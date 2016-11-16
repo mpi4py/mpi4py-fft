@@ -48,12 +48,15 @@ class PFFT(object):
 
         if axes is not None:
             axes = list(axes) if np.ndim(axes) else [axes]
-            assert 0 < len(axes) <= len(shape)
-            assert min(axes) >= -len(shape)
-            assert max(axes) < len(shape)
-            assert sorted(axes) == sorted(set(axes))
+            for i in range(len(axes)):
+                if axes[i] < 0:
+                    axes[i] += len(shape)
         else:
             axes = list(range(len(shape)))
+        assert min(axes) >= 0
+        assert max(axes) < len(shape)
+        assert 0 < len(axes) <= len(shape)
+        assert sorted(axes) == sorted(set(axes))
 
         dtype = np.dtype(dtype)
         assert dtype.char in 'fdgFDG'

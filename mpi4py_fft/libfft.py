@@ -70,12 +70,16 @@ class FFT(object):
         assert min(shape) > 0
 
         if axes is not None:
-            axes = tuple(axes) if np.ndim(axes) else (axes,)
-            assert 0 < len(axes) <= len(shape)
-            assert min(axes) >= -len(shape)
-            assert max(axes) < len(shape)
+            axes = list(axes) if np.ndim(axes) else [axes]
+            for i in range(len(axes)):
+                if axes[i] < 0:
+                    axes[i] += len(shape)
         else:
-            axes = tuple(range(len(shape)))
+            axes = list(range(len(shape)))
+        assert min(axes) >= 0
+        assert max(axes) < len(shape)
+        assert 0 < len(axes) <= len(shape)
+        assert sorted(axes) == sorted(set(axes))
 
         dtype = np.dtype(dtype)
         assert dtype.char in 'fdgFDG'
@@ -111,12 +115,16 @@ class FFTNumPy(object):
         assert min(shape) > 0
 
         if axes is not None:
-            axes = tuple(axes) if np.ndim(axes) else (axes,)
-            assert 0 < len(axes) <= len(shape)
-            assert min(axes) >= -len(shape)
-            assert max(axes) < len(shape)
+            axes = list(axes) if np.ndim(axes) else [axes]
+            for i in range(len(axes)):
+                if axes[i] < 0:
+                    axes[i] += len(shape)
         else:
-            axes = tuple(range(len(shape)))
+            axes = list(range(len(shape)))
+        assert min(axes) >= 0
+        assert max(axes) < len(shape)
+        assert 0 < len(axes) <= len(shape)
+        assert sorted(axes) == sorted(set(axes))
 
         dtype = np.dtype(dtype)
         assert dtype.char in 'fdgFDG'
