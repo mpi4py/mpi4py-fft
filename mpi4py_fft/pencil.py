@@ -166,10 +166,6 @@ class Pencil(object):
         shape = list(penA.subshape)
         shape[axis] = penA.shape[axis]
 
-        tmp = list(penB.subshape)
-        tmp[penA.axis] = penB.shape[penA.axis]
-        assert shape == tmp, (shape, tmp)
-
         return Transfer(comm, shape, dtype,
                         penA.subshape, penA.axis,
                         penB.subshape, penB.axis)
