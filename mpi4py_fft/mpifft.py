@@ -48,9 +48,9 @@ class PFFT(object):
 
         if axes is not None:
             axes = list(axes) if np.ndim(axes) else [axes]
-            for i in range(len(axes)):
-                if axes[i] < 0:
-                    axes[i] += len(shape)
+            for i, axis in enumerate(axes):
+                if axis < 0:
+                    axes[i] = axis + len(shape)
         else:
             axes = list(range(len(shape)))
         assert min(axes) >= 0
@@ -68,7 +68,7 @@ class PFFT(object):
 
         axis = self.axes[-1]
         pencilA = Pencil(self.subcomm, shape, axis)
-        xfftn = FFT(pencilA.subshape, axis, dtype)
+        xfftn = FFT(pencilA.subshape, axis, dtype, **kw)
 
         if np.issubdtype(dtype, np.floating):
             shape[axis] = shape[axis]//2 + 1
@@ -79,7 +79,7 @@ class PFFT(object):
         for axis in reversed(self.axes[:-1]):
             pencilB = pencilA.pencil(axis)
             transAB = pencilA.transfer(pencilB, dtype)
-            xfftn = FFT(pencilB.subshape, axis, dtype)
+            xfftn = FFT(pencilB.subshape, axis, dtype, **kw)
             self.xfftnseq.append(xfftn)
             self.transfer.append(transAB)
             pencilA = pencilB

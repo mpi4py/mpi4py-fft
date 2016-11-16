@@ -20,7 +20,7 @@ def _subarraytypes(comm, shape, axis, subshape, dtype):
     for i in range(p):
         n, s = _blockdist(N, p, i)
         subsizes[axis] = n
-        substarts[axis]= s
+        substarts[axis] = s
         newtype = datatype.Create_subarray(
             sizes, subsizes, substarts).Commit()
         datatypes.append(newtype)
@@ -127,8 +127,7 @@ class Pencil(object):
 
         subshape = [None] * len(shape)
         substart = [None] * len(shape)
-        for i in range(len(shape)):
-            comm = subcomm[i]
+        for i, comm in enumerate(subcomm):
             size = comm.Get_size()
             rank = comm.Get_rank()
             assert shape[i] >= size

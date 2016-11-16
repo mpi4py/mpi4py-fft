@@ -71,9 +71,9 @@ class FFT(object):
 
         if axes is not None:
             axes = list(axes) if np.ndim(axes) else [axes]
-            for i in range(len(axes)):
-                if axes[i] < 0:
-                    axes[i] += len(shape)
+            for i, axis in enumerate(axes):
+                if axis < 0:
+                    axes[i] = axis + len(shape)
         else:
             axes = list(range(len(shape)))
         assert min(axes) >= 0
@@ -93,7 +93,7 @@ class FFT(object):
 
 class FFTNumPy(object):
 
-    class Wrapper(object):
+    class _Wrap(object):
 
         def __init__(self, xfftn, axes, in_array, out_array):
             self.xfftn = xfftn
@@ -109,16 +109,16 @@ class FFTNumPy(object):
             output_array[...] = self.xfftn(input_array, axes=self.axes)
             return output_array
 
-    def __init__(self, shape, axes=None, dtype=float, **kw):
+    def __init__(self, shape, axes=None, dtype=float):
         shape = tuple(shape) if np.ndim(shape) else (shape,)
         assert len(shape) > 0
         assert min(shape) > 0
 
         if axes is not None:
             axes = list(axes) if np.ndim(axes) else [axes]
-            for i in range(len(axes)):
-                if axes[i] < 0:
-                    axes[i] += len(shape)
+            for i, axis in enumerate(axes):
+                if axis < 0:
+                    axes[i] = axis + len(shape)
         else:
             axes = list(range(len(shape)))
         assert min(axes) >= 0
@@ -132,8 +132,9 @@ class FFTNumPy(object):
 
         arrayA = np.zeros(shape, dtype)
         if np.issubdtype(dtype, np.floating):
+            axis = axes[-1]
             shape = list(shape)
-            shape[axis] = shape[axes[-1]]//2 + 1
+            shape[axis] = shape[axis]//2 + 1
             arrayB = np.zeros(shape, dtype.char.upper())
             fwd = np.fft.rfftn
             bck = np.fft.irfftn
@@ -141,8 +142,8 @@ class FFTNumPy(object):
             arrayB = np.zeros(shape, dtype)
             fwd = np.fft.fftn
             bck = np.fft.ifftn
-        self.forward  = self.Wrapper(fwd, axes, arrayA, arrayB)
-        self.backward = self.Wrapper(bck, axes, arrayB, arrayA)
+        self.forward = self._Wrap(fwd, axes, arrayA, arrayB)
+        self.backward = self._Wrap(bck, axes, arrayB, arrayA)
 
 
 #FFT = FFTNumPy
