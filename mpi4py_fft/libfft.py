@@ -25,7 +25,8 @@ def _Xfftn_plan(shape, axes, dtype, options):
     if np.issubdtype(dtype, np.floating):
         del opts['overwrite_input']
     V = xfftn_fwd.output_array
-    xfftn_bck = plan_bck(V, axes=axes, **opts)
+    s = [U.shape[i] for i in axes] if np.ndim(axes) else (U.shape[axes],)
+    xfftn_bck = plan_bck(V, s=s, axes=axes, **opts)
 
     xfftn_fwd.update_arrays(U, V)
     xfftn_bck.update_arrays(V, U)
@@ -77,7 +78,6 @@ class FFT(object):
 
         dtype = np.dtype(dtype)
         assert dtype.char in 'fdgFDG'
-        assert not (dtype.char in 'fdg' and shape[axes[-1]] % 2 != 0)
 
         fwd, bck = _Xfftn_plan(shape, axes, dtype, kw)
         self.forward = _Xfftn_wrap(fwd)
