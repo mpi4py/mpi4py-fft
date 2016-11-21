@@ -36,14 +36,6 @@ def test_mpifft():
                 for axes in [None, (-1,), (-2,),
                              (-1,-2,), (-2,-1),
                              (-1,0), (0,-1)]:
-                    if (axes is None and
-                        shape[-1] % 2 and
-                        typecode in 'fdg'):
-                        continue
-                    if (axes is not None and
-                        shape[axes[-1]] % 2 and
-                        typecode in 'fdg'):
-                        continue
 
                     fft = PFFT(comm, shape, axes=axes, dtype=typecode)
 
