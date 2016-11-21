@@ -9,6 +9,11 @@ def allclose(a, b):
     atol = abstol[a.dtype.char.lower()]
     return np.allclose(a, b, rtol=0, atol=atol)
 
+def random_like(array):
+    shape = array.shape
+    dtype = array.dtype
+    return np.random.random(shape).astype(dtype)
+
 def test_mpifft():
     from itertools import product
 
@@ -21,9 +26,6 @@ def test_mpifft():
         for dim in dims:
             for shape in product(*([sizes]*dim)):
 
-                if (shape[-1] % 2 and
-                    typecode in 'fdg'):
-                    continue
                 if dim < 3:
                     n = min(shape)
                     if typecode in 'fdg':
@@ -31,7 +33,13 @@ def test_mpifft():
                     if n < comm.size:
                         continue
 
-                for axes in [None]: #, (-1,), (-2,), (-1,-2,), (-2,-1),]:
+                for axes in [None, (-1,), (-2,),
+                             (-1,-2,), (-2,-1),
+                             (-1,0), (0,-1)]:
+                    if (axes is None and
+                        shape[-1] % 2 and
+                        typecode in 'fdg'):
+                        continue
                     if (axes is not None and
                         shape[axes[-1]] % 2 and
                         typecode in 'fdg'):
@@ -44,9 +52,7 @@ def test_mpifft():
                         print('grid:{} shape:{} typecode:{} axes:{}'
                               .format(grid, shape, typecode, axes,))
 
-                    shape = fft.forward.input_array.shape
-                    dtype = fft.forward.input_array.dtype
-                    U = np.random.random(shape).astype(dtype)
+                    U = random_like(fft.forward.input_array)
 
                     if 1:
                         F = fft.forward(U)

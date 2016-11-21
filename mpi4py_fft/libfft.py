@@ -22,11 +22,13 @@ def _Xfftn_plan(shape, axes, dtype, options):
 
     U = pyfftw.empty_aligned(shape, dtype=dtype)
     xfftn_fwd = plan_fwd(U, axes=axes, **opts)
+    U.fill(0)
     if np.issubdtype(dtype, np.floating):
         del opts['overwrite_input']
     V = xfftn_fwd.output_array
     s = [U.shape[i] for i in axes] if np.ndim(axes) else (U.shape[axes],)
     xfftn_bck = plan_bck(V, s=s, axes=axes, **opts)
+    V.fill(0)
 
     xfftn_fwd.update_arrays(U, V)
     xfftn_bck.update_arrays(V, U)
@@ -69,12 +71,16 @@ class FFT(object):
         assert min(shape) > 0
 
         if axes is not None:
-            axes = tuple(axes) if np.ndim(axes) else (axes,)
-            assert 0 < len(axes) <= len(shape)
-            assert min(axes) >= -len(shape)
-            assert max(axes) < len(shape)
+            axes = list(axes) if np.ndim(axes) else [axes]
+            for i, axis in enumerate(axes):
+                if axis < 0:
+                    axes[i] = axis + len(shape)
         else:
-            axes = tuple(range(len(shape)))
+            axes = list(range(len(shape)))
+        assert min(axes) >= 0
+        assert max(axes) < len(shape)
+        assert 0 < len(axes) <= len(shape)
+        assert sorted(axes) == sorted(set(axes))
 
         dtype = np.dtype(dtype)
         assert dtype.char in 'fdgFDG'
@@ -87,10 +93,11 @@ class FFT(object):
 
 class FFTNumPy(object):
 
-    class Wrapper(object):
+    class _Wrap(object):
 
-        def __init__(self, xfftn, in_array, out_array):
+        def __init__(self, xfftn, axes, in_array, out_array):
             self.xfftn = xfftn
+            self.axes = axes
             self.input_array = in_array
             self.output_array = out_array
 
@@ -99,39 +106,44 @@ class FFTNumPy(object):
                 input_array = self.input_array
             if output_array is None:
                 output_array = self.output_array
-            output_array[...] = self.xfftn(input_array)
+            output_array[...] = self.xfftn(input_array, axes=self.axes)
             return output_array
 
-    def __init__(self, shape, axes=None, dtype=float, **kw):
+    def __init__(self, shape, axes=None, dtype=float):
         shape = tuple(shape) if np.ndim(shape) else (shape,)
         assert len(shape) > 0
         assert min(shape) > 0
 
-        if axes is None:
-            axes = tuple(range(len(shape)))
+        if axes is not None:
+            axes = list(axes) if np.ndim(axes) else [axes]
+            for i, axis in enumerate(axes):
+                if axis < 0:
+                    axes[i] = axis + len(shape)
         else:
-            axes = tuple(axes) if np.ndim(axes) else (axes,)
-            assert min(axes) >= -len(shape)
-            assert max(axes) < len(shape)
+            axes = list(range(len(shape)))
+        assert min(axes) >= 0
+        assert max(axes) < len(shape)
+        assert 0 < len(axes) <= len(shape)
+        assert sorted(axes) == sorted(set(axes))
 
         dtype = np.dtype(dtype)
         assert dtype.char in 'fdgFDG'
         assert not (dtype.char in 'fdg' and shape[axes[-1]] % 2 != 0)
 
-        arrayA = np.empty(shape, dtype)
+        arrayA = np.zeros(shape, dtype)
         if np.issubdtype(dtype, np.floating):
             axis = axes[-1]
             shape = list(shape)
             shape[axis] = shape[axis]//2 + 1
-            arrayB = np.empty(shape, dtype.char.upper())
+            arrayB = np.zeros(shape, dtype.char.upper())
             fwd = np.fft.rfftn
             bck = np.fft.irfftn
         else:
-            arrayB = np.empty(shape, dtype)
+            arrayB = np.zeros(shape, dtype)
             fwd = np.fft.fftn
             bck = np.fft.ifftn
-        self.forward  = self.Wrapper(fwd, arrayA, arrayB)
-        self.backward = self.Wrapper(bck, arrayB, arrayA)
+        self.forward = self._Wrap(fwd, axes, arrayA, arrayB)
+        self.backward = self._Wrap(bck, axes, arrayB, arrayA)
 
 
 #FFT = FFTNumPy
