@@ -1,4 +1,5 @@
 #/bin/sh
+set -e
 
 python test_libfft.py
 

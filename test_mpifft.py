@@ -3,11 +3,16 @@ import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT
 
-abstol = dict(f=1e-6, d=1e-14, g=1e-15)
+abstol = dict(f=1e-5, d=1e-13, g=1e-15)
 
 def allclose(a, b):
     atol = abstol[a.dtype.char.lower()]
     return np.allclose(a, b, rtol=0, atol=atol)
+
+def random_like(array):
+    shape = array.shape
+    dtype = array.dtype
+    return np.random.random(shape).astype(dtype)
 
 def test_mpifft():
     from itertools import product
@@ -21,9 +26,6 @@ def test_mpifft():
         for dim in dims:
             for shape in product(*([sizes]*dim)):
 
-                if (shape[-1] % 2 and
-                    typecode in 'fdg'):
-                    continue
                 if dim < 3:
                     n = min(shape)
                     if typecode in 'fdg':
@@ -31,11 +33,9 @@ def test_mpifft():
                     if n < comm.size:
                         continue
 
-                for axes in [None]: #, (-1,), (-2,), (-1,-2,), (-2,-1),]:
-                    if (axes is not None and
-                        shape[axes[-1]] % 2 and
-                        typecode in 'fdg'):
-                        continue
+                for axes in [None, (-1,), (-2,),
+                             (-1,-2,), (-2,-1),
+                             (-1,0), (0,-1)]:
 
                     fft = PFFT(comm, shape, axes=axes, dtype=typecode)
 
@@ -44,9 +44,35 @@ def test_mpifft():
                         print('grid:{} shape:{} typecode:{} axes:{}'
                               .format(grid, shape, typecode, axes,))
 
-                    shape = fft.forward.input_array.shape
-                    dtype = fft.forward.input_array.dtype
-                    U = np.random.random(shape).astype(dtype)
+                    assert fft.forward.input_pencil.shape == shape
+                    assert fft.backward.output_pencil.shape == shape
+                    if typecode in 'fdg':
+                        ax = -1 if axes is None else axes[-1]
+                        sh = list(shape)
+                        sh[ax] = sh[ax]//2 + 1
+                        sh = tuple(sh)
+                        assert fft.forward.output_pencil.shape == sh
+                        assert fft.backward.input_pencil.shape == sh
+                    else:
+                        assert fft.forward.output_pencil.shape == shape
+                        assert fft.backward.input_pencil.shape == shape
+
+                    assert (fft.forward.input_pencil.subshape ==
+                            fft.forward.input_array.shape)
+                    assert (fft.forward.output_pencil.subshape ==
+                            fft.forward.output_array.shape)
+                    assert (fft.backward.input_pencil.subshape ==
+                            fft.backward.input_array.shape)
+                    assert (fft.backward.output_pencil.subshape ==
+                            fft.backward.output_array.shape)
+                    ax = -1 if axes is None else axes[-1]
+                    assert fft.forward.input_pencil.substart[ax] == 0
+                    assert fft.backward.output_pencil.substart[ax] == 0
+                    ax = 0 if axes is None else axes[0]
+                    assert fft.forward.output_pencil.substart[ax] == 0
+                    assert fft.backward.input_pencil.substart[ax] == 0
+
+                    U = random_like(fft.forward.input_array)
 
                     if 1:
                         F = fft.forward(U)

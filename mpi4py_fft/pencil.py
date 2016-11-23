@@ -2,41 +2,29 @@ import numpy as np
 from mpi4py import MPI
 
 
-def subsize(N, size, rank):
-    return N // size + (N % size > rank)
+def _blockdist(N, size, rank):
+    q, r = divmod(N, size)
+    n = q + (1 if r > rank else 0)
+    s = rank * q + min(rank, r)
+    return (n, s)
 
 
-def distribution(N, size):
-    q = N // size
-    r = N % size
-    n = s = i = 0
-    while i < size:
-        n = q
-        s = q * i
-        if i < r:
-            n += 1
-            s += i
-        else:
-            s += r
-        yield (n, s)
-        i += 1
-
-
-def subarrays(comm, subshape, shape, axis, dtype):
+def _subarraytypes(comm, shape, axis, subshape, dtype):
     N = shape[axis]
     p = comm.Get_size()
     datatype = MPI._typedict[dtype.char]
     sizes = list(subshape)
     subsizes = sizes[:]
     substarts = [0] * len(sizes)
-    subarrays = []
-    for n, s in distribution(N, p):
+    datatypes = []
+    for i in range(p):
+        n, s = _blockdist(N, p, i)
         subsizes[axis] = n
         substarts[axis] = s
-        newtype = datatype.Create_subarray(sizes, subsizes, substarts)
-        newtype.Commit()
-        subarrays.append(newtype)
-    return tuple(subarrays)
+        newtype = datatype.Create_subarray(
+            sizes, subsizes, substarts).Commit()
+        datatypes.append(newtype)
+    return tuple(datatypes)
 
 
 class Subcomm(tuple):
@@ -61,10 +49,11 @@ class Subcomm(tuple):
 
         dim = cartcomm.Get_dim()
         subcomm = [None] * dim
+        remdims = [False] * dim
         for i in range(dim):
-            remdims = [False] * dim
             remdims[i] = True
             subcomm[i] = cartcomm.Sub(remdims)
+            remdims[i] = False
 
         if cartcomm != comm:
             cartcomm.Free()
@@ -88,32 +77,32 @@ class Transfer(object):
         self.dtype = dtype = np.dtype(dtype)
         self.subshapeA, self.axisA = tuple(subshapeA), axisA
         self.subshapeB, self.axisB = tuple(subshapeB), axisB
-        self._subarraysA = subarrays(comm, subshapeA, shape, axisB, dtype)
-        self._subarraysB = subarrays(comm, subshapeB, shape, axisA, dtype)
+        self._subtypesA = _subarraytypes(comm, shape, axisA, subshapeA, dtype)
+        self._subtypesB = _subarraytypes(comm, shape, axisB, subshapeB, dtype)
         size = comm.Get_size()
-        self._counts_displs = ([1] * size, [0] * size) # XXX (None, None)
+        self._counts_displs = ([1] * size, [0] * size)  # XXX (None, None)
 
-    def forward(self, A, B):
-        assert self.subshapeA == A.shape
-        assert self.subshapeB == B.shape
-        assert self.dtype == A.dtype
-        assert self.dtype == B.dtype
-        self.comm.Alltoallw([A, self._counts_displs, self._subarraysA],
-                            [B, self._counts_displs, self._subarraysB])
+    def forward(self, arrayA, arrayB):
+        assert self.subshapeA == arrayA.shape
+        assert self.subshapeB == arrayB.shape
+        assert self.dtype == arrayA.dtype
+        assert self.dtype == arrayB.dtype
+        self.comm.Alltoallw([arrayA, self._counts_displs, self._subtypesA],
+                            [arrayB, self._counts_displs, self._subtypesB])
 
-    def backward(self, B, A):
-        assert self.subshapeA == A.shape
-        assert self.subshapeB == B.shape
-        assert self.dtype == A.dtype
-        assert self.dtype == B.dtype
-        self.comm.Alltoallw([B, self._counts_displs, self._subarraysB],
-                            [A, self._counts_displs, self._subarraysA])
+    def backward(self, arrayB, arrayA):
+        assert self.subshapeA == arrayA.shape
+        assert self.subshapeB == arrayB.shape
+        assert self.dtype == arrayA.dtype
+        assert self.dtype == arrayB.dtype
+        self.comm.Alltoallw([arrayB, self._counts_displs, self._subtypesB],
+                            [arrayA, self._counts_displs, self._subtypesA])
 
     def destroy(self):
-        for datatype in self._subarraysA:
+        for datatype in self._subtypesA:
             if datatype:
                 datatype.Free()
-        for datatype in self._subarraysB:
+        for datatype in self._subtypesB:
             if datatype:
                 datatype.Free()
 
@@ -137,17 +126,20 @@ class Pencil(object):
             assert subcomm[axis].Get_size() == 1
 
         subshape = [None] * len(shape)
-        for i in range(len(shape)):
-            comm = subcomm[i]
+        substart = [None] * len(shape)
+        for i, comm in enumerate(subcomm):
             size = comm.Get_size()
             rank = comm.Get_rank()
             assert shape[i] >= size
-            subshape[i] = subsize(shape[i], size, rank)
+            n, s = _blockdist(shape[i], size, rank)
+            subshape[i] = n
+            substart[i] = s
 
-        self.subcomm = tuple(subcomm)
         self.shape = tuple(shape)
-        self.subshape = tuple(subshape)
         self.axis = axis
+        self.subcomm = tuple(subcomm)
+        self.subshape = tuple(subshape)
+        self.substart = tuple(substart)
 
     def pencil(self, axis):
         assert -len(self.shape) <= axis < len(self.shape)
@@ -172,6 +164,7 @@ class Pencil(object):
         comm = penA.subcomm[axis]
         shape = list(penA.subshape)
         shape[axis] = penA.shape[axis]
+
         return Transfer(comm, shape, dtype,
-                        penA.subshape, penB.axis,
-                        penB.subshape, penA.axis)
+                        penA.subshape, penA.axis,
+                        penB.subshape, penB.axis)

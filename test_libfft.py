@@ -24,9 +24,6 @@ def test_libfft():
                     for j in range(i+1, dim):
 
                         axes = allaxes[i:j]
-                        if (shape[axes[-1]] % 2 and
-                            typecode in 'fdg'):
-                            continue
 
                         #print shape, axes, typecode
                         fft = FFT(shape, axes, dtype=typecode)
