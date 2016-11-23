@@ -43,8 +43,8 @@ def get_local_mesh(FFT):
 
 def get_local_wavenumbermesh(FFT):
     
-    x1 = slice(FFT.backward.input_pencil.substart[0], 
-               FFT.backward.input_pencil.substart[0]+FFT.backward.input_pencil.subshape[0])
+    x1 = slice(FFT.backward.input_pencil.substart[2], 
+               FFT.backward.input_pencil.substart[2]+FFT.backward.input_pencil.subshape[2])
 
     x2 = slice(FFT.backward.input_pencil.substart[1], 
                FFT.backward.input_pencil.substart[1]+FFT.backward.input_pencil.subshape[1])
