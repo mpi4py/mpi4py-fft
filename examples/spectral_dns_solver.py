@@ -6,7 +6,6 @@ vortex and evolved in time with a 4'th order Runge Kutta method.
 """
 from numpy import array, pi, empty, where, sin, cos, sum, mgrid, meshgrid, fft
 from mpi4py_fft.mpifft import MPI, PFFT
-from mpi4py_fft.pencil import distribution
 
 # Set viscosity, end time and time step
 nu = 0.000625
@@ -28,25 +27,12 @@ def complex_shape(FFT):
     return FFT.forward.output_array.shape
 
 def get_local_mesh(FFT):
-    rank0 = FFT.subcomm[0].Get_rank()
-    rank1 = FFT.subcomm[1].Get_rank()
 
-    # Create the physical mesh
-    P0 = FFT.subcomm[0].Get_size()
-    P1 = FFT.subcomm[1].Get_size()
-    
-    sizes = []
-    starts = []
-    for n, s in distribution(N[0], P0):
-        sizes.append(n)
-        starts.append(s)
-    x1 = slice(starts[rank0], starts[rank0]+sizes[rank0], 1)
-    sizes = []
-    starts = []
-    for n, s in distribution(N[1], P1):
-        sizes.append(n)
-        starts.append(s)
-    x2 = slice(starts[rank1], starts[rank1]+sizes[rank1], 1)
+    x1 = slice(FFT.forward.input_pencil.substart[0], 
+               FFT.forward.input_pencil.substart[0]+FFT.forward.input_pencil.subshape[0])
+
+    x2 = slice(FFT.forward.input_pencil.substart[1], 
+               FFT.forward.input_pencil.substart[1]+FFT.forward.input_pencil.subshape[1])
 
     X = mgrid[x1, x2, :N[2]].astype(float)
     X[0] *= L[0]/N[0]
@@ -55,31 +41,18 @@ def get_local_mesh(FFT):
     return X
 
 def get_local_wavenumbermesh(FFT):
-    rank0 = FFT.subcomm[0].Get_rank()
-    rank1 = FFT.subcomm[1].Get_rank()
 
-    P0 = FFT.subcomm[0].Get_size()
-    P1 = FFT.subcomm[1].Get_size()
-    
-    sizes = []
-    starts = []
-    for n, s in distribution(N[1], P0):
-        sizes.append(n)
-        starts.append(s)
+    x1 = slice(FFT.backward.input_pencil.substart[0], 
+               FFT.backward.input_pencil.substart[0]+FFT.backward.input_pencil.subshape[0])
 
-    x1 = slice(starts[rank0], starts[rank0]+sizes[rank0], 1)
-    sizes = []
-    starts = []
-    for n, s in distribution(N[2]//2+1, P1):
-        sizes.append(n)
-        starts.append(s)
-    x2 = slice(starts[rank1], starts[rank1]+sizes[rank1], 1)
+    x2 = slice(FFT.backward.input_pencil.substart[1], 
+               FFT.backward.input_pencil.substart[1]+FFT.backward.input_pencil.subshape[1])
 
     # Set wavenumbers in grid
     kx = fft.fftfreq(N[0], 1./N[0]).astype(int)
     ky = fft.fftfreq(N[1], 1./N[1]).astype(int)
     kz = fft.rfftfreq(N[2], 1./N[2]).astype(int)
-    K = array(meshgrid(kx, ky[x1], kz[x2], indexing='ij'), dtype=float)
+    K = array(meshgrid(kx, ky[x2], kz[x1], indexing='ij'), dtype=float)
     return K
 
 def get_scaled_local_wavenumbermesh(FFT):
