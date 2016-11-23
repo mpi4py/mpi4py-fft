@@ -44,6 +44,34 @@ def test_mpifft():
                         print('grid:{} shape:{} typecode:{} axes:{}'
                               .format(grid, shape, typecode, axes,))
 
+                    assert fft.forward.input_pencil.shape == shape
+                    assert fft.backward.output_pencil.shape == shape
+                    if typecode in 'fdg':
+                        ax = -1 if axes is None else axes[-1]
+                        sh = list(shape)
+                        sh[ax] = sh[ax]//2 + 1
+                        sh = tuple(sh)
+                        assert fft.forward.output_pencil.shape == sh
+                        assert fft.backward.input_pencil.shape == sh
+                    else:
+                        assert fft.forward.output_pencil.shape == shape
+                        assert fft.backward.input_pencil.shape == shape
+
+                    assert (fft.forward.input_pencil.subshape ==
+                            fft.forward.input_array.shape)
+                    assert (fft.forward.output_pencil.subshape ==
+                            fft.forward.output_array.shape)
+                    assert (fft.backward.input_pencil.subshape ==
+                            fft.backward.input_array.shape)
+                    assert (fft.backward.output_pencil.subshape ==
+                            fft.backward.output_array.shape)
+                    ax = -1 if axes is None else axes[-1]
+                    assert fft.forward.input_pencil.substart[ax] == 0
+                    assert fft.backward.output_pencil.substart[ax] == 0
+                    ax = 0 if axes is None else axes[0]
+                    assert fft.forward.output_pencil.substart[ax] == 0
+                    assert fft.backward.input_pencil.substart[ax] == 0
+
                     U = random_like(fft.forward.input_array)
 
                     if 1:

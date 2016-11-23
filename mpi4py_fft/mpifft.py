@@ -8,29 +8,38 @@ from .pencil import Subcomm
 
 class Transform(object):
 
-    def __init__(self, xfftnseq, transfer):
-        assert len(xfftnseq) == len(transfer) + 1
-        self.xfftnseq = xfftnseq
-        self.transfer = transfer
+    def __init__(self, xfftn, transfer, pencil):
+        assert len(xfftn) == len(transfer) + 1 and len(pencil) == 2
+        self._xfftn = tuple(xfftn)
+        self._transfer = tuple(transfer)
+        self._pencil = tuple(pencil)
 
     @property
     def input_array(self):
-        return self.xfftnseq[0].input_array
+        return self._xfftn[0].input_array
 
     @property
     def output_array(self):
-        return self.xfftnseq[-1].output_array
+        return self._xfftn[-1].output_array
+
+    @property
+    def input_pencil(self):
+        return self._pencil[0]
+
+    @property
+    def output_pencil(self):
+        return self._pencil[1]
 
     def __call__(self, input_array=None, output_array=None, **kw):
         if input_array is not None:
             self.input_array[...] = input_array
 
-        for i in range(len(self.transfer)):
-            self.xfftnseq[i](**kw)
-            arrayA = self.xfftnseq[i].output_array
-            arrayB = self.xfftnseq[i+1].input_array
-            self.transfer[i](arrayA, arrayB)
-        self.xfftnseq[-1](**kw)
+        for i in range(len(self._transfer)):
+            self._xfftn[i](**kw)
+            arrayA = self._xfftn[i].output_array
+            arrayB = self._xfftn[i+1].input_array
+            self._transfer[i](arrayA, arrayB)
+        self._xfftn[-1](**kw)
 
         if output_array is not None:
             output_array[...] = self.output_array
@@ -63,33 +72,37 @@ class PFFT(object):
 
         self.axes = tuple(axes)
         self.subcomm = Subcomm(comm, len(shape)-1)
-        self.xfftnseq = []
+        self.xfftn = []
         self.transfer = []
+        self.pencil = [None, None]
 
         axis = self.axes[-1]
-        pencilA = Pencil(self.subcomm, shape, axis)
-        xfftn = FFT(pencilA.subshape, axis, dtype, **kw)
+        pencil = Pencil(self.subcomm, shape, axis)
+        xfftn = FFT(pencil.subshape, axis, dtype, **kw)
+        self.xfftn.append(xfftn)
 
+        self.pencil[0] = pencilA = pencil
         if np.issubdtype(dtype, np.floating):
             shape[axis] = shape[axis]//2 + 1
             dtype = xfftn.forward.output_array.dtype
             pencilA = Pencil(self.subcomm, shape, axis)
-
-        self.xfftnseq.append(xfftn)
         for axis in reversed(self.axes[:-1]):
             pencilB = pencilA.pencil(axis)
             transAB = pencilA.transfer(pencilB, dtype)
             xfftn = FFT(pencilB.subshape, axis, dtype, **kw)
-            self.xfftnseq.append(xfftn)
+            self.xfftn.append(xfftn)
             self.transfer.append(transAB)
             pencilA = pencilB
+        self.pencil[1] = pencilA
 
         self.forward = Transform(
-            [o.forward for o in self.xfftnseq],
-            [o.forward for o in self.transfer])
+            [o.forward for o in self.xfftn],
+            [o.forward for o in self.transfer],
+            self.pencil)
         self.backward = Transform(
-            [o.backward for o in self.xfftnseq[::-1]],
-            [o.backward for o in self.transfer[::-1]])
+            [o.backward for o in self.xfftn[::-1]],
+            [o.backward for o in self.transfer[::-1]],
+            self.pencil[::-1])
 
     def destroy(self):
         self.subcomm.destroy()
