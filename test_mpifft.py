@@ -3,7 +3,7 @@ import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT
 
-abstol = dict(f=1e-6, d=1e-14, g=1e-15)
+abstol = dict(f=1e-5, d=1e-13, g=1e-15)
 
 def allclose(a, b):
     atol = abstol[a.dtype.char.lower()]

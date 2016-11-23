@@ -71,10 +71,7 @@ class PFFT(object):
         xfftn = FFT(pencilA.subshape, axis, dtype, **kw)
 
         if np.issubdtype(dtype, np.floating):
-            if shape[axis] % 2 == 0:
-                shape[axis] = shape[axis]//2 + 1
-            else:
-                shape[axis] = (shape[axis]+1)//2
+            shape[axis] = shape[axis]//2 + 1
             dtype = xfftn.forward.output_array.dtype
             pencilA = Pencil(self.subcomm, shape, axis)
 

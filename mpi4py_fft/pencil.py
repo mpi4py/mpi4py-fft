@@ -80,7 +80,7 @@ class Transfer(object):
         self._subtypesA = _subarraytypes(comm, shape, axisA, subshapeA, dtype)
         self._subtypesB = _subarraytypes(comm, shape, axisB, subshapeB, dtype)
         size = comm.Get_size()
-        self._counts_displs = ([1] * size, [0] * size) # XXX (None, None)
+        self._counts_displs = ([1] * size, [0] * size)  # XXX (None, None)
 
     def forward(self, arrayA, arrayB):
         assert self.subshapeA == arrayA.shape
