@@ -62,30 +62,43 @@ class PFFT(object):
         assert dtype.char in 'fdgFDG'
 
         self.axes = tuple(axes)
-        self.subcomm = Subcomm(comm, len(shape)-1)
+        #self.subcomm = Subcomm(comm, len(shape)-1)
+        self.subcomm = Subcomm(comm, [comm.Get_size(), 1])
         self.xfftnseq = []
         self.transfer = []
-
-        axis = self.axes[-1]
-        pencilA = Pencil(self.subcomm, shape, axis)
-        xfftn = FFT(pencilA.subshape, axis, dtype, **kw)
-
-        if np.issubdtype(dtype, np.floating):
-            if shape[axis] % 2 == 0:
-                shape[axis] = shape[axis]//2 + 1
-            else:
-                shape[axis] = (shape[axis]+1)//2
-            dtype = xfftn.forward.output_array.dtype
-            pencilA = Pencil(self.subcomm, shape, axis)
-
-        self.xfftnseq.append(xfftn)
-        for axis in reversed(self.axes[:-1]):
-            pencilB = pencilA.pencil(axis)
-            transAB = pencilA.transfer(pencilB, dtype)
-            xfftn = FFT(pencilB.subshape, axis, dtype, **kw)
+        
+        axes = [self.axes.pop(-1)]
+        for i in reversed(self.subcomm):
+            if i.Get_size() == 1:
+                axes.insert(0, self.axes.pop(-1))
+            
+        
+        if comm.Get_size() == 1:
+        #if False:
+            xfftn = FFT(shape, axes, dtype, **kw)
             self.xfftnseq.append(xfftn)
-            self.transfer.append(transAB)
-            pencilA = pencilB
+
+        else:
+            axis = self.axes[-1]
+            pencilA = Pencil(self.subcomm, shape, axis)
+            xfftn = FFT(pencilA.subshape, axis, dtype, **kw)
+
+            if np.issubdtype(dtype, np.floating):
+                if shape[axis] % 2 == 0:
+                    shape[axis] = shape[axis]//2 + 1
+                else:
+                    shape[axis] = (shape[axis]+1)//2
+                dtype = xfftn.forward.output_array.dtype
+                pencilA = Pencil(self.subcomm, shape, axis)
+
+            self.xfftnseq.append(xfftn)
+            for axis in reversed(self.axes[:-1]):
+                pencilB = pencilA.pencil(axis)
+                transAB = pencilA.transfer(pencilB, dtype)
+                xfftn = FFT(pencilB.subshape, axis, dtype, **kw)
+                self.xfftnseq.append(xfftn)
+                self.transfer.append(transAB)
+                pencilA = pencilB
 
         self.forward = Transform(
             [o.forward for o in self.xfftnseq],

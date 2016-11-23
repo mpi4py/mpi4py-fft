@@ -1,5 +1,7 @@
 #/bin/sh
 
+set -e
+
 python test_libfft.py
 
 mpiexec -n  2 python test_pencil.py
