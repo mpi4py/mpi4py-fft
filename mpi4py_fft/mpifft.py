@@ -1,5 +1,5 @@
 import numpy as np
-from mpi4py import MPI
+from mpi4py import MPI  # pylint: disable=unused-import
 
 from .libfft import FFT
 from .pencil import Pencil
@@ -49,6 +49,8 @@ class Transform(object):
 
 
 class PFFT(object):
+
+    # pylint: disable=too-few-public-methods
 
     def __init__(self, comm, shape, axes=None, dtype=float, **kw):
         shape = list(shape)

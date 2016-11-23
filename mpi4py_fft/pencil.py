@@ -10,6 +10,8 @@ def _blockdist(N, size, rank):
 
 
 def _subarraytypes(comm, shape, axis, subshape, dtype):
+    # pylint: disable=too-many-locals
+    # pylint: disable=protected-access
     N = shape[axis]
     p = comm.Get_size()
     datatype = MPI._typedict[dtype.char]
@@ -68,10 +70,13 @@ class Subcomm(tuple):
 
 class Transfer(object):
 
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(self,
                  comm, shape, dtype,
                  subshapeA, axisA,
                  subshapeB, axisB):
+        # pylint: disable=too-many-arguments
         self.comm = comm
         self.shape = tuple(shape)
         self.dtype = dtype = np.dtype(dtype)

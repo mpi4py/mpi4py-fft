@@ -50,6 +50,8 @@ def _Xfftn_exec(xfftn_obj, in_array, out_array, options):
 
 class _Xfftn_wrap(object):
 
+    # pylint: disable=too-few-public-methods
+
     __slots__ = ('_obj',)
 
     def __init__(self, obj):
@@ -66,8 +68,10 @@ class _Xfftn_wrap(object):
 
 class FFT(object):
 
+    # pylint: disable=too-few-public-methods
+
     def __init__(self, shape, axes=None, dtype=float, **kw):
-        shape = tuple(shape) if np.ndim(shape) else (shape,)
+        shape = list(shape) if np.ndim(shape) else [shape]
         assert len(shape) > 0
         assert min(shape) > 0
 
@@ -93,11 +97,14 @@ class FFT(object):
 
 class FFTNumPy(object):
 
+    # pylint: disable=too-few-public-methods
+
     class _Wrap(object):
 
-        def __init__(self, xfftn, s, axes, in_array, out_array):
+        def __init__(self, xfftn, sizes, axes, in_array, out_array):
+            # pylint: disable=too-many-arguments
             self.xfftn = xfftn
-            self.s = s
+            self.sizes = sizes
             self.axes = axes
             self.input_array = in_array
             self.output_array = out_array
@@ -107,12 +114,12 @@ class FFTNumPy(object):
                 input_array = self.input_array
             if output_array is None:
                 output_array = self.output_array
-            s, axes = self.s, self.axes
-            output_array[...] = self.xfftn(input_array, s=s, axes=axes)
+            sizes, axes = self.sizes, self.axes
+            output_array[...] = self.xfftn(input_array, s=sizes, axes=axes)
             return output_array
 
     def __init__(self, shape, axes=None, dtype=float):
-        shape = tuple(shape) if np.ndim(shape) else (shape,)
+        shape = list(shape) if np.ndim(shape) else [shape]
         assert len(shape) > 0
         assert min(shape) > 0
 
@@ -130,23 +137,23 @@ class FFTNumPy(object):
 
         dtype = np.dtype(dtype)
         assert dtype.char in 'fdgFDG'
+        typecode = dtype.char
 
-        s = tuple(np.take(shape, axes))
+        sizes = list(np.take(shape, axes))
         arrayA = np.zeros(shape, dtype)
         if np.issubdtype(dtype, np.floating):
             axis = axes[-1]
-            shape = list(shape)
             shape[axis] = shape[axis]//2 + 1
-            arrayB = np.zeros(shape, dtype.char.upper())
+            arrayB = np.zeros(shape, typecode.upper())
             fwd = np.fft.rfftn
             bck = np.fft.irfftn
         else:
-            arrayB = np.zeros(shape, dtype)
+            arrayB = np.zeros(shape, typecode)
             fwd = np.fft.fftn
             bck = np.fft.ifftn
 
-        self.forward = self._Wrap(fwd, s, axes, arrayA, arrayB)
-        self.backward = self._Wrap(bck, s, axes, arrayB, arrayA)
+        self.forward = self._Wrap(fwd, sizes, axes, arrayA, arrayB)
+        self.backward = self._Wrap(bck, sizes, axes, arrayB, arrayA)
 
 
 # FFT = FFTNumPy

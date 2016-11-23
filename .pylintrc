@@ -1,0 +1,5 @@
+[MASTER]
+disable = locally-disabled,invalid-name,missing-docstring
+extension-pkg-whitelist = mpi4py,pyfftw,numpy
+generated-members=np.floating
+reports = no
