@@ -6,7 +6,6 @@ vortex and evolved in time with a 4'th order Runge Kutta method.
 """
 from numpy import array, pi, empty, where, sin, cos, sum, mgrid, meshgrid, fft
 from mpi4py_fft.mpifft import MPI, PFFT
-#from mpi4py_fft.pencil import distribution
 
 # Set viscosity, end time and time step
 nu = 0.000625
@@ -16,53 +15,53 @@ dt = 0.01
 # Set global size of the computational box
 M = 5
 N = array([2**M, 2**(M+1)+1, 2**M+1], dtype=int)
-L = array([2*pi, 4*pi, 4*pi], dtype=float) # Needs to be (2*int)*pi in all directions because of periodicity
+L = array([2*pi, 4*pi, 4*pi], dtype=float) # Needs to be (2*int)*pi in all directions (periodic)
 
 FFT = PFFT(MPI.COMM_WORLD, N)
 
-# Some helper functions 
-def real_shape(FFT):
-    return FFT.forward.input_array.shape
+# Some helper functions
+def real_shape(pfft):
+    return pfft.forward.input_array.shape
 
-def complex_shape(FFT):
-    return FFT.forward.output_array.shape
+def complex_shape(pfft):
+    return pfft.forward.output_array.shape
 
-def get_local_mesh(FFT):
+def get_local_mesh(pfft):
 
-    x1 = slice(FFT.forward.input_pencil.substart[0], 
-               FFT.forward.input_pencil.substart[0]+FFT.forward.input_pencil.subshape[0])
+    x1 = slice(pfft.forward.input_pencil.substart[0],
+               pfft.forward.input_pencil.substart[0]+pfft.forward.input_pencil.subshape[0])
 
-    x2 = slice(FFT.forward.input_pencil.substart[1], 
-               FFT.forward.input_pencil.substart[1]+FFT.forward.input_pencil.subshape[1])
+    x2 = slice(pfft.forward.input_pencil.substart[1],
+               pfft.forward.input_pencil.substart[1]+pfft.forward.input_pencil.subshape[1])
 
-    X = mgrid[x1, x2, :N[2]].astype(float)
-    X[0] *= L[0]/N[0]
-    X[1] *= L[1]/N[1]
-    X[2] *= L[2]/N[2]
-    return X
+    x = mgrid[x1, x2, :N[2]].astype(float)
+    x[0] *= L[0]/N[0]
+    x[1] *= L[1]/N[1]
+    x[2] *= L[2]/N[2]
+    return x
 
-def get_local_wavenumbermesh(FFT):
-    
-    x1 = slice(FFT.backward.input_pencil.substart[2], 
-               FFT.backward.input_pencil.substart[2]+FFT.backward.input_pencil.subshape[2])
+def get_local_wavenumbermesh(pfft):
 
-    x2 = slice(FFT.backward.input_pencil.substart[1], 
-               FFT.backward.input_pencil.substart[1]+FFT.backward.input_pencil.subshape[1])
+    x1 = slice(pfft.backward.input_pencil.substart[2],
+               pfft.backward.input_pencil.substart[2]+pfft.backward.input_pencil.subshape[2])
+
+    x2 = slice(pfft.backward.input_pencil.substart[1],
+               pfft.backward.input_pencil.substart[1]+pfft.backward.input_pencil.subshape[1])
 
     # Set wavenumbers in grid
     kx = fft.fftfreq(N[0], 1./N[0]).astype(int)
     ky = fft.fftfreq(N[1], 1./N[1]).astype(int)
     kz = fft.rfftfreq(N[2], 1./N[2]).astype(int)
-    K = array(meshgrid(kx, ky[x2], kz[x1], indexing='ij'), dtype=float)
-    return K
+    wavemesh = array(meshgrid(kx, ky[x2], kz[x1], indexing='ij'), dtype=float)
+    return wavemesh
 
-def get_scaled_local_wavenumbermesh(FFT):
-    K = get_local_wavenumbermesh(FFT)
-    # Scale with physical mesh size. This takes care of mapping the physical domain to a computational cube of size (2pi)**3
+def get_scaled_local_wavenumbermesh(pfft):
+    wavemesh = get_local_wavenumbermesh(pfft)
+    # Scale with physical mesh size. Maps physical domain to a computational cube of size (2pi)**3
     Lp = 2*pi/L
-    for i in range(3):
-        K[i] *= Lp[i]
-    return K
+    for j in range(3):
+        wavemesh[j] *= Lp[j]
+    return wavemesh
 
 # Declare variables needed to solve Navier-Stokes
 U = empty((3,) + real_shape(FFT))  # Velocity
@@ -73,7 +72,7 @@ U_hat0 = empty((3,) + complex_shape(FFT), dtype=complex)  # For Runge-Kutta
 U_hat1 = empty((3,) + complex_shape(FFT), dtype=complex)  # For Runge-Kutta
 a = [1./6., 1./3., 1./3., 1./6.]
 b = [0.5, 0.5, 1.]
-rhs = empty((3,) + complex_shape(FFT), dtype=complex)     # Right hand side of ODEs
+dU = empty((3,) + complex_shape(FFT), dtype=complex)     # Right hand side of ODEs
 curl = empty((3,) + real_shape(FFT))
 
 X = get_local_mesh(FFT)
@@ -95,8 +94,8 @@ def compute_curl(x, z):
     return z
 
 def compute_rhs(rhs):
-    for i in range(3):
-        U[i] = FFT.backward(U_hat[i])
+    for j in range(3):
+        U[j] = FFT.backward(U_hat[j])
 
     curl[:] = compute_curl(U_hat, curl)
     rhs = cross(U, curl, rhs)
@@ -120,10 +119,10 @@ while t < T-1e-8:
     tstep += 1
     U_hat1[:] = U_hat0[:] = U_hat
     for rk in range(4):
-        rhs = compute_rhs(rhs)
+        dU = compute_rhs(dU)
         if rk < 3:
-            U_hat[:] = U_hat0 + b[rk]*dt*rhs
-        U_hat1[:] += a[rk]*dt*rhs
+            U_hat[:] = U_hat0 + b[rk]*dt*dU
+        U_hat1[:] += a[rk]*dt*dU
     U_hat[:] = U_hat1[:]
 
 # Transform result to real physical space

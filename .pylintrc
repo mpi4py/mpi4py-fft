@@ -1,5 +1,5 @@
 [MASTER]
-disable = locally-disabled,invalid-name,missing-docstring
+disable = locally-disabled,invalid-name,missing-docstring,redefined-builtin
 extension-pkg-whitelist = mpi4py,pyfftw,numpy
 generated-members=np.floating
 reports = no
