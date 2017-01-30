@@ -44,6 +44,13 @@ def test_mpifft():
                         print('grid:{} shape:{} typecode:{} axes:{}'
                               .format(grid, shape, typecode, axes,))
 
+                    assert len(fft.axes) == len(fft.xfftn)
+                    assert len(fft.axes) == len(fft.transfer) + 1
+                    assert fft.axes[-1] == fft.forward._xfftn[0].axes
+                    assert fft.axes[-1] == fft.backward._xfftn[-1].axes
+                    assert fft.axes[0] == fft.forward._xfftn[-1].axes
+                    assert fft.axes[0] == fft.backward._xfftn[0].axes
+
                     assert fft.forward.input_pencil.shape == shape
                     assert fft.backward.output_pencil.shape == shape
                     if typecode in 'fdg':
