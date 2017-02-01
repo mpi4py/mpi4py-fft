@@ -53,6 +53,9 @@ class PFFT(object):
     # pylint: disable=too-few-public-methods
 
     def __init__(self, comm, shape, axes=None, dtype=float, **kw):
+        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-statements
         shape = list(shape)
         assert len(shape) > 0
         assert min(shape) > 0
@@ -72,26 +75,45 @@ class PFFT(object):
         dtype = np.dtype(dtype)
         assert dtype.char in 'fdgFDG'
 
-        self.axes = tuple(axes)
-        self.subcomm = Subcomm(comm, len(shape)-1)
+        if isinstance(comm, Subcomm):
+            assert len(comm) == len(shape)
+            assert comm[axes[-1]].Get_size() == 1
+            self.subcomm = comm
+        else:
+            dims = [0] * len(shape)
+            dims[axes[-1]] = 1
+            self.subcomm = Subcomm(comm, dims)
+
+        collapse = True # kw.pop('collapse', True)
+        if collapse:
+            groups = [[]]
+            for axis in reversed(axes):
+                if self.subcomm[axis].Get_size() == 1:
+                    groups[0].insert(0, axis)
+                else:
+                    groups.insert(0, [axis])
+            self.axes = tuple(map(tuple, groups))
+        else:
+            self.axes = tuple((axis,) for axis in axes)
+
         self.xfftn = []
         self.transfer = []
         self.pencil = [None, None]
 
-        axis = self.axes[-1]
-        pencil = Pencil(self.subcomm, shape, axis)
-        xfftn = FFT(pencil.subshape, axis, dtype, **kw)
+        axes = self.axes[-1]
+        pencil = Pencil(self.subcomm, shape, axes[-1])
+        xfftn = FFT(pencil.subshape, axes, dtype, **kw)
         self.xfftn.append(xfftn)
 
         self.pencil[0] = pencilA = pencil
         if np.issubdtype(dtype, np.floating):
-            shape[axis] = shape[axis]//2 + 1
+            shape[axes[-1]] = shape[axes[-1]]//2 + 1
             dtype = xfftn.forward.output_array.dtype
-            pencilA = Pencil(self.subcomm, shape, axis)
-        for axis in reversed(self.axes[:-1]):
-            pencilB = pencilA.pencil(axis)
+            pencilA = Pencil(self.subcomm, shape, axes[-1])
+        for axes in reversed(self.axes[:-1]):
+            pencilB = pencilA.pencil(axes[-1])
             transAB = pencilA.transfer(pencilB, dtype)
-            xfftn = FFT(pencilB.subshape, axis, dtype, **kw)
+            xfftn = FFT(pencilB.subshape, axes, dtype, **kw)
             self.xfftn.append(xfftn)
             self.transfer.append(transAB)
             pencilA = pencilB

@@ -127,8 +127,8 @@ class Pencil(object):
             while len(subcomm) < len(shape) - 1:
                 subcomm.append(MPI.COMM_SELF)
             subcomm.insert(axis, MPI.COMM_SELF)
-        else:
-            assert subcomm[axis].Get_size() == 1
+        assert len(subcomm) == len(shape)
+        assert subcomm[axis].Get_size() == 1
 
         subshape = [None] * len(shape)
         substart = [None] * len(shape)
