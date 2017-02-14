@@ -195,7 +195,7 @@ class PFFT(object):
         if padding is True:
             real = False
             for i in range(len(shape)):
-                shape[i] = 3*shape[i]//2
+                shape[i] = (3*shape[i])//2
 
         collapse = False # kw.pop('collapse', True)
         if collapse and not padding:
@@ -227,7 +227,7 @@ class PFFT(object):
                 real = True
 
             else:
-                shape[axes[-1]] = 2*shape[axes[-1]]//3
+                shape[axes[-1]] = (2*shape[axes[-1]])//3
 
             pencilA = Pencil(self.subcomm, shape, axes[-1])
             padder = Padder(padded_array=xfftn.forward.output_array,
@@ -248,7 +248,7 @@ class PFFT(object):
             self.xfftn.append(xfftn)
             if padding:
                 truncated_shape = list(xfftn.forward.output_array.shape)
-                truncated_shape[axes[-1]] = 2*truncated_shape[axes[-1]]//3
+                truncated_shape[axes[-1]] = (2*truncated_shape[axes[-1]])//3
                 padder = Padder(padded_array=xfftn.forward.output_array,
                                 truncated_shape=tuple(truncated_shape),
                                 axis=axes[-1])
@@ -258,7 +258,7 @@ class PFFT(object):
             pencilA = pencilB
             if padding:
                 shape[axes[-1]] = truncated_shape[axes[-1]]
-                pencilA = Pencil(self.subcomm, shape, axes[-1])
+                pencilA = Pencil(pencilB.subcomm, shape, axes[-1])
 
         self.pencil[1] = pencilA
 
