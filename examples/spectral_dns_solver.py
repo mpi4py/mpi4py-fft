@@ -71,7 +71,7 @@ class DistributedArray(ndarray):
 
 def get_local_mesh(pfft):
     """Returns local mesh."""
-
+    N = pfft.pencil[0].shape
     x1 = slice(pfft.forward.input_pencil.substart[0],
                pfft.forward.input_pencil.substart[0] +
                pfft.forward.input_pencil.subshape[0])
@@ -131,6 +131,7 @@ L = array([2*pi, 4*pi, 4*pi], dtype=float) # Needs to be (2*int)*pi in all direc
 
 # Create instance of PFFT to perform parallel FFT
 FFT = PFFT(MPI.COMM_WORLD, N)
+FFT_pad = PFFT(MPI.COMM_WORLD, N, padding=True)
 
 # Declare variables needed to solve Navier-Stokes
 U = DistributedArray(FFT, 'input', tensor=3)        # Velocity
@@ -144,6 +145,9 @@ b = [0.5, 0.5, 1.]                                  # Runge-Kutta parameter
 dU = DistributedArray(FFT, 'output', tensor=3)      # Right hand side of ODEs
 curl = DistributedArray(FFT, 'input', tensor=3)
 
+U_pad = DistributedArray(FFT_pad, 'input', tensor=3)
+curl_pad = DistributedArray(FFT_pad, 'input', tensor=3)
+
 X = get_local_mesh(FFT)
 K = get_scaled_local_wavenumbermesh(FFT)
 K2 = sum(K*K, 0, dtype=float)
@@ -152,25 +156,25 @@ K_over_K2 = K.astype(float) / where(K2 == 0, 1, K2).astype(float)
 
 def cross(x, y, z):
     """Cross product z = x \times y"""
-    z[0] = FFT.forward(x[1]*y[2]-x[2]*y[1], z[0])
-    z[1] = FFT.forward(x[2]*y[0]-x[0]*y[2], z[1])
-    z[2] = FFT.forward(x[0]*y[1]-x[1]*y[0], z[2])
+    z[0] = FFT_pad.forward(x[1]*y[2]-x[2]*y[1], z[0])
+    z[1] = FFT_pad.forward(x[2]*y[0]-x[0]*y[2], z[1])
+    z[2] = FFT_pad.forward(x[0]*y[1]-x[1]*y[0], z[2])
     return z
 
 
 def compute_curl(x, z):
-    z[2] = FFT.backward(1j*(K[0]*x[1]-K[1]*x[0]), z[2])
-    z[1] = FFT.backward(1j*(K[2]*x[0]-K[0]*x[2]), z[1])
-    z[0] = FFT.backward(1j*(K[1]*x[2]-K[2]*x[1]), z[0])
+    z[2] = FFT_pad.backward(1j*(K[0]*x[1]-K[1]*x[0]), z[2])
+    z[1] = FFT_pad.backward(1j*(K[2]*x[0]-K[0]*x[2]), z[1])
+    z[0] = FFT_pad.backward(1j*(K[1]*x[2]-K[2]*x[1]), z[0])
     return z
 
 
 def compute_rhs(rhs):
     for j in range(3):
-        U[j] = FFT.backward(U_hat[j], U[j])
+        U_pad[j] = FFT_pad.backward(U_hat[j], U_pad[j])
 
-    curl[:] = compute_curl(U_hat, curl)
-    rhs = cross(U, curl, rhs)
+    curl_pad[:] = compute_curl(U_hat, curl_pad)
+    rhs = cross(U_pad, curl_pad, rhs)
     P_hat[:] = sum(rhs*K_over_K2, 0, out=P_hat)
     rhs -= P_hat*K
     rhs -= nu*K2*U_hat
@@ -211,4 +215,4 @@ for i in range(3):
 # Check energy
 k = MPI.COMM_WORLD.reduce(sum(U*U)/N[0]/N[1]/N[2]/2)
 if MPI.COMM_WORLD.Get_rank() == 0:
-    assert round(k - 0.124953117517, 7) == 0
+    assert round(float(k) - 0.124953117517, 7) == 0

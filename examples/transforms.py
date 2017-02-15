@@ -11,30 +11,31 @@ from time import time
 
 # Set global size of the computational box
 M = 4
-N = array([2**M, 2**(M+1), 2**(M+2)], dtype=int)
+N = array([2**M, 2**(M+1)+2, 2**(M+2)], dtype=int)
 
 fft = PFFT(MPI.COMM_WORLD, N)
 pfft = PFFT(MPI.COMM_WORLD, N, padding=True)
-#print(fft.axes, fft.forward._xfftn[1])
 
 u = random.random(fft.forward.input_array.shape)
-#MPI.COMM_WORLD.barrier()
 
-#t0 = time()
 u_hat = fft.forward(u)
-#u_hat[N[0]//2] = 0
-#u_hat[:, N[1]//2] = 0
-u_hat[:, :, 0] = 0
 u_padded = pfft.backward(u_hat)
 u_hatc = u_hat.copy()
 u_hatc = pfft.forward(u_padded)
 
 assert allclose(u_hat, u_hatc)
 
+# Just complex to complex
+ffft = PFFT(MPI.COMM_WORLD, N, dtype=complex, padding=False)
 cfft = PFFT(MPI.COMM_WORLD, N, dtype=complex, padding=True)
+uc = random.random(cfft.backward.input_array.shape) + random.random(cfft.backward.input_array.shape)*1j
 
-uc = random.random(cfft.backward.input_array.shape).astype(complex)
 u2 = cfft.backward(uc)
-u3 = cfft.forward(u2)
+f2 = ffft.backward(uc)
+u2 = cfft.backward(uc)
+f2 = ffft.backward(uc)
 
-assert allclose(uc, u3)
+u3 = cfft.forward(u2)
+f3 = ffft.forward(f2)
+
+assert allclose(f3, u3)

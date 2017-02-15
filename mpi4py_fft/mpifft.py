@@ -10,19 +10,20 @@ from .pencil import Subcomm
 class Padder(object):
 
     def __init__(self, padded_array, truncated_shape=(0,), axis=None,
-                 real=False):
+                 real=False, scale=1.0):
         truncated_array = np.zeros(truncated_shape, dtype=padded_array.dtype)
         self.forward = functools.partial(Padder.forward, padded_array,
-                                         truncated_array, axis, real)
+                                         truncated_array, axis, real, scale)
         self.backward = functools.partial(Padder.backward, truncated_array,
-                                          padded_array, axis, real)
+                                          padded_array, axis, real, scale)
         self.forward.input_array = self.forward.args[0]
         self.forward.output_array = self.forward.args[1]
         self.backward.input_array = self.backward.args[0]
         self.backward.output_array = self.backward.args[1]
 
     @staticmethod
-    def backward(fu, fp, axis, real):
+    def backward(fu, fp, axis, real, scale):
+        fp.fill(0)
         if real:
             s = [slice(0, n) for n in fu.shape]
             fp[s] = fu[:]
@@ -33,24 +34,23 @@ class Padder(object):
             fp[su] = fu[su]
             su[axis] = slice(-N//2, None)
             fp[su] = fu[su]
-
-        return fp
+        fp *= scale
 
     @staticmethod
-    def forward(fp, fu, axis, real):
+    def forward(fp, fu, axis, real, scale):
+        fu.fill(0)
         N = fu.shape[axis]
         if not real:
             su = [slice(None)]*fu.ndim
-            su[axis] = slice(0, N//2)
+            su[axis] = slice(0, N//2+1)
             fu[su] = fp[su]
             su[axis] = slice(-N//2, None)
-            fu[su] = fp[su]
-
+            fu[su] += fp[su]
         else:
             s = [slice(None)]*fu.ndim
             s[axis] = slice(0, N)
             fu[:] = fp[s]
-        return fu
+        fu *= (1./scale)
 
 
 class Transform(object):
@@ -95,6 +95,7 @@ class Transform(object):
                 arrayA = self._xfftn[i].output_array
                 arrayB = self._xfftn[i+1].input_array
                 self._transfer[i](arrayA, arrayB)
+
             self._xfftn[-1](**kw)
 
             if output_array is not None:
@@ -103,24 +104,21 @@ class Transform(object):
             else:
                 return self.output_array
 
-
         elif self._xfftn[0].direction == 'FFTW_BACKWARD':
 
             if input_array is not None:
                 self.input_array[...] = input_array
 
-            dummy = self._padder[0]()
-
             for i in range(len(self._transfer)):
+                self._padder[i]()
                 self._xfftn[i](**kw)
                 arrayA = self._xfftn[i].output_array
                 arrayB = self._padder[i+1].input_array
                 self._transfer[i](arrayA, arrayB)
-                dummy = self._padder[i+1]()
 
+            self._padder[-1]()
             self._xfftn[-1](**kw)
 
-            self.output_array[:] *= (27./8.) # 1.5**3
             if output_array is not None:
                 output_array[...] = self.output_array
                 return output_array
@@ -135,19 +133,19 @@ class Transform(object):
 
             for i in range(len(self._transfer)):
                 self._xfftn[i](**kw)
-                arrayA = self._padder[i]()
+                self._padder[i]()
+                arrayA = self._padder[i].output_array
                 arrayB = self._xfftn[i+1].input_array
                 self._transfer[i](arrayA, arrayB)
 
             self._xfftn[-1](**kw)
-            out_array = self._padder[-1]()
+            self._padder[-1]()
 
-            out_array *= (8./27.) # (2/3)**3
             if output_array is not None:
-                output_array[...] = out_array
+                output_array[...] = self.output_array
                 return output_array
             else:
-                return out_array
+                return self.output_array
 
 
 class PFFT(object):
@@ -232,7 +230,7 @@ class PFFT(object):
             pencilA = Pencil(self.subcomm, shape, axes[-1])
             padder = Padder(padded_array=xfftn.forward.output_array,
                             truncated_shape=pencilA.subshape, axis=axes[-1],
-                            real=real)
+                            real=real, scale=1.5)
             self.padder.append(padder)
 
         else:
@@ -251,7 +249,7 @@ class PFFT(object):
                 truncated_shape[axes[-1]] = (2*truncated_shape[axes[-1]])//3
                 padder = Padder(padded_array=xfftn.forward.output_array,
                                 truncated_shape=tuple(truncated_shape),
-                                axis=axes[-1])
+                                axis=axes[-1], scale=1.5)
                 self.padder.append(padder)
 
             self.transfer.append(transAB)
