@@ -17,17 +17,15 @@ class Transform(object):
 
     @property
     def input_array(self):
-        if len(self._padder) > 0 and self._xfftn[0].direction == 'FFTW_BACKWARD':
+        if self._padder and self._xfftn[0].direction == 'FFTW_BACKWARD':
             return self._padder[0].input_array
-        else:
-            return self._xfftn[0].input_array
+        return self._xfftn[0].input_array
 
     @property
     def output_array(self):
-        if len(self._padder) > 0 and self._xfftn[0].direction == 'FFTW_FORWARD':
+        if self._padder and self._xfftn[0].direction == 'FFTW_FORWARD':
             return self._padder[-1].output_array
-        else:
-            return self._xfftn[-1].output_array
+        return self._xfftn[-1].output_array
 
     @property
     def input_pencil(self):
@@ -39,7 +37,7 @@ class Transform(object):
 
     def __call__(self, input_array=None, output_array=None, **kw):
 
-        if len(self._padder) == 0:
+        if not self._padder:
             if input_array is not None:
                 self.input_array[...] = input_array
 
@@ -54,8 +52,7 @@ class Transform(object):
             if output_array is not None:
                 output_array[...] = self.output_array
                 return output_array
-            else:
-                return self.output_array
+            return self.output_array
 
         elif self._xfftn[0].direction == 'FFTW_BACKWARD':
 
@@ -75,8 +72,7 @@ class Transform(object):
             if output_array is not None:
                 output_array[...] = self.output_array
                 return output_array
-            else:
-                return self.output_array
+            return self.output_array
 
 
         elif self._xfftn[0].direction == 'FFTW_FORWARD':
@@ -97,8 +93,7 @@ class Transform(object):
             if output_array is not None:
                 output_array[...] = self.output_array
                 return output_array
-            else:
-                return self.output_array
+            return self.output_array
 
 
 class PFFT(object):
@@ -145,8 +140,8 @@ class PFFT(object):
         self.padding = padding
         if padding is True:
             real = False
-            for i in range(len(shape)):
-                shape[i] = (3*shape[i])//2
+            for i, s in enumerate(shape):
+                shape[i] = 3*s//2
 
         collapse = False # kw.pop('collapse', True)
         if collapse and not padding:
@@ -178,7 +173,7 @@ class PFFT(object):
                 real = True
 
             else:
-                shape[axes[-1]] = (2*shape[axes[-1]])//3
+                shape[axes[-1]] = 2*shape[axes[-1]]//3
 
             pencilA = Pencil(self.subcomm, shape, axes[-1])
             padder = Padder(padded_array=xfftn.forward.output_array,
@@ -199,7 +194,7 @@ class PFFT(object):
             self.xfftn.append(xfftn)
             if padding:
                 trunc_shape = list(xfftn.forward.output_array.shape)
-                trunc_shape[axes[-1]] = (2*trunc_shape[axes[-1]])//3
+                trunc_shape[axes[-1]] = 2*trunc_shape[axes[-1]]//3
                 padder = Padder(padded_array=xfftn.forward.output_array,
                                 trunc_shape=tuple(trunc_shape),
                                 axis=axes[-1], scale=1.5)
