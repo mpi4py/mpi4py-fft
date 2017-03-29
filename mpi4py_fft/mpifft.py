@@ -52,11 +52,11 @@ class PFFT(object):
 
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, comm, shape, axes=None, dtype=float, **kw):
+    def __init__(self, comm, shape, axes=None, dtype=float, padding=1, **kw):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
-        shape = list(shape)
+        shape = [int(i*padding) for i in shape]
         assert len(shape) > 0
         assert min(shape) > 0
 
@@ -84,8 +84,12 @@ class PFFT(object):
             dims[axes[-1]] = 1
             self.subcomm = Subcomm(comm, dims)
 
-        collapse = True # kw.pop('collapse', True)
-        if collapse:
+        collapse = False # kw.pop('collapse', True)
+
+        if padding > 1+1e-8:
+            collapse = False
+
+        if collapse is True:
             groups = [[]]
             for axis in reversed(axes):
                 if self.subcomm[axis].Get_size() == 1:
@@ -102,21 +106,26 @@ class PFFT(object):
 
         axes = self.axes[-1]
         pencil = Pencil(self.subcomm, shape, axes[-1])
-        xfftn = FFT(pencil.subshape, axes, dtype, **kw)
+        xfftn = FFT(pencil.subshape, axes, dtype, padding, **kw)
         self.xfftn.append(xfftn)
-
         self.pencil[0] = pencilA = pencil
-        if np.issubdtype(dtype, np.floating):
-            shape[axes[-1]] = shape[axes[-1]]//2 + 1
+        if not shape[axes[-1]] == xfftn.forward.output_array.shape[axes[-1]]:
             dtype = xfftn.forward.output_array.dtype
+            shape[axes[-1]] = xfftn.forward.output_array.shape[axes[-1]]
             pencilA = Pencil(self.subcomm, shape, axes[-1])
+
         for axes in reversed(self.axes[:-1]):
             pencilB = pencilA.pencil(axes[-1])
             transAB = pencilA.transfer(pencilB, dtype)
-            xfftn = FFT(pencilB.subshape, axes, dtype, **kw)
+            xfftn = FFT(pencilB.subshape, axes, dtype, padding, **kw)
             self.xfftn.append(xfftn)
             self.transfer.append(transAB)
             pencilA = pencilB
+            if not shape[axes[-1]] == xfftn.forward.output_array.shape[axes[-1]]:
+                dtype = xfftn.forward.output_array.dtype
+                shape[axes[-1]] = xfftn.forward.output_array.shape[axes[-1]]
+                pencilA = Pencil(pencilB.subcomm, shape, axes[-1])
+
         self.pencil[1] = pencilA
 
         self.forward = Transform(
