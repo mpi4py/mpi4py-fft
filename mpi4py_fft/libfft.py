@@ -41,19 +41,13 @@ class _Xfftn_wrap(object):
 
     # pylint: disable=too-few-public-methods
 
-    __slots__ = ('_xfftn', 'input_array', 'output_array')
+    __slots__ = ('_xfftn', 'axes', 'input_array', 'output_array')
 
-    def __init__(self, xfftn_obj, input_array, output_array):
+    def __init__(self, xfftn_obj, axes, input_array, output_array):
         object.__setattr__(self, '_xfftn', xfftn_obj)
+        object.__setattr__(self, 'axes', axes)
         object.__setattr__(self, 'input_array', input_array)
         object.__setattr__(self, 'output_array', output_array)
-
-    def __getattribute__(self, name):
-        if name in ('input_array', 'output_array'):
-            return object.__getattribute__(self, name)
-        else:
-            obj = object.__getattribute__(self, '_xfftn')
-            return getattr(obj, name)
 
     def __call__(self, input_array=None, output_array=None, **options):
         xfftn = object.__getattribute__(self, '_xfftn')
@@ -61,7 +55,7 @@ class _Xfftn_wrap(object):
             self.input_array[...] = input_array
         xfftn(**options)
         if output_array is not None:
-            output_array[...] = xfftn_obj.output_array
+            output_array[...] = self.output_array
             return output_array
         else:
             return self.output_array
@@ -94,17 +88,18 @@ class FFT(object):
 
         self.fwd, self.bck = _Xfftn_plan(shape, axes, dtype, kw)
         self.real_transform = np.issubdtype(dtype, np.floating)
+        self.axes = axes
         U, V = self.fwd.input_array, self.fwd.output_array
 
         if padding > 1.+1e-8:
             assert len(axes) == 1
             self.axis = axes[-1]
             trunc_array = self._get_truncarray(shape, dtype)
-            self.forward = _Xfftn_wrap(self._forward, U, trunc_array)
-            self.backward = _Xfftn_wrap(self._backward, trunc_array, U)
+            self.forward = _Xfftn_wrap(self._forward, tuple(axes), U, trunc_array)
+            self.backward = _Xfftn_wrap(self._backward, tuple(axes), trunc_array, U)
         else:
-            self.forward = _Xfftn_wrap(self._forward, U, V)
-            self.backward = _Xfftn_wrap(self._backward, V, U)
+            self.forward = _Xfftn_wrap(self._forward, tuple(axes), U, V)
+            self.backward = _Xfftn_wrap(self._backward, tuple(axes), V, U)
 
     def _get_truncarray(self, shape, dtype):
         if not self.real_transform:

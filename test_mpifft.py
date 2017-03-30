@@ -96,4 +96,8 @@ def test_mpifft():
 
 
 if __name__ == '__main__':
+    import time
+    t0 = time.time()
     test_mpifft()
+    print("Time = {}".format(time.time()-t0))
+
