@@ -1,5 +1,6 @@
 import numpy as np
 from mpi4py import MPI  # pylint: disable=unused-import
+from copy import copy
 
 from .libfft import FFT
 from .pencil import Pencil
@@ -52,13 +53,11 @@ class PFFT(object):
 
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, comm, shape, axes=None, dtype=float, padding=1, **kw):
+    def __init__(self, comm, shape, axes=None, dtype=float, padding=False,
+                 collapse=False, **kw):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
-        shape = [int(i*padding) for i in shape]
-        assert len(shape) > 0
-        assert min(shape) > 0
 
         if axes is not None:
             axes = list(axes) if np.ndim(axes) else [axes]
@@ -72,6 +71,18 @@ class PFFT(object):
         assert 0 < len(axes) <= len(shape)
         assert sorted(axes) == sorted(set(axes))
 
+        shape = list(shape)
+        if padding is not False:
+            assert len(padding) == len(shape)
+            for axis in axes:
+                old = np.float(shape[axis])
+                shape[axis] = int(np.floor(shape[axis]*padding[axis]))
+                padding[axis] = shape[axis] / old
+
+        self._input_shape = copy(shape)
+        assert len(shape) > 0
+        assert min(shape) > 0
+
         dtype = np.dtype(dtype)
         assert dtype.char in 'fdgFDG'
 
@@ -84,10 +95,9 @@ class PFFT(object):
             dims[axes[-1]] = 1
             self.subcomm = Subcomm(comm, dims)
 
-        collapse = False # kw.pop('collapse', True)
-
-        if padding > 1+1e-8:
+        if padding is not False:
             collapse = False
+        self.collapse = collapse
 
         if collapse is True:
             groups = [[]]
@@ -127,6 +137,7 @@ class PFFT(object):
                 pencilA = Pencil(pencilB.subcomm, shape, axes[-1])
 
         self.pencil[1] = pencilA
+        self._output_shape = copy(shape)
 
         self.forward = Transform(
             [o.forward for o in self.xfftn],
@@ -141,3 +152,104 @@ class PFFT(object):
         self.subcomm.destroy()
         for trans in self.transfer:
             trans.destroy()
+
+    def local_shape(self, spectral=True):
+        if not spectral:
+            return self.forward.input_pencil.subshape
+        else:
+            return self.backward.input_pencil.subshape
+
+    def local_slice(self, spectral=True):
+        """The local view into the global data"""
+
+        if not spectral is True:
+            ip = self.forward.input_pencil
+            s = [slice(start, start+shape) for start, shape in zip(ip.substart,
+                                                                   ip.subshape)]
+        else:
+            ip = self.backward.input_pencil
+            s = [slice(start, start+shape) for start, shape in zip(ip.substart,
+                                                                   ip.subshape)]
+        return s
+
+    def input_shape(self):
+        return self._input_shape
+
+    def output_shape(self):
+        return self._output_shape
+
+    def get_local_mesh(self, L):
+        """Returns local mesh."""
+        X = np.ogrid[self.local_slice(False)]
+        N = self.input_shape()
+        for i in range(len(N)):
+            X[i] = (X[i]*L[i]/N[i])
+        X = [np.broadcast_to(x, self.local_shape(False)) for x in X]
+        return X
+
+    def get_local_wavenumbermesh(self, L):
+        """Returns local wavenumber mesh."""
+
+        s = self.local_slice()
+        N = self.input_shape()
+
+        # Set wavenumbers in grid
+        k = [np.fft.fftfreq(n, 1./n).astype(int) for n in N[:-1]]
+        if self.forward.input_array.dtype.char in 'fdg':
+            k.append(np.fft.rfftfreq(N[-1], 1./N[-1]).astype(int))
+        else:
+            k.append(np.fft.fftfreq(N[-1], 1./N[-1]).astype(int))
+        K = [ki[si] for ki, si in zip(k, s)]
+        Ks = np.meshgrid(*K, indexing='ij', sparse=True)
+        Lp = 2*np.pi/L
+        for i in range(len(Ks)):
+            Ks[i] = (Ks[i]*Lp[i]).astype(float)
+        return [np.broadcast_to(k, self.local_shape(True)) for k in Ks]
+
+
+class Function(np.ndarray):
+    """Distributed Numpy array for instance of PFFT class
+
+    Parameters
+    ----------
+
+    pfft : Instance of PFFT class
+    input_array: boolean.
+        If True then create Function of shape/type for input to PFFT.forward,
+        otherwise create Function of shape/type for output from PFFT.forward
+    val : int or float
+        Value used to initialize array
+    tensor: int or tuple
+        For tensorvalued Functions, e.g., tensor=(3) for a vector in 3D.
+
+    For more information, see numpy.ndarray
+
+    Examples
+    --------
+    from mpi4py_fft import MPI, PFFT, Function
+
+    FFT = PFFT(MPI.COMM_WORLD, [64, 64, 64])
+    u = Function(FFT, tensor=3)
+    uhat = Function(FFT, False, tensor=3)
+
+    """
+
+    # pylint: disable=too-few-public-methods,too-many-arguments
+
+    def __new__(cls, pfft, input_array=True, val=0, tensor=None):
+
+        shape = pfft.forward.input_array.shape
+        dtype = pfft.forward.input_array.dtype
+        if input_array is False:
+            shape = pfft.forward.output_array.shape
+            dtype = pfft.forward.output_array.dtype
+
+        if not tensor is None:
+            tensor = list(tensor) if np.ndim(tensor) else [tensor]
+            shape = tensor + list(shape)
+
+        obj = np.ndarray.__new__(cls,
+                                 shape,
+                                 dtype=dtype)
+        obj.fill(val)
+        return obj
