@@ -41,13 +41,12 @@ class _Xfftn_wrap(object):
 
     # pylint: disable=too-few-public-methods
 
-    __slots__ = ('_xfftn', 'axes', '_input_array', '_output_array')
+    __slots__ = ('_xfftn', '_input_array', '_output_array')
 
-    def __init__(self, xfftn_obj, axes, input_array, output_array):
+    def __init__(self, xfftn_obj, input_array, output_array):
         object.__setattr__(self, '_xfftn', xfftn_obj)
         object.__setattr__(self, '_input_array', input_array)
         object.__setattr__(self, '_output_array', output_array)
-        object.__setattr__(self, 'axes', axes)
 
     @property
     def input_array(self):
@@ -104,11 +103,11 @@ class FFTBase(object):
             shape = list(shape)
             shape[axis] = int(np.round(shape[axis] / self.padding_factor))
             return pyfftw.empty_aligned(shape, dtype=dtype)
-        else:
-            shape = list(shape)
-            shape[axis] = int(np.round(shape[axis] / self.padding_factor))
-            shape[axis] = shape[axis]//2 + 1
-            return pyfftw.empty_aligned(shape, dtype=dtype)
+
+        shape = list(shape)
+        shape[axis] = int(np.round(shape[axis] / self.padding_factor))
+        shape[axis] = shape[axis]//2 + 1
+        return pyfftw.empty_aligned(shape, dtype=dtype)
 
     def _truncation_forward(self, padded_array, trunc_array):
         axis = self.axes[-1]
@@ -162,11 +161,11 @@ class FFT(FFTBase):
             assert len(self.axes) == 1
             self.padding_factor = padding[self.axes[-1]] if np.ndim(padding) else padding
             trunc_array = self._get_truncarray(shape, V.dtype)
-            self.forward = _Xfftn_wrap(self._forward, tuple(self.axes), U, trunc_array)
-            self.backward = _Xfftn_wrap(self._backward, tuple(self.axes), trunc_array, U)
+            self.forward = _Xfftn_wrap(self._forward, U, trunc_array)
+            self.backward = _Xfftn_wrap(self._backward, trunc_array, U)
         else:
-            self.forward = _Xfftn_wrap(self._forward, tuple(self.axes), U, V)
-            self.backward = _Xfftn_wrap(self._backward, tuple(self.axes), V, U)
+            self.forward = _Xfftn_wrap(self._forward, U, V)
+            self.backward = _Xfftn_wrap(self._backward, V, U)
 
     def _forward(self, **kw):
         self.fwd(None, None, **kw)
@@ -212,11 +211,11 @@ class FFTNumPy(FFTBase):
             self.axis = self.axes[-1]
             self.padding_factor = padding[axes[-1]] if np.ndim(padding) else padding
             trunc_array = self._get_truncarray(shape, arrayB.dtype)
-            self.forward = _Xfftn_wrap(self._forward, tuple(self.axes), arrayA, trunc_array)
-            self.backward = _Xfftn_wrap(self._backward, tuple(self.axes), trunc_array, arrayA)
+            self.forward = _Xfftn_wrap(self._forward, arrayA, trunc_array)
+            self.backward = _Xfftn_wrap(self._backward, trunc_array, arrayA)
         else:
-            self.forward = _Xfftn_wrap(self._forward, tuple(self.axes), arrayA, arrayB)
-            self.backward = _Xfftn_wrap(self._backward, tuple(self.axes), arrayB, arrayA)
+            self.forward = _Xfftn_wrap(self._forward, arrayA, arrayB)
+            self.backward = _Xfftn_wrap(self._backward, arrayB, arrayA)
 
     def _forward(self, **kw):
         self.fwd.output_array[:] = self.fwd(self.fwd.input_array, s=self.sizes,

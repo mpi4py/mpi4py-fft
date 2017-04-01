@@ -1,6 +1,6 @@
+from copy import copy
 import numpy as np
 from mpi4py import MPI  # pylint: disable=unused-import
-from copy import copy
 
 from .libfft import FFT
 from .pencil import Pencil
@@ -132,7 +132,6 @@ class PFFT(object):
             self.transfer.append(transAB)
             pencilA = pencilB
             if not shape[axes[-1]] == xfftn.forward.output_array.shape[axes[-1]]:
-                dtype = xfftn.forward.output_array.dtype
                 shape[axes[-1]] = xfftn.forward.output_array.shape[axes[-1]]
                 pencilA = Pencil(pencilB.subcomm, shape, axes[-1])
 
@@ -162,7 +161,7 @@ class PFFT(object):
     def local_slice(self, spectral=True):
         """The local view into the global data"""
 
-        if not spectral is True:
+        if spectral is not True:
             ip = self.forward.input_pencil
             s = [slice(start, start+shape) for start, shape in zip(ip.substart,
                                                                    ip.subshape)]

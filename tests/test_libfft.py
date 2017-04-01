@@ -38,7 +38,6 @@ def test_libfft():
 
                         A.fill(0)
                         A = fft.backward(B, A)
-
                         assert allclose(A, X)
 
     # Padding is different because the shape needs to be modified prior to
@@ -70,7 +69,6 @@ def test_libfft():
 
                         B.fill(0)
                         B = fft.forward(A, B)
-                        #print(np.linalg.norm(B-X, np.inf, axis=axis).max())
                         assert allclose(B, X)
 
 if __name__ == '__main__':
