@@ -97,18 +97,6 @@ class FFTBase(object):
         self.real_transform = np.issubdtype(dtype, np.floating)
         self.padding_factor = 1
 
-    def _get_truncarray(self, shape, dtype):
-        axis = self.axes[-1]
-        if not self.real_transform:
-            shape = list(shape)
-            shape[axis] = int(np.round(shape[axis] / self.padding_factor))
-            return pyfftw.empty_aligned(shape, dtype=dtype)
-
-        shape = list(shape)
-        shape[axis] = int(np.round(shape[axis] / self.padding_factor))
-        shape[axis] = shape[axis]//2 + 1
-        return pyfftw.empty_aligned(shape, dtype=dtype)
-
     def _truncation_forward(self, padded_array, trunc_array):
         axis = self.axes[-1]
         if self.padding_factor > 1.0+1e-8:
@@ -177,6 +165,18 @@ class FFT(FFTBase):
         self.bck(None, None, **kw)
         return self.backward.output_array
 
+    def _get_truncarray(self, shape, dtype):
+        axis = self.axes[-1]
+        if not self.real_transform:
+            shape = list(shape)
+            shape[axis] = int(np.round(shape[axis] / self.padding_factor))
+            return pyfftw.empty_aligned(shape, dtype=dtype)
+
+        shape = list(shape)
+        shape[axis] = int(np.round(shape[axis] / self.padding_factor))
+        shape[axis] = shape[axis]//2 + 1
+        return pyfftw.empty_aligned(shape, dtype=dtype)
+
 
 class FFTNumPy(FFTBase):
 
@@ -228,6 +228,18 @@ class FFTNumPy(FFTBase):
         self.backward.output_array[:] = self.bck(self.bck.input_array, s=self.sizes,
                                                  axes=self.axes, **kw)
         return self.backward.output_array
+
+    def _get_truncarray(self, shape, dtype):
+        axis = self.axes[-1]
+        if not self.real_transform:
+            shape = list(shape)
+            shape[axis] = int(np.round(shape[axis] / self.padding_factor))
+            return np.zeros(shape, dtype=dtype)
+
+        shape = list(shape)
+        shape[axis] = int(np.round(shape[axis] / self.padding_factor))
+        shape[axis] = shape[axis]//2 + 1
+        return np.zeros(shape, dtype=dtype)
 
 
 #FFT = FFTNumPy
