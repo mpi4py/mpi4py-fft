@@ -41,12 +41,13 @@ class _Xfftn_wrap(object):
 
     # pylint: disable=too-few-public-methods
 
-    __slots__ = ('_xfftn', '_input_array', '_output_array')
+    __slots__ = ('_xfftn', '__doc__', '_input_array', '_output_array')
 
     def __init__(self, xfftn_obj, input_array, output_array):
         object.__setattr__(self, '_xfftn', xfftn_obj)
         object.__setattr__(self, '_input_array', input_array)
         object.__setattr__(self, '_output_array', output_array)
+        object.__setattr__(self, '__doc__', xfftn_obj.__doc__)
 
     @property
     def input_array(self):

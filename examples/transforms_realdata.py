@@ -13,17 +13,20 @@ from time import time
 M = 4
 N = array([2**M, 2**(M+1), 2**(M+2)], dtype=int)
 
-fft = PFFT(MPI.COMM_WORLD, N, collapse=False)
-pfft = PFFT(MPI.COMM_WORLD, N, padding=[1., 1.5, 1.])
+fft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), collapse=False)
+pfft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), padding=[1., 1.5, 1.])
 
-u = Function(fft)
+u = Function(fft, False)
 u[:] = random.random(u.shape).astype(u.dtype)
 
-u_hat = Function(fft, False)
+u_hat = Function(fft)
 u_hat = fft.forward(u, u_hat)
 uj = zeros_like(u)
 uj = fft.backward(u_hat, uj)
 assert allclose(uj, u)
+
+#print("U", u.shape)
+#print("U_hat", u_hat.shape)
 
 u_padded = zeros(pfft.forward.input_array.shape)
 u_padded[:] = random.random(u_padded.shape)
@@ -42,3 +45,19 @@ u3 = uc.copy()
 u3 = cfft.forward(u2, u3)
 
 assert allclose(uc, u3)
+
+M = 4
+N = array([31, 32], dtype=int)
+
+fft = PFFT(MPI.COMM_WORLD, N, axes=(0,1))
+u = Function(fft, False)
+u_hat = Function(fft)
+print("U0", u.shape)
+print("U0_hat", u_hat.shape)
+fft = PFFT(MPI.COMM_WORLD, N, axes=(1,0))
+u = Function(fft, False)
+u_hat = Function(fft)
+print("U", u.shape)
+print("U_hat", u_hat.shape)
+
+

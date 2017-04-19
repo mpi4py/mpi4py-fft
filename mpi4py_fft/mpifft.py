@@ -213,8 +213,8 @@ class Function(np.ndarray):
     ----------
 
     pfft : Instance of PFFT class
-    input_array: boolean.
-        If True then create Function of shape/type for input to PFFT.forward,
+    forward_output: boolean.
+        If False then create Function of shape/type for input to PFFT.forward,
         otherwise create Function of shape/type for output from PFFT.forward
     val : int or float
         Value used to initialize array
@@ -235,11 +235,11 @@ class Function(np.ndarray):
 
     # pylint: disable=too-few-public-methods,too-many-arguments
 
-    def __new__(cls, pfft, input_array=True, val=0, tensor=None):
+    def __new__(cls, pfft, forward_output=True, val=0, tensor=None):
 
         shape = pfft.forward.input_array.shape
         dtype = pfft.forward.input_array.dtype
-        if input_array is False:
+        if forward_output is True:
             shape = pfft.forward.output_array.shape
             dtype = pfft.forward.output_array.dtype
 
