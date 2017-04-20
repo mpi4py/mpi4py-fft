@@ -128,7 +128,7 @@ class FFTBase(object):
             else:
                 N = trunc_array.shape[axis]
                 su = [slice(None)]*trunc_array.ndim
-                su[axis] = slice(0, np.ceil(N/2).astype(np.int))
+                su[axis] = slice(0, np.ceil(N/2.).astype(np.int))
                 padded_array[su] = trunc_array[su]
                 su[axis] = slice(-(N//2), None)
                 padded_array[su] = trunc_array[su]
