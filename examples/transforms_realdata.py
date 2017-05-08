@@ -1,8 +1,3 @@
-__author__ = "Mikael Mortensen <mikaem@math.uio.no>"
-__date__ = "2016-03-09"
-__copyright__ = "Copyright (C) 2016 " + __author__
-__license__  = "GNU Lesser GPL version 3 or any later version"
-
 from numpy import *
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT, Function
@@ -11,10 +6,10 @@ from time import time
 
 # Set global size of the computational box
 M = 4
-N = array([2**M, 2**(M+1), 2**(M+2)], dtype=int)
+N = array([13, 13, 13], dtype=int)
 
 fft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), collapse=False)
-pfft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), padding=[1., 1.5, 1.])
+pfft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), padding=[1.5, 1.5, 1.5])
 
 u = Function(fft, False)
 u[:] = random.random(u.shape).astype(u.dtype)
@@ -29,15 +24,12 @@ assert allclose(uj, u)
 #print("U_hat", u_hat.shape)
 
 u_padded = zeros(pfft.forward.input_array.shape)
-u_padded[:] = random.random(u_padded.shape)
-uc = u_padded.copy()
-u_hat.fill(0)
-u_hat = pfft.forward(u_padded, u_hat)
-u_padded.fill(0)
+uc = u_hat.copy()
 u_padded = pfft.backward(u_hat, u_padded)
-assert allclose(u_padded, uc)
+u_hat = pfft.forward(u_padded, u_hat)
+assert allclose(u_hat, uc)
 
-cfft = PFFT(MPI.COMM_WORLD, N, dtype=complex, padding=[1., 1., 1.5])
+cfft = PFFT(MPI.COMM_WORLD, N, dtype=complex, padding=[1.5, 1.5, 1.5])
 
 uc = random.random(cfft.backward.input_array.shape).astype(complex)
 u2 = cfft.backward(uc)
