@@ -53,8 +53,8 @@ class PFFT(object):
 
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, comm, shape, axes=None, dtype=float, padding=False,
-                 collapse=False, **kw):
+    def __init__(self, comm, shape, axes=None, dtype=float,
+                 slab=None, padding=False, collapse=False, **kw):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
@@ -87,12 +87,20 @@ class PFFT(object):
         assert dtype.char in 'fdgFDG'
 
         if isinstance(comm, Subcomm):
+            assert slab is None
             assert len(comm) == len(shape)
             assert comm[axes[-1]].Get_size() == 1
             self.subcomm = comm
         else:
-            dims = [0] * len(shape)
-            dims[axes[-1]] = 1
+            if slab is not None:
+                if slab < 0:
+                    slab += len(shape)
+                assert 0 <= slab < len(shape)
+                dims = [1] * len(shape)
+                dims[axes[slab]] = comm.Get_size()
+            else:
+                dims = [0] * len(shape)
+                dims[axes[-1]] = 1
             self.subcomm = Subcomm(comm, dims)
 
         if padding is not False:
