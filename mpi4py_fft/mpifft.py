@@ -92,13 +92,20 @@ class PFFT(object):
             assert comm[axes[-1]].Get_size() == 1
             self.subcomm = comm
         else:
-            if slab:
-                dims = [1] * len(shape)
-                dims[axes[0]] = comm.Get_size()
-            else:
+            if slab is False or slab is None:
                 dims = [0] * len(shape)
                 dims[axes[-1]] = 1
-            self.subcomm = Subcomm(comm, dims)
+            else:
+                if slab is True:
+                    axis = (axes[-1] + 1) % len(shape)
+                else:
+                    axis = slab
+                    if axis < 0:
+                        axis = axis + len(shape)
+                    assert 0 <= axis < len(shape)
+                    assert axes[-1] != axis
+                dims = [1] * len(shape)
+                dims[axis] = comm.Get_size()
 
         if padding is not False:
             collapse = False
