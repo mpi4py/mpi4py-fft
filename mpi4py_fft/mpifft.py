@@ -106,6 +106,7 @@ class PFFT(object):
                     assert axes[-1] != axis
                 dims = [1] * len(shape)
                 dims[axis] = comm.Get_size()
+            self.subcomm = Subcomm(comm, dims)
 
         if padding is not False:
             collapse = False
