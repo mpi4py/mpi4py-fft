@@ -5,8 +5,7 @@ from time import time
 
 
 # Set global size of the computational box
-M = 4
-N = array([25, 28, 23], dtype=int)
+N = array([4, 4, 4], dtype=int)
 
 fft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), collapse=False, slab=True)
 pfft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), padding=[1.5, 1.5, 1.5], slab=True)
@@ -26,7 +25,8 @@ u_padded = pfft.backward(u_hat, u_padded)
 u_hat = pfft.forward(u_padded, u_hat)
 assert allclose(u_hat, uc)
 
-cfft = PFFT(MPI.COMM_WORLD, N, dtype=complex, padding=[1.5, 1.5, 1.5])
+#cfft = PFFT(MPI.COMM_WORLD, N, dtype=complex, padding=[1.5, 1.5, 1.5])
+cfft = PFFT(MPI.COMM_WORLD, N, dtype=complex)
 
 uc = random.random(cfft.backward.input_array.shape).astype(complex)
 u2 = cfft.backward(uc)

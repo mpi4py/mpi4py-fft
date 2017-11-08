@@ -71,5 +71,6 @@ def test_libfft():
                         B = fft.forward(A, B)
                         assert allclose(B, X)
 
+
 if __name__ == '__main__':
     test_libfft()

@@ -107,7 +107,9 @@ class FFTBase(object):
                 s = [slice(None)]*trunc_array.ndim
                 s[axis] = slice(0, N)
                 trunc_array[:] = padded_array[s]
-                trunc_array *= (1./self.padding_factor)
+                if N % 2 == 1:
+                    s[axis] = N-1
+                    trunc_array[s] = trunc_array[s].real
             else:
                 N = trunc_array.shape[axis]
                 su = [slice(None)]*trunc_array.ndim
@@ -115,7 +117,6 @@ class FFTBase(object):
                 trunc_array[su] = padded_array[su]
                 su[axis] = slice(-(N//2), None)
                 trunc_array[su] += padded_array[su]
-                trunc_array *= (1./self.padding_factor)
 
     def _padding_backward(self, trunc_array, padded_array):
         axis = self.axes[-1]
@@ -124,7 +125,10 @@ class FFTBase(object):
             if self.real_transform:
                 s = [slice(0, n) for n in trunc_array.shape]
                 padded_array[s] = trunc_array[:]
-                padded_array *= self.padding_factor
+                N = trunc_array.shape[axis]
+                if N % 2 == 1:
+                    s[axis] = trunc_array.shape[axis]-1
+                    padded_array[s] = padded_array[s].real
             else:
                 N = trunc_array.shape[axis]
                 su = [slice(None)]*trunc_array.ndim
@@ -132,8 +136,6 @@ class FFTBase(object):
                 padded_array[su] = trunc_array[su]
                 su[axis] = slice(-(N//2), None)
                 padded_array[su] = trunc_array[su]
-                padded_array *= self.padding_factor
-
 
 
 class FFT(FFTBase):
@@ -145,6 +147,8 @@ class FFT(FFTBase):
 
         self.fwd, self.bck = _Xfftn_plan(self.shape, self.axes, self.dtype, kw)
         U, V = self.fwd.input_array, self.fwd.output_array
+
+        self.M = 1./np.prod(np.take(shape, axes))
 
         if padding is not False:
             assert len(self.axes) == 1
@@ -159,11 +163,12 @@ class FFT(FFTBase):
     def _forward(self, **kw):
         self.fwd(None, None, **kw)
         self._truncation_forward(self.fwd.output_array, self.forward.output_array)
+        self.forward._output_array *= self.M
         return self.forward.output_array
 
     def _backward(self, **kw):
         self._padding_backward(self.backward.input_array, self.bck.input_array)
-        self.bck(None, None, **kw)
+        self.bck(None, None, normalise_idft=False, **kw)
         return self.backward.output_array
 
     def _get_truncarray(self, shape, dtype):
