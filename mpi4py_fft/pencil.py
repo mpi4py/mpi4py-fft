@@ -2,25 +2,22 @@ import numpy as np
 from mpi4py import MPI
 
 
-def _blockdist(N, size, rank):
-    q, r = divmod(N, size)
-    n = q + (1 if r > rank else 0)
-    s = rank * q + min(rank, r)
+def _blockdist(N, P, i):
+    q, r = divmod(N, P)
+    n = q + (1 if r > i else 0)
+    s = i * q + min(i, r)
     return (n, s)
 
 
-def _subarraytypes(comm, shape, axis, subshape, dtype):
+def _subarraytypes(comm, sizes, axis, datatype):
     # pylint: disable=too-many-locals
-    # pylint: disable=protected-access
-    N = shape[axis]
-    p = comm.Get_size()
-    datatype = MPI._typedict[dtype.char]
-    sizes = list(subshape)
-    subsizes = sizes[:]
+    N = sizes[axis]
+    P = comm.Get_size()
+    subsizes = list(sizes)
     substarts = [0] * len(sizes)
     datatypes = []
-    for i in range(p):
-        n, s = _blockdist(N, p, i)
+    for i in range(P):
+        n, s = _blockdist(N, P, i)
         subsizes[axis] = n
         substarts[axis] = s
         newtype = datatype.Create_subarray(
@@ -155,13 +152,18 @@ class Transfer(object):
                  comm, shape, dtype,
                  subshapeA, axisA,
                  subshapeB, axisB):
+        # pylint: disable=too-many-arguments
+        # pylint: disable=protected-access
+        assert subshapeA[axisA] == shape[axisA]
+        assert subshapeB[axisB] == shape[axisB]
         self.comm = comm
         self.shape = tuple(shape)
         self.dtype = dtype = np.dtype(dtype)
         self.subshapeA, self.axisA = tuple(subshapeA), axisA
         self.subshapeB, self.axisB = tuple(subshapeB), axisB
-        self._subtypesA = _subarraytypes(comm, shape, axisA, subshapeA, dtype)
-        self._subtypesB = _subarraytypes(comm, shape, axisB, subshapeB, dtype)
+        datatype = MPI._typedict[dtype.char]
+        self._subtypesA = _subarraytypes(comm, subshapeA, axisA, datatype)
+        self._subtypesB = _subarraytypes(comm, subshapeB, axisB, datatype)
         size = comm.Get_size()
         self._counts_displs = ([1] * size, [0] * size)  # XXX (None, None)
 
