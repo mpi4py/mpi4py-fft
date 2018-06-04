@@ -32,6 +32,21 @@ class Transform(object):
         return self._pencil[1]
 
     def __call__(self, input_array=None, output_array=None, **kw):
+        """Compute transform
+
+        Parameters
+        ----------
+        input_array : array, optional
+            Function values on quadrature mesh
+        output_array : array, optional
+            Expansion coefficients
+
+        Note
+        ----
+        If input_array/output_array are not given, then use predefined arrays
+        as planned with serial transform object _xfftn.
+
+        """
         if input_array is not None:
             self.input_array[...] = input_array
 

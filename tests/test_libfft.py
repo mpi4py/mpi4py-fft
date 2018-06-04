@@ -13,7 +13,7 @@ def test_libfft():
 
     dims  = (1, 2, 3, 4)
     sizes = (7, 8, 9)
-    types = 'fdFD'
+    types = 'D'
 
     padding = False
     for typecode in types:
@@ -38,11 +38,10 @@ def test_libfft():
 
                         A.fill(0)
                         A = fft.backward(B, A)
+                        #from IPython import embed; embed()
                         assert allclose(A, X)
 
-    # Padding is different because the shape needs to be modified prior to
-    # calling FFT, and an additional transform is required to wash out
-    # some frequencies that are not supposed to be there.
+    # Padding
     for padding in (1.5, 2.0):
         for typecode in types:
             for dim in dims:
@@ -53,7 +52,6 @@ def test_libfft():
                         shape = list(shape)
                         shape[axis] = int(shape[axis]*padding)
 
-                        #print(shape, axis, typecode)
                         fft = FFT(shape, axis, dtype=typecode, padding=padding)
                         A = fft.forward.input_array
                         B = fft.forward.output_array
@@ -70,7 +68,6 @@ def test_libfft():
                         B.fill(0)
                         B = fft.forward(A, B)
                         assert allclose(B, X)
-
 
 if __name__ == '__main__':
     test_libfft()

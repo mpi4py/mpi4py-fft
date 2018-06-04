@@ -1,6 +1,7 @@
 import numpy as np
 import pyfftw
-
+from copy import copy
+from .fftw import xfftn
 
 def _Xfftn_plan(shape, axes, dtype, options):
     assert pyfftw
@@ -33,6 +34,45 @@ def _Xfftn_plan(shape, axes, dtype, options):
 
     xfftn_fwd.update_arrays(U, V)
     xfftn_bck.update_arrays(V, U)
+
+    return (xfftn_fwd, xfftn_bck)
+
+def _Xfftn_plan2(shape, axes, dtype, options):
+    opts = dict(
+        overwrite_input='FFTW_PRESERVE_INPUT',
+        planner_effort='FFTW_MEASURE',
+        threads=1,
+    )
+    opts.update(options)
+    flags = (xfftn.flag_dict[opts['planner_effort']],
+             xfftn.flag_dict[opts['overwrite_input']])
+    threads = opts['threads']
+
+    outshape = copy(shape)
+    if np.issubdtype(dtype, np.floating):
+        plan_fwd = xfftn.rfftn
+        plan_bck = xfftn.irfftn
+        outshape[axes[-1]] = shape[axes[-1]]//2 +1
+    else:
+        plan_fwd = xfftn.fftn
+        plan_bck = xfftn.ifftn
+
+    s = tuple(np.take(shape, axes))
+
+    U = pyfftw.empty_aligned(shape, dtype=dtype)
+    V = pyfftw.empty_aligned(outshape, dtype=dtype)
+
+    xfftn_fwd = plan_fwd(U, V, axes, threads, flags)
+    U.fill(0)
+    V.fill(0)
+
+    if np.issubdtype(dtype, np.floating):
+        flags = (xfftn.flag_dict[opts['planner_effort']])
+
+    xfftn_bck = plan_bck(V, U, axes, threads, flags, s=U.shape)
+
+    #xfftn_fwd.update_arrays(U, V)
+    #xfftn_bck.update_arrays(V, U)
 
     return (xfftn_fwd, xfftn_bck)
 
@@ -102,14 +142,16 @@ class FFTBase(object):
         axis = self.axes[-1]
         if self.padding_factor > 1.0+1e-8:
             trunc_array.fill(0)
+            N0 = self.forward.output_array.shape[axis]
             if self.real_transform:
                 N = trunc_array.shape[axis]
                 s = [slice(None)]*trunc_array.ndim
                 s[axis] = slice(0, N)
                 trunc_array[:] = padded_array[s]
-                if N % 2 == 1:
+                if N0 % 2 == 0:
                     s[axis] = N-1
                     trunc_array[s] = trunc_array[s].real
+                    trunc_array[s] *= 2
             else:
                 N = trunc_array.shape[axis]
                 su = [slice(None)]*trunc_array.ndim
@@ -122,20 +164,27 @@ class FFTBase(object):
         axis = self.axes[-1]
         if self.padding_factor > 1.0+1e-8:
             padded_array.fill(0)
+            N0 = self.forward.output_array.shape[axis]
             if self.real_transform:
                 s = [slice(0, n) for n in trunc_array.shape]
                 padded_array[s] = trunc_array[:]
                 N = trunc_array.shape[axis]
-                if N % 2 == 1:
-                    s[axis] = trunc_array.shape[axis]-1
+                if N0 % 2 == 0: # Symmetric Fourier interpolator
+                    s[axis] = N-1
                     padded_array[s] = padded_array[s].real
+                    padded_array[s] *= 0.5
             else:
                 N = trunc_array.shape[axis]
                 su = [slice(None)]*trunc_array.ndim
-                su[axis] = slice(0, np.ceil(N/2.).astype(np.int))
+                su[axis] = slice(0, N//2+1)
                 padded_array[su] = trunc_array[su]
                 su[axis] = slice(-(N//2), None)
                 padded_array[su] = trunc_array[su]
+                if N0 % 2 == 0:  # Use symmetric Fourier interpolator
+                    su[axis] = N//2
+                    padded_array[su] *= 0.5
+                    su[axis] = -(N//2)
+                    padded_array[su] *= 0.5
 
 
 class FFT(FFTBase):
@@ -145,7 +194,7 @@ class FFT(FFTBase):
     def __init__(self, shape, axes=None, dtype=float, padding=False, **kw):
         FFTBase.__init__(self, shape, axes, dtype, padding)
 
-        self.fwd, self.bck = _Xfftn_plan(self.shape, self.axes, self.dtype, kw)
+        self.fwd, self.bck = _Xfftn_plan2(self.shape, self.axes, self.dtype, kw)
         U, V = self.fwd.input_array, self.fwd.output_array
 
         self.M = 1./np.prod(np.take(shape, axes))
