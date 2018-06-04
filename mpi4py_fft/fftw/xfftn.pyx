@@ -125,7 +125,7 @@ def fftn(input_array, output_array, axes=(-1,),
     return FFT(input_array, output_array, axes, kind, threads, flags, 1)
 
 def ifftn(input_array, output_array, axes=(-1,), 
-          int threads=1, flags=(FFTW_MEASURE,), s=None):
+          int threads=1, flags=(FFTW_MEASURE,)):
     cdef int kind = FFTW_BACKWARD
     cdef int M, axis
     assert input_array.dtype.char in 'FDG'

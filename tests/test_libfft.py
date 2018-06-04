@@ -13,61 +13,67 @@ def test_libfft():
 
     dims  = (1, 2, 3, 4)
     sizes = (7, 8, 9)
-    types = 'D'
+    types = 'dD'
 
-    padding = False
-    for typecode in types:
-        for dim in dims:
-            for shape in product(*([sizes]*dim)):
-                allaxes = tuple(reversed(range(dim)))
-                for i in range(dim):
-                    for j in range(i+1, dim):
-
-                        axes = allaxes[i:j]
-
-                        #print(shape, axes, typecode)
-                        fft = FFT(shape, axes, dtype=typecode)
-                        A = fft.forward.input_array
-                        B = fft.forward.output_array
-
-                        A[...] = np.random.random(A.shape).astype(typecode)
-                        X = A.copy()
-
-                        B.fill(0)
-                        B = fft.forward(A, B)
-
-                        A.fill(0)
-                        A = fft.backward(B, A)
-                        #from IPython import embed; embed()
-                        assert allclose(A, X)
-
-    # Padding
-    for padding in (1.5, 2.0):
+    for use_pyfftw in (True, False):
         for typecode in types:
             for dim in dims:
                 for shape in product(*([sizes]*dim)):
                     allaxes = tuple(reversed(range(dim)))
                     for i in range(dim):
-                        axis = allaxes[i]
-                        shape = list(shape)
-                        shape[axis] = int(shape[axis]*padding)
+                        for j in range(i+1, dim):
 
-                        fft = FFT(shape, axis, dtype=typecode, padding=padding)
-                        A = fft.forward.input_array
-                        B = fft.forward.output_array
+                            axes = allaxes[i:j]
 
-                        A[...] = np.random.random(A.shape).astype(typecode)
+                            #print(shape, axes, typecode)
+                            fft = FFT(shape, axes, dtype=typecode,
+                                      use_pyfftw=use_pyfftw)
+                            A = fft.forward.input_array
+                            B = fft.forward.output_array
 
-                        B.fill(0)
-                        B = fft.forward(A, B)
-                        X = B.copy()
+                            A[...] = np.random.random(A.shape).astype(typecode)
+                            X = A.copy()
 
-                        A.fill(0)
-                        A = fft.backward(B, A)
+                            B.fill(0)
+                            B = fft.forward(A, B)
 
-                        B.fill(0)
-                        B = fft.forward(A, B)
-                        assert allclose(B, X)
+                            A.fill(0)
+                            A = fft.backward(B, A)
+                            assert allclose(A, X)
+
+    # Padding is different because the physical space is padded and as such
+    # difficult to initialize. We solve this problem by making one extra
+    # transform
+    for use_pyfftw in (True, False):
+        for padding in (1.5, 2.0):
+            for typecode in types:
+                for dim in dims:
+                    for shape in product(*([sizes]*dim)):
+                        allaxes = tuple(reversed(range(dim)))
+                        for i in range(dim):
+                            axis = allaxes[i]
+                            shape = list(shape)
+                            shape[axis] = int(shape[axis]*padding)
+
+                            #print(shape, axis, typecode)
+                            fft = FFT(shape, axis, dtype=typecode,
+                                      padding=padding, use_pyfftw=use_pyfftw)
+                            A = fft.forward.input_array
+                            B = fft.forward.output_array
+
+                            A[...] = np.random.random(A.shape).astype(typecode)
+
+                            B.fill(0)
+                            B = fft.forward(A, B)
+                            X = B.copy()
+
+                            A.fill(0)
+                            A = fft.backward(B, A)
+
+                            B.fill(0)
+                            B = fft.forward(A, B)
+                            assert allclose(B, X)
+
 
 if __name__ == '__main__':
     test_libfft()
