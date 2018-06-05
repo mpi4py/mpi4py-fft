@@ -7,15 +7,15 @@ enum {
   C2R = FFTW_BACKWARD+1,
 };
 
-fftw_plan planxfftn(int      ndims,
-                    int      sizesA[ndims],
-                    void     *arrayA,
-                    int      sizesB[ndims],
-                    void     *arrayB,
-                    int      naxes,
-                    int      axes[naxes],
-                    int      kind,
-                    unsigned flags)
+fftw_plan fftw_planxfftn(int      ndims,
+                         int      sizesA[ndims],
+                         void     *arrayA,
+                         int      sizesB[ndims],
+                         void     *arrayB,
+                         int      naxes,
+                         int      axes[naxes],
+                         int      kind,
+                         unsigned flags)
 {
   fftw_iodim ranks[ndims], dims[ndims];
   int stridesA[ndims], stridesB[ndims], markers[ndims];
@@ -56,20 +56,20 @@ fftw_plan planxfftn(int      ndims,
   case R2C:
     return fftw_plan_guru_dft_r2c(naxes, ranks,
                                   ndims-naxes, dims,
-                                  (real *)arrayA,
+                                  (fftw_real *)arrayA,
                                   (fftw_complex *)arrayB,
                                   flags);
   case C2R:
     return fftw_plan_guru_dft_c2r(naxes, ranks,
                                   ndims-naxes, dims,
                                   (fftw_complex *)arrayA,
-                                  (real *)arrayB,
+                                  (fftw_real *)arrayB,
                                   flags);
   default :
     return fftw_plan_guru_r2r(naxes, ranks,
                               ndims-naxes, dims,
-                              (real *)arrayA,
-                              (real *)arrayB,
+                              (fftw_real *)arrayA,
+                              (fftw_real *)arrayB,
                               &kind, flags);
   }
   return NULL;

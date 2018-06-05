@@ -1,6 +1,7 @@
 from __future__ import print_function
 import numpy as np
 from mpi4py_fft.libfft import FFT
+from time import time
 
 abstol = dict(f=5e-5, d=1e-14, g=1e-15)
 
@@ -13,9 +14,10 @@ def test_libfft():
 
     dims  = (1, 2, 3, 4)
     sizes = (7, 8, 9)
-    types = 'dD'
+    types = 'fdgFDG'
 
     for use_pyfftw in (True, False):
+        t0 = 0
         for typecode in types:
             for dim in dims:
                 for shape in product(*([sizes]*dim)):
@@ -35,12 +37,16 @@ def test_libfft():
                             X = A.copy()
 
                             B.fill(0)
+                            t0 -= time()
                             B = fft.forward(A, B)
+                            t0 += time()
 
                             A.fill(0)
+                            t0 -= time()
                             A = fft.backward(B, A)
+                            t0 += time()
                             assert allclose(A, X)
-
+        print(use_pyfftw, t0)
     # Padding is different because the physical space is padded and as such
     # difficult to initialize. We solve this problem by making one extra
     # transform

@@ -1,7 +1,7 @@
 import numpy as np
 import pyfftw
 from copy import copy
-from .fftw import xfftn
+from . import fftw
 
 def _Xfftn_plan_pyfftw(shape, axes, dtype, options):
     assert pyfftw
@@ -44,18 +44,18 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
         threads=1,
     )
     opts.update(options)
-    flags = (xfftn.flag_dict[opts['planner_effort']],
-             xfftn.flag_dict[opts['overwrite_input']])
+    flags = (fftw.flag_dict[opts['planner_effort']],
+             fftw.flag_dict[opts['overwrite_input']])
     threads = opts['threads']
 
     outshape = copy(shape)
     if np.issubdtype(dtype, np.floating):
-        plan_fwd = xfftn.rfftn
-        plan_bck = xfftn.irfftn
-        outshape[axes[-1]] = shape[axes[-1]]//2 +1
+        plan_fwd = fftw.rfftn
+        plan_bck = fftw.irfftn
+        outshape[axes[-1]] = shape[axes[-1]]//2 + 1
     else:
-        plan_fwd = xfftn.fftn
-        plan_bck = xfftn.ifftn
+        plan_fwd = fftw.fftn
+        plan_bck = fftw.ifftn
 
     U = pyfftw.empty_aligned(shape, dtype=dtype)
     V = pyfftw.empty_aligned(outshape, dtype=U.dtype.char.upper())
@@ -65,7 +65,7 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
     V.fill(0)
 
     if np.issubdtype(dtype, np.floating):
-        flags = (xfftn.flag_dict[opts['planner_effort']])
+        flags = (fftw.flag_dict[opts['planner_effort']])
 
     xfftn_bck = plan_bck(V, U, axes, threads, flags)
 
@@ -186,14 +186,16 @@ class FFT(FFTBase):
 
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, shape, axes=None, dtype=float, padding=1.0,
+    def __init__(self, shape, axes=None, dtype=float, padding=False,
                  use_pyfftw=False, **kw):
         FFTBase.__init__(self, shape, axes, dtype, padding)
         plan = _Xfftn_plan_pyfftw if use_pyfftw is True else _Xfftn_plan_mpi4py
         self.fwd, self.bck = plan(self.shape, self.axes, self.dtype, kw)
         U, V = self.fwd.input_array, self.fwd.output_array
         self.M = 1./np.prod(np.take(shape, axes))
-        self.padding_factor = padding[self.axes[-1]] if np.ndim(padding) else padding
+        self.padding_factor = 1.0
+        if padding is not False:
+            self.padding_factor = padding[self.axes[-1]] if np.ndim(padding) else padding
         if abs(self.padding_factor-1.0) > 1e-8:
             assert len(self.axes) == 1
             trunc_array = self._get_truncarray(shape, V.dtype)

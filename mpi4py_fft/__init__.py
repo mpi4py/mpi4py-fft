@@ -2,4 +2,5 @@
 # Contact: dalcinl@gmail.com
 
 from .mpifft import PFFT
-from .fftw import xfftn
+from . import fftw
+

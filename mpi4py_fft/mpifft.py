@@ -69,7 +69,8 @@ class PFFT(object):
     # pylint: disable=too-few-public-methods
 
     def __init__(self, comm, shape, axes=None, dtype=float,
-                 slab=False, padding=False, collapse=False, **kw):
+                 slab=False, padding=False, collapse=False,
+                 use_pyfftw=False, **kw):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
@@ -144,7 +145,7 @@ class PFFT(object):
 
         axes = self.axes[-1]
         pencil = Pencil(self.subcomm, shape, axes[-1])
-        xfftn = FFT(pencil.subshape, axes, dtype, padding, **kw)
+        xfftn = FFT(pencil.subshape, axes, dtype, padding, use_pyfftw, **kw)
         self.xfftn.append(xfftn)
         self.pencil[0] = pencilA = pencil
         if not shape[axes[-1]] == xfftn.forward.output_array.shape[axes[-1]]:
@@ -155,7 +156,7 @@ class PFFT(object):
         for axes in reversed(self.axes[:-1]):
             pencilB = pencilA.pencil(axes[-1])
             transAB = pencilA.transfer(pencilB, dtype)
-            xfftn = FFT(pencilB.subshape, axes, dtype, padding, **kw)
+            xfftn = FFT(pencilB.subshape, axes, dtype, padding, use_pyfftw, **kw)
             self.xfftn.append(xfftn)
             self.transfer.append(transAB)
             pencilA = pencilB

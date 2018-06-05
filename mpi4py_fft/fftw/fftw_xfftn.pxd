@@ -18,17 +18,19 @@ cdef extern from "fftw3.h":
 
 cdef extern from "planxfftn.h":
 
-    fftw_plan planxfftn(int      ndims,
-                        int      sizesA[],
-                        void     *arrayA,
-                        int      sizesB[],
-                        void     *arrayB,
-                        int      naxes,
-                        int      axes[],
-                        int      kind,
-                        unsigned flags)
+    ctypedef double fftw_real
 
-cdef enum:
+    fftw_plan fftw_planxfftn(int      ndims,
+                             int      sizesA[],
+                             void     *arrayA,
+                             int      sizesB[],
+                             void     *arrayB,
+                             int      naxes,
+                             int      axes[],
+                             int      kind,
+                             unsigned flags)
+
+cpdef enum:
     FFTW_FORWARD = -1
     FFTW_BACKWARD = 1
     FFTW_REDFT00  = 3
@@ -40,13 +42,13 @@ cdef enum:
     FFTW_RODFT10  = 9
     FFTW_RODFT11  = 10
 
-cdef enum:
+cpdef enum:
     C2C_FORWARD = -1
     C2C_BACKWARD = 1
     R2C = -2
     C2R = 2
 
-cdef enum:
+cpdef enum:
     FFTW_MEASURE = 0
     FFTW_DESTROY_INPUT = 1
     FFTW_UNALIGNED = 2
