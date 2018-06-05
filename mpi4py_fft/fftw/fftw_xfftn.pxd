@@ -16,6 +16,10 @@ cdef extern from "fftw3.h":
 
     void fftw_plan_with_nthreads(int n)
 
+    int fftw_export_wisdom_to_filename(const char *filename)
+
+    int fftw_import_wisdom_from_filename(const char *filename)
+
 cdef extern from "fftw_planxfftn.h":
 
     ctypedef double fftw_real

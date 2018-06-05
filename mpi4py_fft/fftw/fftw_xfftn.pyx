@@ -4,27 +4,11 @@ cimport numpy as np
 from numbers import Number
 from libc.stdlib cimport malloc, free
 
-directions = {'FFTW_FORWARD': FFTW_FORWARD,
-        'FFTW_BACKWARD': FFTW_BACKWARD,
-        'R2C': -2,
-        'C2R': 2,
-        'FFTW_REDFT00': FFTW_REDFT00,
-        'FFTW_REDFT10': FFTW_REDFT10,
-        'FFTW_REDFT01': FFTW_REDFT01,
-        'FFTW_REDFT11': FFTW_REDFT11,
-        'FFTW_RODFT00': FFTW_RODFT00,
-        'FFTW_RODFT10': FFTW_RODFT10,
-        'FFTW_RODFT01': FFTW_RODFT01,
-        'FFTW_RODFT11': FFTW_RODFT11}
+cpdef int export_wisdom(const char *filename):
+    return fftw_export_wisdom_to_filename(filename)
 
-flag_dict = {'FFTW_MEASURE': FFTW_MEASURE,
-        'FFTW_EXHAUSTIVE': FFTW_EXHAUSTIVE,
-        'FFTW_PATIENT': FFTW_PATIENT,
-        'FFTW_ESTIMATE': FFTW_ESTIMATE,
-        'FFTW_UNALIGNED': FFTW_UNALIGNED,
-        'FFTW_DESTROY_INPUT': FFTW_DESTROY_INPUT,
-        'FFTW_PRESERVE_INPUT': FFTW_PRESERVE_INPUT,
-        'FFTW_WISDOM_ONLY': FFTW_WISDOM_ONLY}
+cpdef int import_wisdom(const char *filename):
+    return fftw_import_wisdom_from_filename(filename)
 
 cdef fftw_plan* _fftw_planxfftn(int      ndims,
                                 int      sizesA[],
