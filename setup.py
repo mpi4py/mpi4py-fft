@@ -7,14 +7,14 @@ from numpy import get_include
 from Cython.Build import cythonize
 
 cwd = os.path.abspath(os.path.dirname(__file__))
-fftwdir = os.path.join(cwd, "mpi4py_fft", "fftw")
+fftwdir = os.path.join(cwd, 'mpi4py_fft', 'fftw')
 d = {'fftwf_': 'float', 'fftwl_': 'long double'}
 libs = {
     'fftwf_': ['m', 'fftw3f', 'fftw3f_threads'],
     'fftw_': ['m', 'fftw3', 'fftw3_threads'],
     'fftwl_': ['m', 'fftw3l', 'fftw3l_threads']}
 
-for fl in ('fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn.pxd'):
+for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn.pxd'):
     for p in ('fftwf_', 'fftwl_'):
         fp = fl.replace('fftw_', p)
         shutil.copy(os.path.join(fftwdir, fl), os.path.join(fftwdir, fp))

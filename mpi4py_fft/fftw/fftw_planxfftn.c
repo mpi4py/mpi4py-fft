@@ -1,4 +1,4 @@
-#include "planxfftn.h"
+#include "fftw_planxfftn.h"
 
 enum {
   C2C_FORWARD = FFTW_FORWARD,

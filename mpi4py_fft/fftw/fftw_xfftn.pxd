@@ -16,7 +16,7 @@ cdef extern from "fftw3.h":
 
     void fftw_plan_with_nthreads(int n)
 
-cdef extern from "planxfftn.h":
+cdef extern from "fftw_planxfftn.h":
 
     ctypedef double fftw_real
 
