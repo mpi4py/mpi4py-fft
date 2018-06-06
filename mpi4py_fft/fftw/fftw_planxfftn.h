@@ -13,7 +13,7 @@ fftw_plan fftw_planxfftn(int      ndims,
                          void     *arrayB,
                          int      naxes,
                          int      axes[naxes],
-                         int      kind,
+                         int      kind[naxes],
                          unsigned flags);
 
 #endif

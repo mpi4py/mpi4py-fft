@@ -14,12 +14,12 @@ fftw_plan fftw_planxfftn(int      ndims,
                          void     *arrayB,
                          int      naxes,
                          int      axes[naxes],
-                         int      kind,
+                         int      kind[naxes],
                          unsigned flags)
 {
   fftw_iodim ranks[ndims], dims[ndims];
   int stridesA[ndims], stridesB[ndims], markers[ndims];
-  int *sizes = (kind != C2R) ? sizesA : sizesB;
+  int *sizes = (kind[0] != C2R) ? sizesA : sizesB;
 
   stridesA[ndims-1] = 1;
   stridesB[ndims-1] = 1;
@@ -45,14 +45,14 @@ fftw_plan fftw_planxfftn(int      ndims,
     j++;
   }
 
-  switch (kind) {
+  switch (kind[0]) {
   case C2C_FORWARD:
   case C2C_BACKWARD:
     return fftw_plan_guru_dft(naxes, ranks,
                               ndims-naxes, dims,
                               (fftw_complex *)arrayA,
                               (fftw_complex *)arrayB,
-                              kind, flags);
+                              kind[0], flags);
   case R2C:
     return fftw_plan_guru_dft_r2c(naxes, ranks,
                                   ndims-naxes, dims,
@@ -65,13 +65,11 @@ fftw_plan fftw_planxfftn(int      ndims,
                                   (fftw_complex *)arrayA,
                                   (fftw_real *)arrayB,
                                   flags);
-  default :
-    return fftw_plan_guru_r2r(naxes, ranks,
-                              ndims-naxes, dims,
-                              (fftw_real *)arrayA,
-                              (fftw_real *)arrayB,
-                              &kind, flags);
   }
-  return NULL;
+  return fftw_plan_guru_r2r(naxes, ranks,
+                          ndims-naxes, dims,
+                          (fftw_real *)arrayA,
+                          (fftw_real *)arrayB,
+                          kind, flags);
 }
 

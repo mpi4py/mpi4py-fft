@@ -8,7 +8,10 @@ from Cython.Build import cythonize
 
 cwd = os.path.abspath(os.path.dirname(__file__))
 fftwdir = os.path.join(cwd, 'mpi4py_fft', 'fftw')
-d = {'fftwf_': 'float', 'fftwl_': 'long double'}
+
+# For now assuming that all precisions are available
+
+prec = {'fftwf_': 'float', 'fftw': 'double', 'fftwl_': 'long double'}
 libs = {
     'fftwf_': ['m', 'fftw3f', 'fftw3f_threads'],
     'fftw_': ['m', 'fftw3', 'fftw3_threads'],
@@ -19,7 +22,7 @@ for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn
         fp = fl.replace('fftw_', p)
         shutil.copy(os.path.join(fftwdir, fl), os.path.join(fftwdir, fp))
         os.system("sed -i '' 's/fftw_/{0}/g' {1}".format(p, os.path.join(fftwdir, fp)))
-        os.system("sed -i '' 's/double/{0}/g' {1}".format(d[p], os.path.join(fftwdir, fp)))
+        os.system("sed -i '' 's/double/{0}/g' {1}".format(prec[p], os.path.join(fftwdir, fp)))
 
 ext = []
 for p in ('fftw_', 'fftwf_', 'fftwl_'):

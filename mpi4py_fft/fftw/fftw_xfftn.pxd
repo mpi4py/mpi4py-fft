@@ -31,12 +31,15 @@ cdef extern from "fftw_planxfftn.h":
                              void     *arrayB,
                              int      naxes,
                              int      axes[],
-                             int      kind,
+                             int      kind[],
                              unsigned flags)
 
 cpdef enum:
-    FFTW_FORWARD = -1
+    FFTW_FORWARD  = -1
+    FFTW_R2HC     = 0
     FFTW_BACKWARD = 1
+    FFTW_HC2R     = 1
+    FFTW_DHT      = 2
     FFTW_REDFT00  = 3
     FFTW_REDFT01  = 4
     FFTW_REDFT10  = 5
