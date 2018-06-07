@@ -7,8 +7,7 @@ cdef extern from "fftw3.h":
 
     void fftw_destroy_plan(fftw_plan *plan)
 
-    void fftw_execute_dft(fftw_plan *plan,
-          void *_in, void *_out) nogil
+    void fftw_execute_dft(fftw_plan *plan, void *_in, void *_out) nogil
 
     void fftw_execute(fftw_plan *plan) nogil
 

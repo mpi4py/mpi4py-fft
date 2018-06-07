@@ -1,7 +1,6 @@
 cimport fftw_xfftn
 import numpy as np
 cimport numpy as np
-from numbers import Number
 from libc.stdlib cimport malloc, free
 
 cpdef int export_wisdom(const char *filename):
@@ -23,30 +22,6 @@ cdef fftw_plan* _fftw_planxfftn(int      ndims,
                                        sizesB, <void *> arrayB, naxes, 
                                        axes, kind, flags)
 
-cdef fftw_plan* _fftw_xfftn(ndims, arrayA, arrayB, naxes, axes, kind, flags):
-    cdef int *szA = <int *> malloc(ndims * sizeof(int))
-    cdef int *szB = <int *> malloc(ndims * sizeof(int))
-    cdef int *axs = <int *> malloc(naxes * sizeof(int))
-    cdef int *knd = <int *> malloc(naxes * sizeof(int))
-    cdef int i
-    cdef fftw_plan *plan 
-    for i in range(ndims):
-        szA[i] = arrayA.shape[i]
-        szB[i] = arrayB.shape[i]
-    for i in range(naxes):
-        axs[i] = axes[i]
-    for i in range(len(kind)):
-        knd[i] = kind[i]
-
-    cdef void *_in = <void *>np.PyArray_DATA(arrayA)
-    cdef void *_out = <void *>np.PyArray_DATA(arrayB)          
-    plan = _fftw_planxfftn(ndims, szA, _in, szB, _out, naxes, axs, knd, flags)
-    free(szA)
-    free(szB)
-    free(axs)
-    free(knd)
-    return plan
-
 cdef class FFT:
     """
     Unified class for performing FFTs on multidimensional arrays
@@ -62,7 +37,7 @@ cdef class FFT:
         real or complex output array
     axes : tuple if ints
         The axes to transform over, starting from the last
-    kind : int
+    kind : int or tuple of ints
         Any one of
         - FFTW_FORWARD (-1)
         - FFTW_R2HC (0)
@@ -79,7 +54,7 @@ cdef class FFT:
         - FFTW_RODFT11 (10)
     threads : int
         Number of threads to use in transforms
-    flags : tuple of ints
+    flags : int or tuple of ints
         Any one of, but not necessarily for all transforms or all combinations
         - FFTW_MEASURE (0)
         - FFTW_DESTROY_INPUT (1)
@@ -101,36 +76,47 @@ cdef class FFT:
 
     def __cinit__(self, input_array, output_array, axes=(-1,), 
                   kind=FFTW_FORWARD, int threads=1,
-                  flags=(FFTW_MEASURE,), int normalization=1):
+                  flags=FFTW_MEASURE, int normalization=1):
         cdef int ndims = len(input_array.shape)
         cdef int naxes = len(axes)
-        cdef unsigned myflags
-        cdef unsigned opt, destroy_input
+        cdef int flag, i
+        cdef unsigned allflags
+        cdef int *szA = <int *> malloc(ndims * sizeof(int))
+        cdef int *szB = <int *> malloc(ndims * sizeof(int))
+        cdef int *axs = <int *> malloc(naxes * sizeof(int))
+        cdef int *knd = <int *> malloc(naxes * sizeof(int))
+        cdef void *_in = <void *>np.PyArray_DATA(input_array)
+        cdef void *_out = <void *>np.PyArray_DATA(output_array)        
 
         fftw_plan_with_nthreads(threads)
-        opt = FFTW_MEASURE
-        destroy_input = FFTW_DESTROY_INPUT
-        flags = [flags] if isinstance(flags, Number) else flags
-        kind = [kind] if isinstance(kind, Number) else kind
+        flags = [flags] if isinstance(flags, int) else flags
+        kind = [kind] if isinstance(kind, int) else kind
         axes = list(axes)
         for i in range(naxes):
             if axes[i] < 0:
                 axes[i] = axes[i] + ndims
         
-        for f in flags:
-            if f in (FFTW_ESTIMATE, FFTW_MEASURE, FFTW_PATIENT, FFTW_EXHAUSTIVE):
-                opt = f
-            elif f in (FFTW_PRESERVE_INPUT, FFTW_DESTROY_INPUT):
-                destroy_input = f
-            else:
-                raise RuntimeError
+        allflags = flags[0]
+        for flag in flags[1:]:
+            allflags |= flag
 
-        self._plan = NULL
         self._input_array = input_array 
         self._output_array = output_array
         self._M = 1./normalization
-        self._plan = _fftw_xfftn(ndims, input_array, output_array, naxes, axes,
-                                kind, opt | destroy_input)
+        for i in range(ndims):
+            szA[i] = input_array.shape[i]
+            szB[i] = output_array.shape[i]
+        for i in range(naxes):
+            axs[i] = axes[i]
+        for i in range(len(kind)):
+            knd[i] = kind[i]
+
+        self._plan = _fftw_planxfftn(ndims, szA, _in, szB, _out, naxes, axs,
+                                     knd, allflags)
+        free(szA)
+        free(szB)
+        free(axs)
+        free(knd)
 
     def __call__(self, input_array=None, output_array=None, **kw):
         if input_array is not None:

@@ -45,7 +45,8 @@ def rfftn(input_array, output_array, axes=(-1,), threads=1,
           flags=(FFTW_MEASURE,)):
     kind = R2C
     assert input_array.dtype.char in 'fdg'
-    assert np.all(input_array.shape[axes[-1]]//2+1 == output_array.shape[axes[-1]]), "Output array must have shape N//2+1 along first transformed axis"
+    assert np.all(input_array.shape[axes[-1]]//2+1 == output_array.shape[axes[-1]]), \
+    "Wrong shape of arrays. Shape in spectral space must be N//2+1 (N is shape in physical space)"
     return FFT(input_array, output_array, axes, kind, threads, flags, 1)
 
 def irfftn(input_array, output_array, axes=(-1,), threads=1,
@@ -53,6 +54,8 @@ def irfftn(input_array, output_array, axes=(-1,), threads=1,
     kind = C2R
     assert input_array.dtype.char in 'FDG'
     s = output_array.shape
+    assert np.all(output_array.shape[axes[-1]]//2+1 == input_array.shape[axes[-1]]), \
+    "Wrong shape of arrays. Shape in spectral space must be N//2+1 (N is shape in physical space)"
     M = 1
     for axis in axes:
         M *= s[axis]
@@ -154,7 +157,7 @@ def export_wisdom(filename):
     Notes
     -----
     Wisdom is stored for all three precisions, float, double and long double,
-    using, respectively, prefix 'fftwf_', 'fftw_' and 'fftwl_'. Wisdom is
+    using, respectively, prefix 'F_', 'D_' and 'G_'. Wisdom is
     imported using :mod:`.import_wisdom`.
 
     See also
@@ -178,7 +181,7 @@ def import_wisdom(filename):
     Notes
     -----
     Wisdom is imported for all three precisions, float, double and long double,
-    using, respectively, prefix 'fftwf_', 'fftw_' and 'fftwl_'. Wisdom is
+    using, respectively, prefix 'F_', 'D_' and 'G_'. Wisdom is
     exported using :mod:`.export_wisdom`.
 
     See also
