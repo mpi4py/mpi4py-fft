@@ -1,5 +1,10 @@
 cdef extern from "fftw3.h":
 
+    ctypedef struct fftw_complex_struct:
+        pass
+
+    ctypedef fftw_complex_struct *fftw_complex
+
     ctypedef struct fftw_plan_struct:
         pass
 
@@ -8,6 +13,12 @@ cdef extern from "fftw3.h":
     void fftw_destroy_plan(fftw_plan *plan)
 
     void fftw_execute_dft(fftw_plan *plan, void *_in, void *_out) nogil
+    
+    void fftw_execute_dft_c2r(fftw_plan *plan, void *_in, void *_out) nogil
+    
+    void fftw_execute_dft_r2c(fftw_plan *plan, void *_in, void *_out) nogil
+    
+    void fftw_execute_r2r(fftw_plan *plan, void *_in, void *_out) nogil
 
     void fftw_execute(fftw_plan *plan) nogil
 
@@ -18,6 +29,15 @@ cdef extern from "fftw3.h":
     int fftw_export_wisdom_to_filename(const char *filename)
 
     int fftw_import_wisdom_from_filename(const char *filename)
+
+    void fftw_forget_wisdom()
+
+    void fftw_set_timelimit(double seconds)
+
+    void fftw_cleanup()
+
+    void fftw_cleanup_threads()
+
 
 cdef extern from "fftw_planxfftn.h":
 
@@ -32,6 +52,8 @@ cdef extern from "fftw_planxfftn.h":
                              int      axes[],
                              int      kind[],
                              unsigned flags)
+
+ctypedef void (*fftw_execute_function)(void *_plan, void *_in, void *_out) nogil
 
 cpdef enum:
     FFTW_FORWARD  = -1

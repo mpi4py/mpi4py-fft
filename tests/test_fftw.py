@@ -87,7 +87,7 @@ def test_fftw():
                                     assert allclose(B, B2), np.linalg.norm(B-B2)
 
                             # Different r2r transforms along all axes. Just pick
-                            # any naxes transforms and compare
+                            # any naxes transforms and compare with scipy
                             naxes = len(axes)
                             vals = np.random.randint(6, size=naxes) # get naxes transforms
                             kds = np.array(list(kinds.values()))[vals]
@@ -100,8 +100,6 @@ def test_fftw():
                                     A = eval('scipy.fftpack.'+ts[:-1])(A, axis=axes[i], type=int(ts[-1]))
                                 print(shape, axes, typecode, threads, tsf)
                                 assert allclose(C, A), np.linalg.norm(C-A)
-
-
 
 if __name__ == '__main__':
     test_fftw()

@@ -9,6 +9,16 @@ cpdef int export_wisdom(const char *filename):
 cpdef int import_wisdom(const char *filename):
     return fftw_import_wisdom_from_filename(filename)
 
+cpdef void forget_wisdom():
+    fftw_forget_wisdom()
+
+cpdef void set_timelimit(double limit):
+    fftw_set_timelimit(limit)
+
+cpdef void cleanup(): 
+    fftw_cleanup()
+    fftw_cleanup_threads()
+
 cdef fftw_plan* _fftw_planxfftn(int      ndims,
                                 int      sizesA[],
                                 void     *arrayA,
@@ -22,9 +32,31 @@ cdef fftw_plan* _fftw_planxfftn(int      ndims,
                                        sizesB, <void *> arrayB, naxes, 
                                        axes, kind, flags)
 
+cdef void _fftw_execute_dft(void *_plan, void *_in, void *_out) nogil:
+    fftw_execute_dft(<fftw_plan *>_plan, <fftw_complex *>_in, <fftw_complex *>_out)
+
+cdef void _fftw_execute_dft_r2c(void *_plan, void *_in, void *_out) nogil:
+    fftw_execute_dft_r2c(<fftw_plan *>_plan, <fftw_real *>_in, <fftw_complex *>_out)
+
+cdef void _fftw_execute_dft_c2r(void *_plan, void *_in, void *_out) nogil:
+    fftw_execute_dft_c2r(<fftw_plan *>_plan, <fftw_complex *>_in, <fftw_real *>_out)
+
+cdef void _fftw_execute_r2r(void *_plan, void *_in, void *_out) nogil:
+    fftw_execute_r2r(<fftw_plan *>_plan, <fftw_real *>_in, <fftw_real *>_out)
+
+cdef fftw_execute_function get_executor_function(kind):
+    if kind in (C2C_FORWARD, C2C_BACKWARD):
+        return _fftw_execute_dft
+    elif kind == R2C:
+        return _fftw_execute_dft_r2c
+    elif kind == C2R:
+        return _fftw_execute_dft_c2r
+    else:
+        return _fftw_execute_r2r
+
 cdef class FFT:
     """
-    Unified class for performing FFTs on multidimensional arrays
+    Unified class for FFTs of multidimensional arrays
 
     The class can be used for any type of transform defined in the user manual
     of `FFTW <http://www.fftw.org/fftw3_doc>`_. 
@@ -73,6 +105,7 @@ cdef class FFT:
     cdef np.ndarray _input_array
     cdef np.ndarray _output_array
     cdef fftw_real _M
+    cdef fftw_execute_function _apply_plan
 
     def __cinit__(self, input_array, output_array, axes=(-1,), 
                   kind=FFTW_FORWARD, int threads=1,
@@ -103,6 +136,7 @@ cdef class FFT:
         self._input_array = input_array 
         self._output_array = output_array
         self._M = 1./normalization
+        self._apply_plan = get_executor_function(kind[0])
         for i in range(ndims):
             szA[i] = input_array.shape[i]
             szB[i] = output_array.shape[i]
@@ -118,15 +152,44 @@ cdef class FFT:
         free(axs)
         free(knd)
 
-    def __call__(self, input_array=None, output_array=None, **kw):
+    def __call__(self, input_array=None, output_array=None, implicit=True, 
+                 normalize_idft=False, **kw):
+        if implicit:
+            return self._apply_implicit(input_array, output_array, 
+                                        normalize_idft, **kw)
+        return self._apply_explicit(input_array, output_array, normalize_idft,
+                                    **kw)
+
+    def _apply_explicit(self, input_array, output_array, normalize_idft, **kw):
+        """Apply plan with explicit (and safe) update of work arrays"""
         if input_array is not None:
             self._input_array[...] = input_array
-        fftw_execute(<fftw_plan *>self._plan)
-        if kw.get('normalize_idft', False):
+        with nogil:
+            fftw_execute(<fftw_plan *>self._plan)
+        if normalize_idft:
             self._output_array *= self._M
         if output_array is not None:
             output_array[...] = self._output_array
             return output_array
+        return self._output_array
+
+    def _apply_implicit(self, input_array, output_array, normalize_idft, **kw):
+        """Apply plan with implicit update of work arrays"""
+        cdef void *_in
+        cdef void *_out
+        cdef void *plan = self._plan
+        cdef fftw_execute_function apply_plan = self._apply_plan
+    
+        if input_array is not None:
+            self._input_array = input_array
+        if output_array is not None:
+            self._output_array = output_array
+        _in = <void *>np.PyArray_DATA(self._input_array)
+        _out = <void *>np.PyArray_DATA(self._output_array)   
+        with nogil:
+            apply_plan(plan, _in, _out)
+        if normalize_idft:
+            self._output_array *= self._M
         return self._output_array
 
     def __dealloc__(self):
