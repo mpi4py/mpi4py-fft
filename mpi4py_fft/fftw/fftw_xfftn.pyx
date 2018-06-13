@@ -36,7 +36,7 @@ cdef void _fftw_execute_dft_c2r(void *plan, void *_in, void *_out) nogil:
 cdef void _fftw_execute_r2r(void *plan, void *_in, void *_out) nogil:
     fftw_execute_r2r(<fftw_plan>plan, <fftw_real *>_in, <fftw_real *>_out)
 
-cdef generic_function get_execute_function(kind):
+cdef generic_function _get_execute_function(kind):
     if kind in (C2C_FORWARD, C2C_BACKWARD):
         return _fftw_execute_dft
     elif kind == R2C:
@@ -45,13 +45,13 @@ cdef generic_function get_execute_function(kind):
         return _fftw_execute_dft_c2r
     return _fftw_execute_r2r
 
-cdef get_alignment(array):
-        """Return alignment assuming highest allowed is 32"""
-        cdef int n
-        for n in 2**np.arange(1, 6)[::-1]:
-            if array.ctypes.data % n == 0:
-                break
-        return n
+cdef int _get_alignment(array):
+    """Return alignment assuming highest allowed is 32"""
+    cdef int n
+    for n in 2**np.arange(1, 6)[::-1]:
+        if array.ctypes.data % n == 0:
+            break
+    return n
 
 cdef class FFT:
     """
@@ -191,14 +191,14 @@ cdef class FFT:
         """
         cdef void *_in
         cdef void *_out
-        cdef generic_function apply_plan = get_execute_function(self.kind)
+        cdef generic_function apply_plan = _get_execute_function(self.kind)
 
         if input_array is not None:
             assert self.input_shape == input_array.shape
             assert self.input_strides == input_array.strides
             assert self._input_array.dtype.char == input_array.dtype.char
             if (<intptr_t>np.PyArray_DATA(input_array) %
-                get_alignment(self._input_array) == 0):
+                _get_alignment(self._input_array) == 0):
                 self._input_array = input_array
             else:
                 self._input_array[...] = input_array
