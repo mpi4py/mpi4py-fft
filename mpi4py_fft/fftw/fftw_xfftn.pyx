@@ -106,7 +106,6 @@ cdef class FFT:
     cdef np.ndarray _input_array
     cdef np.ndarray _output_array
     cdef fftw_real _M
-    cdef int input_alignment
     cdef int kind
     cdef tuple input_shape
     cdef tuple output_shape

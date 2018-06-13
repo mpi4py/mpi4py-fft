@@ -18,26 +18,27 @@ fftw_plan fftw_planxfftn(int      ndims,
                          unsigned flags)
 {
   fftw_iodim ranks[ndims], dims[ndims];
+  int i, j, axis;
   int strides_in[ndims], strides_out[ndims], markers[ndims];
   int *sizes = (kind[0] != C2R) ? sizes_in : sizes_out;
 
   strides_in[ndims-1] = 1;
   strides_out[ndims-1] = 1;
-  for (int i = ndims-2; i >= 0; i--) {
+  for (i = ndims-2; i >= 0; i--) {
     strides_in[i] = sizes_in[i+1] * strides_in[i+1];
     strides_out[i] = sizes_out[i+1] * strides_out[i+1];
   }
 
-  for (int i = 0; i < ndims; i++)
+  for (i = 0; i < ndims; i++)
     markers[i] = 0;
-  for (int i = 0; i < naxes; i++) {
-    int axis = axes[i];
+  for (i = 0; i < naxes; i++) {
+    axis = axes[i];
     ranks[i].n = sizes[axis];
     ranks[i].is = strides_in[axis];
     ranks[i].os = strides_out[axis];
     markers[axis] = 1;
   }
-  for (int i = 0, j = 0; i < ndims; i++) {
+  for (i = 0, j = 0; i < ndims; i++) {
     if (markers[i]) continue;
     dims[j].n = sizes[i];
     dims[j].is = strides_in[i];

@@ -1,6 +1,5 @@
 import numpy as np
 import pyfftw
-from copy import copy
 from . import fftw
 
 def _Xfftn_plan_pyfftw(shape, axes, dtype, options):
@@ -48,7 +47,7 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
              fftw.flag_dict[opts['overwrite_input']])
     threads = opts['threads']
 
-    outshape = copy(shape)
+    outshape = list(shape)
     if np.issubdtype(dtype, np.floating):
         plan_fwd = fftw.rfftn
         plan_bck = fftw.irfftn
