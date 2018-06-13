@@ -34,7 +34,8 @@ for p in ('fftw_', 'fftwf_', 'fftwl_'):
                                 libraries=libs[p],
                                 include_dirs=[get_include(),
                                               os.path.join(sys.prefix, 'include')],
-                                library_dirs=[os.path.join(sys.prefix, 'lib')])])[0])
+                                library_dirs=[os.path.join(sys.prefix, 'lib')],
+                                extra_compile_args=['-std=c99'])])[0])
 
 setup(name = "mpi4py-fft",
       version = "1.0-beta",
