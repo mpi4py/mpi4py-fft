@@ -1,8 +1,9 @@
 import numpy as np
 import pyfftw
+from copy import copy
+from . import fftw
 
-
-def _Xfftn_plan(shape, axes, dtype, options):
+def _Xfftn_plan_pyfftw(shape, axes, dtype, options):
     assert pyfftw
     opts = dict(
         avoid_copy=True,
@@ -33,6 +34,40 @@ def _Xfftn_plan(shape, axes, dtype, options):
 
     xfftn_fwd.update_arrays(U, V)
     xfftn_bck.update_arrays(V, U)
+
+    return (xfftn_fwd, xfftn_bck)
+
+def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
+    opts = dict(
+        overwrite_input='FFTW_DESTROY_INPUT',
+        planner_effort='FFTW_MEASURE',
+        threads=1,
+    )
+    opts.update(options)
+    flags = (fftw.flag_dict[opts['planner_effort']],
+             fftw.flag_dict[opts['overwrite_input']])
+    threads = opts['threads']
+
+    outshape = copy(shape)
+    if np.issubdtype(dtype, np.floating):
+        plan_fwd = fftw.rfftn
+        plan_bck = fftw.irfftn
+        outshape[axes[-1]] = shape[axes[-1]]//2 + 1
+    else:
+        plan_fwd = fftw.fftn
+        plan_bck = fftw.ifftn
+
+    U = pyfftw.empty_aligned(shape, dtype=dtype)
+    V = pyfftw.empty_aligned(outshape, dtype=U.dtype.char.upper())
+
+    xfftn_fwd = plan_fwd(U, V, axes, threads, flags)
+    U.fill(0)
+    V.fill(0)
+
+    if np.issubdtype(dtype, np.floating):
+        flags = (fftw.flag_dict[opts['planner_effort']])
+
+    xfftn_bck = plan_bck(V, U, axes, threads, flags)
 
     return (xfftn_fwd, xfftn_bck)
 
@@ -102,14 +137,16 @@ class FFTBase(object):
         axis = self.axes[-1]
         if self.padding_factor > 1.0+1e-8:
             trunc_array.fill(0)
+            N0 = self.forward.output_array.shape[axis]
             if self.real_transform:
                 N = trunc_array.shape[axis]
                 s = [slice(None)]*trunc_array.ndim
                 s[axis] = slice(0, N)
                 trunc_array[:] = padded_array[s]
-                if N % 2 == 1:
+                if N0 % 2 == 0:
                     s[axis] = N-1
                     trunc_array[s] = trunc_array[s].real
+                    trunc_array[s] *= 2
             else:
                 N = trunc_array.shape[axis]
                 su = [slice(None)]*trunc_array.ndim
@@ -122,37 +159,45 @@ class FFTBase(object):
         axis = self.axes[-1]
         if self.padding_factor > 1.0+1e-8:
             padded_array.fill(0)
+            N0 = self.forward.output_array.shape[axis]
             if self.real_transform:
                 s = [slice(0, n) for n in trunc_array.shape]
                 padded_array[s] = trunc_array[:]
                 N = trunc_array.shape[axis]
-                if N % 2 == 1:
-                    s[axis] = trunc_array.shape[axis]-1
+                if N0 % 2 == 0: # Symmetric Fourier interpolator
+                    s[axis] = N-1
                     padded_array[s] = padded_array[s].real
+                    padded_array[s] *= 0.5
             else:
                 N = trunc_array.shape[axis]
                 su = [slice(None)]*trunc_array.ndim
-                su[axis] = slice(0, np.ceil(N/2.).astype(np.int))
+                su[axis] = slice(0, N//2+1)
                 padded_array[su] = trunc_array[su]
                 su[axis] = slice(-(N//2), None)
                 padded_array[su] = trunc_array[su]
+                if N0 % 2 == 0:  # Use symmetric Fourier interpolator
+                    su[axis] = N//2
+                    padded_array[su] *= 0.5
+                    su[axis] = -(N//2)
+                    padded_array[su] *= 0.5
 
 
 class FFT(FFTBase):
 
     # pylint: disable=too-few-public-methods
 
-    def __init__(self, shape, axes=None, dtype=float, padding=False, **kw):
+    def __init__(self, shape, axes=None, dtype=float, padding=False,
+                 use_pyfftw=False, **kw):
         FFTBase.__init__(self, shape, axes, dtype, padding)
-
-        self.fwd, self.bck = _Xfftn_plan(self.shape, self.axes, self.dtype, kw)
+        plan = _Xfftn_plan_pyfftw if use_pyfftw is True else _Xfftn_plan_mpi4py
+        self.fwd, self.bck = plan(self.shape, self.axes, self.dtype, kw)
         U, V = self.fwd.input_array, self.fwd.output_array
-
         self.M = 1./np.prod(np.take(shape, axes))
-
+        self.padding_factor = 1.0
         if padding is not False:
-            assert len(self.axes) == 1
             self.padding_factor = padding[self.axes[-1]] if np.ndim(padding) else padding
+        if abs(self.padding_factor-1.0) > 1e-8:
+            assert len(self.axes) == 1
             trunc_array = self._get_truncarray(shape, V.dtype)
             self.forward = _Xfftn_wrap(self._forward, U, trunc_array)
             self.backward = _Xfftn_wrap(self._backward, trunc_array, U)
