@@ -225,44 +225,6 @@ cdef class FFT:
             self._output_array *= self._M
         return self._output_array
 
-
-    #def _apply_implicit(self, input_array, output_array, normalize_idft, **kw):
-    #    """Apply plan with implicit update of work arrays if possible
-
-    #    This version of apply will replace the original arrays that were used
-    #    to plan the transform. Since planning takes the alignment of arrays
-    #    into consideration, we need to make sure that the alignment of the new
-    #    arrays match the once they are to replace. Other than that we also make
-    #    sure that the new arrays have the correct shape, strides and type.
-    #    """
-    #    cdef void *_in
-    #    cdef void *_out
-    #    cdef generic_function apply_plan = _get_execute_function(self.kind)
-
-    #    if input_array is not None:
-    #        assert self.input_shape == input_array.shape
-    #        assert self.input_strides == input_array.strides
-    #        assert self._input_array.dtype.char == input_array.dtype.char
-    #        if (<intptr_t>np.PyArray_DATA(input_array) %
-    #            _get_alignment(self._input_array) == 0):
-    #            self._input_array = input_array
-    #        else:
-    #            self._input_array[...] = input_array
-
-    #    if output_array is not None:
-    #        assert self.output_shape == output_array.shape
-    #        assert self.output_strides == output_array.strides
-    #        assert self._output_array.dtype.char == output_array.dtype.char
-    #        self._output_array = output_array
-
-    #    _in = <void *>np.PyArray_DATA(self._input_array)
-    #    _out = <void *>np.PyArray_DATA(self._output_array)
-    #    with nogil:
-    #        apply_plan(<fftw_plan>self._plan, _in, _out)
-    #    if normalize_idft:
-    #        self._output_array *= self._M
-    #    return self._output_array
-
     def __dealloc__(self):
         self.destroy()
 
