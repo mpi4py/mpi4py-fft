@@ -21,8 +21,9 @@ for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn
     for p in ('fftwf_', 'fftwl_'):
         fp = fl.replace('fftw_', p)
         shutil.copy(os.path.join(fftwdir, fl), os.path.join(fftwdir, fp))
-        os.system("sed -i '' 's/fftw_/{0}/g' {1}".format(p, os.path.join(fftwdir, fp)))
-        os.system("sed -i '' 's/double/{0}/g' {1}".format(prec[p], os.path.join(fftwdir, fp)))
+        sedcmd = "sed -i ''" if sys.platform == 'darwing' else "sed -i''"
+        os.system(sedcmd + " 's/fftw_/{0}/g' {1}".format(p, os.path.join(fftwdir, fp)))
+        os.system(sedcmd + " 's/double/{0}/g' {1}".format(prec[p], os.path.join(fftwdir, fp)))
 
 ext = []
 for p in ('fftw_', 'fftwf_', 'fftwl_'):
