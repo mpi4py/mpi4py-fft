@@ -7,10 +7,10 @@
 typedef double fftw_real;
 
 fftw_plan fftw_planxfftn(int      ndims,
-                         int      sizesA[ndims],
-                         void     *arrayA,
-                         int      sizesB[ndims],
-                         void     *arrayB,
+                         int      sizes_in[ndims],
+                         void     *_in,
+                         int      sizes_out[ndims],
+                         void     *_out,
                          int      naxes,
                          int      axes[naxes],
                          int      kind[naxes],

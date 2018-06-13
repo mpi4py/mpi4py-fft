@@ -16,18 +16,23 @@ threads = 1
 implicit = True
 flags = (fftw.FFTW_PATIENT, fftw.FFTW_DESTROY_INPUT)
 
-def empty_aligned(shape, n=32, dtype=np.dtype('d', align=True)):
-    a = np.empty(np.prod(shape)*dtype.itemsize+n, dtype=np.dtype('uint8'))
+def empty_aligned(shape, n=32, dtype=np.dtype('d')):
+    N = np.prod(shape)*dtype.itemsize
+    a = np.empty(N+n, dtype=np.dtype('uint8'))
     offset = a.ctypes.data % n
     offset = 0 if offset == 0 else (n - offset)
-    return np.frombuffer(a[offset:offset+n].data, dtype=dtype).reshape(shape)
+    return np.frombuffer(a[offset:(offset+N)].data, dtype=dtype).reshape(shape)
 
 # Transform complex to complex
 #A = pyfftw.byte_align(np.random.random(N).astype('D'))
-A = np.random.random(N).astype(np.dtype('D', align=True))
+#A = np.random.random(N).astype(np.dtype('D'))
+A = empty_aligned(N, n=8, dtype=np.dtype('D'))
+A[:] = np.random.random(N).astype(np.dtype('D'))
 
-input_array = np.zeros_like(A)
-output_array = np.zeros_like(A)
+#print(A.ctypes.data % 32)
+
+input_array = empty_aligned(A.shape, n=32, dtype=A.dtype)
+output_array = empty_aligned(A.shape, n=32, dtype=A.dtype)
 
 ptime = [[], []]
 ftime = [[], []]
@@ -53,11 +58,14 @@ for axis in ((1, 2), 0, 1, 2):
     assert np.allclose(C, C2)
 
     # scipy
-    C3 = sp.fftn(A, axes=axes) # scipy is caching, so call once before
-    t0 = time()
-    for i in range(loops):
-        C3 = sp.fftn(A, axes=axes)
-    stime[0].append(time()-t0)
+    if not A.dtype.char.upper() == 'G':
+        C3 = sp.fftn(A, axes=axes) # scipy is caching, so call once before
+        t0 = time()
+        for i in range(loops):
+            C3 = sp.fftn(A, axes=axes)
+        stime[0].append(time()-t0)
+    else:
+        stime[0].append(0)
 
     # pyfftw
     ifft = pyfftw.builders.ifftn(output_array, axes=axes, threads=threads,
@@ -76,12 +84,14 @@ for axis in ((1, 2), 0, 1, 2):
     assert np.allclose(B, B2), np.linalg.norm(B-B2)
 
     # scipy
-    B3 = sp.ifftn(C, axes=axes) # scipy is caching, so call once before
-    t0 = time()
-    for i in range(loops):
-        B3 = sp.ifftn(C, axes=axes)
-    stime[1].append(time()-t0)
-
+    if not C.dtype.char.upper() == 'G':
+        B3 = sp.ifftn(C, axes=axes) # scipy is caching, so call once before
+        t0 = time()
+        for i in range(loops):
+            B3 = sp.ifftn(C, axes=axes)
+        stime[1].append(time()-t0)
+    else:
+        stime[1].append(0)
 
 print("Timing forward transform axes (1, 2), 0, 1, 2")
 print("pyfftw  {0:2.4e}  {1:2.4e}  {2:2.4e} {3:2.4e}".format(*ptime[0]))

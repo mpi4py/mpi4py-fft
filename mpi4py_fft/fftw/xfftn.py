@@ -12,9 +12,9 @@ flag_dict = {key: val for key, val in six.iteritems(locals())
              if key.startswith('FFTW_')}
 
 fftlib = {
- 'F': fftwf_xfftn,
- 'D': fftw_xfftn,
- 'G': fftwl_xfftn
+    'F': fftwf_xfftn,
+    'D': fftw_xfftn,
+    'G': fftwl_xfftn
 }
 
 def FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD, threads=1,

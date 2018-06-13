@@ -39,7 +39,7 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, options):
 
 def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
     opts = dict(
-        overwrite_input='FFTW_PRESERVE_INPUT',
+        overwrite_input='FFTW_DESTROY_INPUT',
         planner_effort='FFTW_MEASURE',
         threads=1,
     )
