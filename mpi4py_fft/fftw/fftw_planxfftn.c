@@ -65,11 +65,12 @@ fftw_plan fftw_planxfftn(int      ndims,
                                   (fftw_complex *)_in,
                                   (fftw_real *)_out,
                                   flags);
+  default:
+    return fftw_plan_guru_r2r(naxes, ranks,
+                              ndims-naxes, dims,
+                              (fftw_real *)_in,
+                              (fftw_real *)_out,
+                              (fftw_r2r_kind *)kind, flags);
   }
-  return fftw_plan_guru_r2r(naxes, ranks,
-                          ndims-naxes, dims,
-                          (fftw_real *)_in,
-                          (fftw_real *)_out,
-                          kind, flags);
 }
 
