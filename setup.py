@@ -21,7 +21,7 @@ for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn
     for p in ('fftwf_', 'fftwl_'):
         fp = fl.replace('fftw_', p)
         shutil.copy(os.path.join(fftwdir, fl), os.path.join(fftwdir, fp))
-        sedcmd = "sed -i ''" if sys.platform == 'darwing' else "sed -i''"
+        sedcmd = "sed -i ''" if sys.platform == 'darwin' else "sed -i''"
         os.system(sedcmd + " 's/fftw_/{0}/g' {1}".format(p, os.path.join(fftwdir, fp)))
         os.system(sedcmd + " 's/double/{0}/g' {1}".format(prec[p], os.path.join(fftwdir, fp)))
 
@@ -30,6 +30,7 @@ for p in ('fftw_', 'fftwf_', 'fftwl_'):
     ext.append(cythonize([Extension("mpi4py_fft.fftw.{}xfftn".format(p),
                                 sources=[os.path.join(fftwdir, "{}xfftn.pyx".format(p)),
                                          os.path.join(fftwdir, "{}planxfftn.c".format(p))],
+                                #define_macros=[('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
                                 libraries=libs[p],
                                 include_dirs=[get_include(),
                                               os.path.join(sys.prefix, 'include')],
