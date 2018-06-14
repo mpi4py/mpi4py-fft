@@ -35,15 +35,15 @@ jobs:
           command: |
             source ~/miniconda/bin/activate root
             #cd /home/circleci/project
-            conda build ./conf/conda
-            conda build --python 3.6 ./conf/conda
+            conda build ./conf
+            conda build --python 3.6 ./conf
         
       #- run:
       #    name: Upload packages
       #    command: |
       #        source ~/miniconda/bin/activate root
       #        cd /home/circleci/project
-      #        upload_or_check_non_existence ./conf/conda mpi4py --channel main
+      #        upload_or_check_non_existence ./conf mpi4py --channel main
       #        export CONDA_PY=36
-      #        upload_or_check_non_existence ./conf/conda mpi4py --channel main
+      #        upload_or_check_non_existence ./conf mpi4py --channel main
 
