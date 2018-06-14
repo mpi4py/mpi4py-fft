@@ -14,5 +14,5 @@ two index sets (pencil decomposition) or even more for higher-dimensional arrays
 
 In mpi4py-fft there is also included a Python interface to the FFTW (fftw.org) library. 
 This interface can be used without MPI, much like `pyfftw <https://hgomersall.github.io/pyFFTW/>`_, and works for
-any, FFTW transform, and not just Fourier. This means that you can use this package to do real-to-real transforms,
+any transform defined by FFTW, not just Fourier. This means that you can use this package to do real-to-real transforms,
 like discrete cosine or sine transforms.
