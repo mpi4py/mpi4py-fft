@@ -9,7 +9,9 @@ from time import time
 
 abstol = dict(f=5e-4, d=1e-12, g=1e-15)
 
-kinds = {'dst3': fftw.FFTW_RODFT01,
+kinds = {#'dst4': fftw.FFTW_RODFT11, # no scipy to compare with
+         #'dct4': fftw.FFTW_REDFT11, # no scipy to compare with
+         'dst3': fftw.FFTW_RODFT01,
          'dct3': fftw.FFTW_REDFT01,
          'dct2': fftw.FFTW_REDFT10,
          'dst2': fftw.FFTW_RODFT10,

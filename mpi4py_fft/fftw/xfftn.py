@@ -71,6 +71,8 @@ def dct(input_array, output_array, axes=(-1,), type=2, threads=1,
         kind = FFTW_REDFT10  # inverse is type 3
     elif type == 3:
         kind = FFTW_REDFT01  # inverse is type 2
+    elif type == 4:
+        kind = FFTW_REDFT11
     kind = [kind]*len(axes)
     return FFT(input_array, output_array, axes, kind, threads, flags, 1)
 
@@ -92,6 +94,10 @@ def idct(input_array, output_array, axes=(-1,), type=2, threads=1,
         kind = FFTW_REDFT10
         for axis in axes:
             M *= 2*s[axis]
+    elif type == 4:
+        kind = FFTW_REDFT11
+        for axis in axes:
+            M *= 2*s[axis]
     kind = [kind]*len(axes)
     return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
@@ -105,6 +111,8 @@ def dst(input_array, output_array, axes=(-1,), type=2, threads=1,
         kind = FFTW_RODFT10  # inverse is type 3
     elif type == 3:
         kind = FFTW_RODFT01  # inverse is type 2
+    elif type == 4:
+        kind = FFTW_RODFT11
     kind = [kind]*len(axes)
     return FFT(input_array, output_array, axes, kind, threads, flags, 1)
 
@@ -124,6 +132,10 @@ def idst(input_array, output_array, axes=(-1,), type=2, threads=1,
             M *= 2*s[axis]
     elif type == 3:
         kind = FFTW_RODFT10
+        for axis in axes:
+            M *= 2*s[axis]
+    elif type == 4:
+        kind = FFTW_RODFT11
         for axis in axes:
             M *= 2*s[axis]
     kind = [kind]*len(axes)

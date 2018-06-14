@@ -1,4 +1,3 @@
-from time import time
 import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT, Function

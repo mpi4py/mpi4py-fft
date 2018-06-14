@@ -4,7 +4,7 @@ periodic domain. The solution is initialized using the Taylor-Green
 vortex and evolved in time with a 4'th order Runge Kutta method.
 
 """
-from numpy import array, pi, ndarray, where, sin, cos, sum, fft
+from numpy import array, pi, where, sin, cos, sum, fft
 from mpi4py_fft.mpifft import MPI, PFFT, Function
 from time import time
 
