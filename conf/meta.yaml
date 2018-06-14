@@ -1,0 +1,36 @@
+package:
+  name: mpi4py_fft
+  version: "1.0.0"
+
+source:
+  git_url: https://bitbucket.org/mpi4py/mpi4py-fft
+  git_tag: master
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - python
+    - cython
+    - mpi4py
+    - numpy
+    - six
+    - pip
+    - fftw
+
+  run:
+    - python
+    - mpi4py
+    - numpy
+    - fftw
+    - pyfftw
+    - six
+
+test:
+  source_files:
+    - tests
+
+  imports:
+    - mpi4py_fft
+
