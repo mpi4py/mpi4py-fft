@@ -1,7 +1,7 @@
 from __future__ import print_function
+from time import time
 import numpy as np
 from mpi4py_fft.libfft import FFT
-from time import time
 
 abstol = dict(f=5e-5, d=1e-14, g=1e-15)
 

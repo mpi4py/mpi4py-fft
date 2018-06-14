@@ -7,9 +7,9 @@ from mpi4py_fft.pencil import Subcomm, Pencil
 def test_pencil():
     from itertools import product
     comm = MPI.COMM_WORLD
-    dims  = (3, 4)
+    dims = (2, 3, 4)
     sizes = (7, 8, 9)
-    types = 'd' #'hilfdgFDG'
+    types = 'fdFD' #'hilfdgFDG'
 
     for typecode in types:
         for dim in dims:
@@ -31,8 +31,8 @@ def test_pencil():
                         pencilB = pencilA.pencil(axis2)
                         pencilC = pencilB.pencil(axis3)
 
-                        trans1  = Pencil.transfer(pencilA, pencilB, typecode)
-                        trans2  = Pencil.transfer(pencilB, pencilC, typecode)
+                        trans1 = Pencil.transfer(pencilA, pencilB, typecode)
+                        trans2 = Pencil.transfer(pencilB, pencilC, typecode)
 
                         X = np.random.random(pencilA.subshape).astype(typecode)
 

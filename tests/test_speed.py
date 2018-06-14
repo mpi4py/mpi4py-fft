@@ -1,8 +1,8 @@
+from time import time
 import numpy as np
 import pyfftw
 import scipy.fftpack as sp
 from mpi4py_fft import fftw
-from time import time
 
 try:
     fftw.xfftn.import_wisdom('wisdom.dat')
@@ -17,11 +17,11 @@ implicit = True
 flags = (fftw.FFTW_PATIENT, fftw.FFTW_DESTROY_INPUT)
 
 def empty_aligned(shape, n=32, dtype=np.dtype('d')):
-    N = np.prod(shape)*dtype.itemsize
-    a = np.empty(N+n, dtype=np.dtype('uint8'))
+    M = np.prod(shape)*dtype.itemsize
+    a = np.empty(M+n, dtype=np.dtype('uint8'))
     offset = a.ctypes.data % n
     offset = 0 if offset == 0 else (n - offset)
-    return np.frombuffer(a[offset:(offset+N)].data, dtype=dtype).reshape(shape)
+    return np.frombuffer(a[offset:(offset+M)].data, dtype=dtype).reshape(shape)
 
 # Transform complex to complex
 #A = pyfftw.byte_align(np.random.random(N).astype('D'))

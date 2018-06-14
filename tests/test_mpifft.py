@@ -29,7 +29,7 @@ def test_mpifft():
                 if dim < 3:
                     n = min(shape)
                     if typecode in 'fdg':
-                        n //=2; n+=1
+                        n //= 2; n+=1
                     if n < comm.size:
                         continue
                 for slab in (True, False):
@@ -37,17 +37,17 @@ def test_mpifft():
                     for collapse in (True, False):
                         for use_pyfftw in (True, False):
                              for axes in [None, (-1,), (-2,),
-                                        (-1,-2,), (-2,-1),
-                                        (-1,0), (0,-1)]:
+                                          (-1, -2,), (-2, -1),
+                                          (-1, 0), (0, -1)]:
 
                                 fft = PFFT(comm, shape, axes=axes, dtype=typecode,
-                                        padding=padding, slab=slab, collapse=collapse,
-                                        use_pyfftw=use_pyfftw)
+                                           padding=padding, slab=slab, collapse=collapse,
+                                           use_pyfftw=use_pyfftw)
 
                                 if comm.rank == 0:
                                     grid = [c.size for c in fft.subcomm]
                                     print('grid:{} shape:{} typecode:{} use_pyfftw:{} axes:{}'
-                                        .format(grid, shape, typecode, use_pyfftw, axes))
+                                          .format(grid, shape, typecode, use_pyfftw, axes))
 
                                 assert len(fft.axes) == len(fft.xfftn)
                                 assert len(fft.axes) == len(fft.transfer) + 1
@@ -84,16 +84,16 @@ def test_mpifft():
                     padding = [1.5]*len(shape)
                     for use_pyfftw in (True, False):
                         for axes in [None, (-1,), (-2,),
-                                    (-1,-2,), (-2,-1),
-                                    (-1,0), (0,-1)]:
+                                     (-1, -2,), (-2, -1),
+                                     (-1, 0), (0, -1)]:
 
                             fft = PFFT(comm, shape, axes=axes, dtype=typecode,
-                                    padding=padding, slab=slab, use_pyfftw=use_pyfftw)
+                                       padding=padding, slab=slab, use_pyfftw=use_pyfftw)
 
                             if comm.rank == 0:
                                 grid = [c.size for c in fft.subcomm]
                                 print('grid:{} shape:{} typecode:{} use_pyfftw:{} axes:{}'
-                                    .format(grid, shape, typecode, use_pyfftw, axes))
+                                      .format(grid, shape, typecode, use_pyfftw, axes))
 
                             assert len(fft.axes) == len(fft.xfftn)
                             assert len(fft.axes) == len(fft.transfer) + 1

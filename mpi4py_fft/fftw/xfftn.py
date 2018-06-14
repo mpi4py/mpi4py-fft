@@ -1,5 +1,5 @@
-import numpy as np
 import six
+import numpy as np
 from . import fftwf_xfftn, fftw_xfftn, fftwl_xfftn
 from .fftw_xfftn import FFTW_FORWARD, FFTW_BACKWARD, FFTW_REDFT00, FFTW_REDFT01, \
     FFTW_REDFT10, FFTW_REDFT11, FFTW_RODFT00, FFTW_RODFT01, FFTW_RODFT10, \
