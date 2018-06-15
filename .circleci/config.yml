@@ -48,6 +48,7 @@ jobs:
           name: Deploy
           command: |
             source ~/miniconda/bin/activate root
+            cd tests
             codecov
             coverage xml
             python-codacy-coverage -r coverage.xml
