@@ -1,3 +1,4 @@
+import sys
 import six
 import numpy as np
 from . import fftwf_xfftn, fftw_xfftn, fftwl_xfftn
@@ -179,7 +180,7 @@ def export_wisdom(filename):
     """
     e = []
     for key, lib in six.iteritems(fftlib):
-        e.append(lib.export_wisdom(bytes(key+'_'+filename, 'utf-8')))
+        e.append(lib.export_wisdom(bytearray(key+'_'+filename, 'utf-8')))
     assert np.all(np.array(e) == 1), "Not able to export wisdom {}".format(filename)
 
 def import_wisdom(filename):
@@ -203,6 +204,6 @@ def import_wisdom(filename):
     """
     e = []
     for key, lib in six.iteritems(fftlib):
-        e.append(lib.import_wisdom(bytes(key+'_'+filename, 'utf-8')))
+        e.append(lib.import_wisdom(bytearray(key+'_'+filename, 'utf-8')))
     assert np.all(np.array(e) == 1), "Not able to import wisdom {}".format(filename)
 
