@@ -23,9 +23,7 @@ if [ $PY -eq 3 ]; then
     
     python -m coverage combine
     
-    codecov
-    coverage xml
-    python-codacy-coverage -r coverage.xml
+    mv .coverage /home/circleci/project/
 
 else
     python test_fftw.py

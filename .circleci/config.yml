@@ -36,11 +36,21 @@ jobs:
             source ~/miniconda/bin/activate root
             conda build --python 3.6 ./conf
 
-      - run:
-          name: Build and test Python 2.7
+      #- run:
+      #    name: Build and test Python 2.7
+      #    command: |
+      #      source ~/miniconda/bin/activate root
+      #      conda build --python 2.7 ./conf
+
+      - deploy:
+          name: Deploy
           command: |
             source ~/miniconda/bin/activate root
-            conda build --python 2.7 ./conf
+            pip install --no-deps codacy-coverage
+            codecov
+            coverage xml
+            python-codacy-coverage -r coverage.xml
+            
         
       #- run:
       #    name: Upload packages
