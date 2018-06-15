@@ -48,7 +48,7 @@ jobs:
           command: |
             source ~/miniconda/bin/activate root
             codecov
-            coverage xml
+            coverage xml -i
             python-codacy-coverage -r coverage.xml
             
         
