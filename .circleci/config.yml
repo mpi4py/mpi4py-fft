@@ -21,7 +21,7 @@ jobs:
             conda config --set always_yes yes
             conda update -q conda
             conda config --add channels conda-forge
-            conda install -n root conda-build, coverage, codecov
+            conda install -n root conda-build coverage codecov
             pip install --no-deps codacy-coverage
             #conda install --yes --quiet conda-forge-build-setup
             #source run_conda_forge_build_setup
