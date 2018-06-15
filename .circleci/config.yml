@@ -6,7 +6,7 @@ jobs:
       - checkout
 
       - restore_cache:
-          key: v1-miniconda-{{ .Branch }}
+          key: v2-miniconda-{{ .Branch }}
 
       - run:
           name: install miniconda
@@ -23,26 +23,20 @@ jobs:
             conda config --add channels conda-forge
             conda install -n root conda-build coverage codecov
             pip install --no-deps codacy-coverage
-            #conda install --yes --quiet conda-forge-build-setup
-            #source run_conda_forge_build_setup
 
       - run:
           name: Build and test Python 3.6
           command: |
             source ~/miniconda/bin/activate root
             conda build --no-test --python 3.6 ./conf
-            #cd mpi4py_fft
-            #export PYTHONPATH=/home/circleci/project/mpi4py_fft:$PYTHONPATH
-            #python setup.py build_ext --inplace
             conda install mpi4py_fft --use-local
-            cd tests
-            ./runtests.sh
+            cd tests && ./runtests.sh
 
-      #- run:
-      #    name: Build and test Python 2.7
-      #    command: |
-      #      source ~/miniconda/bin/activate root
-      #      conda build --python 2.7 ./conf
+      - run:
+          name: Build and test Python 2.7
+          command: |
+            source ~/miniconda/bin/activate root
+            conda build --python 2.7 ./conf
 
       - deploy:
           name: Deploy
@@ -55,17 +49,7 @@ jobs:
             python-codacy-coverage -r coverage.xml
            
       - save_cache:
-          key: v1-miniconda-{{ .Branch }}
+          key: v2-miniconda-{{ .Branch }}
           paths:
             - /home/circleci/miniconda
- 
-        
-      #- run:
-      #    name: Upload packages
-      #    command: |
-      #        source ~/miniconda/bin/activate root
-      #        cd /home/circleci/project
-      #        upload_or_check_non_existence ./conf mpi4py --channel main
-      #        export CONDA_PY=36
-      #        upload_or_check_non_existence ./conf mpi4py --channel main
 
