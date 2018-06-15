@@ -69,14 +69,35 @@ class Subcomm(tuple):
 
 
 class Transfer(object):
+    """Class for performing global redistributions
 
-    # pylint: disable=too-many-instance-attributes
+    Parameters
+    ----------
+    comm : MPI communicator
+    shape : list or tuple of ints
+        shape of input array planned for
+    dtype : np.dtype, optional
+        Type of input array
+    subshapeA : list of ints
+        Shape of input pencil
+    axisA : int
+        Input array aligned in this direction
+    subshapeB : list of ints
+        Shape of output pencil
+    axisB : int
+        Output array aligned in this direction
 
+    Methods
+    -------
+    forward
+        Global redistribution from pencil A to pencil B
+    backward
+        Global redistribution from pencil B to pencil A
+    """
     def __init__(self,
                  comm, shape, dtype,
                  subshapeA, axisA,
                  subshapeB, axisB):
-        # pylint: disable=too-many-arguments
         self.comm = comm
         self.shape = tuple(shape)
         self.dtype = dtype = np.dtype(dtype)
@@ -113,6 +134,24 @@ class Transfer(object):
 
 
 class Pencil(object):
+    """Class to represent a distributed array (pencil)
+
+    Parameters
+    ----------
+    subcomm : MPI communicator
+    shape : tuple or list of ints
+        Shape of pencil (local array)
+    axis : int, optional
+        Pencil is aligned in this direction
+
+    Methods
+    -------
+    transfer(pencil, dtype)
+        Return an instance of the :class:`.Transfer` class for global
+        redistribution from this pencil instance to the given pencil instance
+    pencil(axis)
+        Return an instance of the :class:`.Pencil` class aligned along axis
+    """
 
     def __init__(self, subcomm, shape, axis=-1):
         assert len(shape) >= 2

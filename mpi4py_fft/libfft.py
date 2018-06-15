@@ -3,6 +3,19 @@ import pyfftw
 from . import fftw
 
 def _Xfftn_plan_pyfftw(shape, axes, dtype, options):
+    """Plan serial transforms using pyfftw
+
+    Parameters
+    ----------
+    shape : list of ints
+        shape of input array planned for
+    axes : list of ints
+        axes to transform over
+    dtype : np.dtype
+        type of input array
+    options : dict
+        arguments for planning serial transforms
+    """
     assert pyfftw
     opts = dict(
         avoid_copy=True,
@@ -37,6 +50,19 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, options):
     return (xfftn_fwd, xfftn_bck)
 
 def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
+    """Plan serial transforms using local wrapper
+
+    Parameters
+    ----------
+    shape : list of ints
+        shape of input array planned for
+    axes : list of ints
+        axes to transform over
+    dtype : np.dtype
+        type of input array
+    options : dict
+        arguments for planning serial transforms
+    """
     opts = dict(
         overwrite_input='FFTW_DESTROY_INPUT',
         planner_effort='FFTW_MEASURE',
@@ -72,6 +98,15 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
 
 
 class _Xfftn_wrap(object):
+    """Wrapper class for serial transform methods
+
+    Parameters
+    ----------
+    xfftn_obj :
+        Callable transform object
+    input_array, output_array : arrays
+        input and output arrays of type np.ndarray
+    """
 
     # pylint: disable=too-few-public-methods
 
@@ -106,6 +141,21 @@ class _Xfftn_wrap(object):
             return self.output_array
 
 class FFTBase(object):
+    """Base class for serial FFT transforms
+
+    Parameters
+    ----------
+    shape : list or tuple of ints
+        shape of input array planned for
+    axes : None, int or tuple of ints, optional
+        axes to transform over. If None transform over all axes
+    dtype : np.dtype, optional
+        Type of input array
+    padding : bool, number or list of numbers
+        If False, then no padding. If number, then apply this number as padding
+        factor for all axes. If list of numbers, then each number gives the
+        padding for each axis. Must be same length as axes.
+    """
 
     def __init__(self, shape, axes=None, dtype=float, padding=False):
         shape = list(shape) if np.ndim(shape) else [shape]
@@ -182,9 +232,31 @@ class FFTBase(object):
 
 
 class FFT(FFTBase):
+    """Class for serial FFT transforms
 
-    # pylint: disable=too-few-public-methods
+    Parameters
+    ----------
+    shape : list or tuple of ints
+        shape of input array planned for
+    axes : None, int or tuple of ints, optional
+        axes to transform over. If None transform over all axes
+    dtype : np.dtype, optional
+        Type of input array
+    padding : bool, number or list of numbers
+        If False, then no padding. If number, then apply this number as padding
+        factor for all axes. If list of numbers, then each number gives the
+        padding for each axis. Must be same length as axes.
+    kw : dict
+        Parameters passed to serial transform object
 
+    Methods
+    -------
+    forward(input_array, output_array, options)
+        The forward transform
+    backward(input_array, output_array, options)
+        The backward transform
+
+    """
     def __init__(self, shape, axes=None, dtype=float, padding=False,
                  use_pyfftw=False, **kw):
         FFTBase.__init__(self, shape, axes, dtype, padding)
@@ -229,8 +301,31 @@ class FFT(FFTBase):
 
 
 class FFTNumPy(FFTBase): #pragma: no cover
+    """Class for serial FFT transforms
 
-    # pylint: disable=too-few-public-methods
+    Parameters
+    ----------
+    shape : list or tuple of ints
+        shape of input array planned for
+    axes : None, int or tuple of ints, optional
+        axes to transform over. If None transform over all axes
+    dtype : np.dtype, optional
+        Type of input array
+    padding : bool, number or list of numbers
+        If False, then no padding. If number, then apply this number as padding
+        factor for all axes. If list of numbers, then each number gives the
+        padding for each axis. Must be same length as axes.
+    kw : dict
+        Parameters passed to serial transform object
+
+    Methods
+    -------
+    forward(input_array, output_array, options)
+        The forward transform
+    backward(input_array, output_array, options)
+        The backward transform
+
+    """
 
     def __init__(self, shape, axes=None, dtype=float, padding=False, **kw):
         FFTBase.__init__(self, shape, axes, dtype, padding)
@@ -290,6 +385,5 @@ class FFTNumPy(FFTBase): #pragma: no cover
         shape[axis] = int(np.round(shape[axis] / self.padding_factor))
         shape[axis] = shape[axis]//2 + 1
         return np.zeros(shape, dtype=dtype)
-
 
 #FFT = FFTNumPy

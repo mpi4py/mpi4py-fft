@@ -1,6 +1,6 @@
 from copy import copy
 import numpy as np
-from mpi4py import MPI  # pylint: disable=unused-import
+from mpi4py import MPI
 
 from .libfft import FFT
 from .pencil import Pencil
@@ -8,6 +8,24 @@ from .pencil import Subcomm
 
 
 class Transform(object):
+    """Class for performing any parallel transform
+
+    Parameters
+    ----------
+    xfftn : list of serial transform objects
+    transfer : list of global redistribution objects
+    pencil : list of two pencil objects
+        The two pencils represent the input and final output configuration of
+        the distributed global arrays
+
+    Attributes
+    -------
+    input_array
+    output_array
+    input_pencil
+    output_pencil
+
+    """
 
     def __init__(self, xfftn, transfer, pencil):
         assert len(xfftn) == len(transfer) + 1 and len(pencil) == 2
@@ -40,6 +58,8 @@ class Transform(object):
             Function values on quadrature mesh
         output_array : array, optional
             Expansion coefficients
+        kw : dict
+            parameters to serial transforms
 
         Note
         ----
@@ -65,8 +85,35 @@ class Transform(object):
 
 
 class PFFT(object):
+    """Base class for parallel FFT transforms
 
-    # pylint: disable=too-few-public-methods
+    Parameters
+    ----------
+    comm : MPI communicator
+    shape : list or tuple of ints
+        shape of input array planned for
+    axes : None, int or tuple of ints, optional
+        axes to transform over. If None transform over all axes
+    dtype : np.dtype, optional
+        Type of input array
+    slab : bool, optional
+        If True then distribute only one index of the global array
+    padding : bool, number or list of numbers, optional
+        If False, then no padding. If number, then apply this number as padding
+        factor for all axes. If list of numbers, then each number gives the
+        padding for each axis. Must be same length as axes.
+    collapse : bool, optional
+        If True try to collapse several serial transforms into one object
+    use_pyfftw : bool, optional
+        Use pyfftw for serial transforms instead of local wrappers
+
+    Methods
+    -------
+    forward
+        Parallel forward transform. Instance of Transform class
+    backward
+        Parallel backward transform. Instance of Transform class
+    """
 
     def __init__(self, comm, shape, axes=None, dtype=float,
                  slab=False, padding=False, collapse=False,
@@ -189,7 +236,6 @@ class PFFT(object):
 
     def local_slice(self, spectral=True):
         """The local view into the global data"""
-
         if spectral is not True:
             ip = self.forward.input_pencil
             s = [slice(start, start+shape) for start, shape in zip(ip.substart,
