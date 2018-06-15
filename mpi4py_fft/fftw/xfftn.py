@@ -1,4 +1,3 @@
-import sys
 import six
 import numpy as np
 from . import fftwf_xfftn, fftw_xfftn, fftwl_xfftn

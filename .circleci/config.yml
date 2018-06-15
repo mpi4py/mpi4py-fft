@@ -31,17 +31,16 @@ jobs:
             - /home/circleci/miniconda
 
       - run:
-          name: Build and test Python 2.7
-          command: |
-            source ~/miniconda/bin/activate root
-            conda build --python 2.7 ./conf
-
-      - run:
           name: Build and test Python 3.6
           command: |
             source ~/miniconda/bin/activate root
             conda build --python 3.6 ./conf
 
+      - run:
+          name: Build and test Python 2.7
+          command: |
+            source ~/miniconda/bin/activate root
+            conda build --python 2.7 ./conf
         
       #- run:
       #    name: Upload packages
