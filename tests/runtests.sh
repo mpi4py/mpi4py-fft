@@ -7,7 +7,7 @@ if [ $PY -eq 3 ]; then
     # coverage only for python version 3
 
     python -m coverage erase
-    
+    #src=$(python -c "import site; print(site.getsitepackages()[0]+'/mpi4py_fft')") 
     python -m coverage run -m test_fftw
     python -m coverage run -m test_libfft
     

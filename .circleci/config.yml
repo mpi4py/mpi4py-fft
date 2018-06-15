@@ -26,11 +26,6 @@ jobs:
             #conda install --yes --quiet conda-forge-build-setup
             #source run_conda_forge_build_setup
 
-      - save_cache:
-          key: v1-miniconda-{{ .Branch }}
-          paths:
-            - /home/circleci/miniconda
-
       - run:
           name: Build and test Python 3.6
           command: |
@@ -53,11 +48,15 @@ jobs:
           name: Deploy
           command: |
             source ~/miniconda/bin/activate root
-            cd mpi4py_fft/tests
             codecov
             coverage xml
             python-codacy-coverage -r coverage.xml
-            
+           
+      - save_cache:
+          key: v1-miniconda-{{ .Branch }}
+          paths:
+            - /home/circleci/miniconda
+ 
         
       #- run:
       #    name: Upload packages
