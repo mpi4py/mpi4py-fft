@@ -23,7 +23,7 @@ if [ $PY -eq 3 ]; then
     
     python -m coverage combine
     
-    mv .coverage /home/circleci/project/
+    #mv .coverage /home/circleci/project/
 
 else
     python test_fftw.py

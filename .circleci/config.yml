@@ -35,7 +35,11 @@ jobs:
           name: Build and test Python 3.6
           command: |
             source ~/miniconda/bin/activate root
-            conda build --python 3.6 ./conf
+            conda build --no-test --python 3.6 ./conf
+            export PYTHONPATH=/home/circleci/project/mpi4py_fft:$PYTHONPATH
+            python setup.py build_ext --inplace
+            cd tests
+            ./runtests.sh
 
       #- run:
       #    name: Build and test Python 2.7
@@ -47,8 +51,9 @@ jobs:
           name: Deploy
           command: |
             source ~/miniconda/bin/activate root
+            cd tests
             codecov
-            coverage xml -i
+            coverage xml
             python-codacy-coverage -r coverage.xml
             
         
