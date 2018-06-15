@@ -7,16 +7,27 @@ import pyfftw
 from mpi4py_fft import fftw
 from time import time
 
-abstol = dict(f=5e-4, d=1e-12, g=1e-15)
+abstol = dict(f=5e-4, d=1e-12, g=1e-14)
 
-kinds = {#'dst4': fftw.FFTW_RODFT11, # no scipy to compare with
-         #'dct4': fftw.FFTW_REDFT11, # no scipy to compare with
+kinds = {'dst4': fftw.FFTW_RODFT11, # no scipy to compare with
+         'dct4': fftw.FFTW_REDFT11, # no scipy to compare with
          'dst3': fftw.FFTW_RODFT01,
          'dct3': fftw.FFTW_REDFT01,
          'dct2': fftw.FFTW_REDFT10,
          'dst2': fftw.FFTW_RODFT10,
          'dct1': fftw.FFTW_REDFT00,
          'dst1': fftw.FFTW_RODFT00}
+
+inv = {
+    fftw.FFTW_RODFT11: fftw.FFTW_RODFT11,
+    fftw.FFTW_REDFT11: fftw.FFTW_REDFT11,
+    fftw.FFTW_RODFT01: fftw.FFTW_RODFT10,
+    fftw.FFTW_REDFT01: fftw.FFTW_REDFT10,
+    fftw.FFTW_RODFT10: fftw.FFTW_RODFT01,
+    fftw.FFTW_REDFT10: fftw.FFTW_REDFT01,
+    fftw.FFTW_RODFT00: fftw.FFTW_RODFT00,
+    fftw.FFTW_REDFT00: fftw.FFTW_REDFT00
+}
 
 ds = {val: key for key, val in six.iteritems(kinds)}
 
@@ -50,6 +61,7 @@ def test_fftw():
                             output_array = np.zeros(outshape, dtype=typecode.upper())
                             rfftn = fftw.rfftn(input_array, output_array, axes, threads, fflags)
                             B = rfftn(A)
+                            BC = B.copy()
                             B2 = pyfftw.interfaces.numpy_fft.rfftn(A, axes=axes)
                             assert allclose(B, B2), np.linalg.norm(B-B2)
                             irfftn = fftw.irfftn(output_array.copy(), input_array.copy(), axes, threads, iflags)
@@ -58,6 +70,11 @@ def test_fftw():
                             # Note that irfftn destroys input for
                             # multidimensional transform. Can be avoided using
                             # instead A2 = irfftn(B, implicit=False, normalize_idft=True)
+                            hfftn = fftw.hfftn(output_array, input_array, axes, threads, fflags)
+                            AC = hfftn(BC, implicit=False)
+                            ihfftn = fftw.ihfftn(input_array.copy(), output_array.copy(), axes, threads, iflags)
+                            A2 = ihfftn(AC, normalize_idft=True, implicit=False)
+                            assert allclose(A2, BC), print(np.linalg.norm(A2-BC))
 
                             # c2c
                             C = np.random.random(shape).astype(typecode.upper())
@@ -74,13 +91,13 @@ def test_fftw():
                             # r2r
                             input_array = np.zeros_like(A)
                             output_array = np.zeros_like(A)
-                            for type in (1, 2, 3):
+                            for type in (1, 2, 3, 4):
                                 dct = fftw.dct(input_array, output_array, axes, type, threads, fflags)
                                 B = dct(A)
                                 idct = fftw.idct(output_array.copy(), input_array.copy(), axes, type, threads, iflags)
                                 A2 = idct(B, normalize_idft=True)
                                 assert allclose(A, A2), np.linalg.norm(A-A2)
-                                if typecode is not 'g':
+                                if typecode is not 'g' and not type is 4:
                                     B2 = scipy.fftpack.dctn(A, axes=axes, type=type)
                                     assert allclose(B, B2), np.linalg.norm(B-B2)
 
@@ -89,23 +106,39 @@ def test_fftw():
                                 idst = fftw.idst(output_array.copy(), input_array.copy(), axes, type, threads, iflags)
                                 A2 = idst(B, normalize_idft=True)
                                 assert allclose(A, A2), np.linalg.norm(A-A2)
-                                if typecode is not 'g':
+                                if typecode is not 'g' and not type is 4:
                                     B2 = scipy.fftpack.dstn(A, axes=axes, type=type)
                                     assert allclose(B, B2), np.linalg.norm(B-B2)
 
                             # Different r2r transforms along all axes. Just pick
                             # any naxes transforms and compare with scipy
                             naxes = len(axes)
-                            vals = np.random.randint(6, size=naxes) # get naxes transforms
-                            kds = np.array(list(kinds.values()))[vals]
+                            kds = np.random.randint(3, 11, size=naxes) # get naxes transforms
                             tsf = [ds[k] for k in kds]
                             T = fftw.FFT(input_array, output_array, axes=axes,
-                                         kind=kds, threads=threads)
+                                         kind=kds, threads=threads, flags=fflags)
                             C = T(A)
-                            if typecode is not 'g':
+                            TI = fftw.FFT(output_array.copy(), input_array.copy(), axes=axes,
+                                          kind=list([inv[kd] for kd in kds]),
+                                          threads=threads, flags=iflags)
+
+                            C2 = TI(C)
+                            M = 1.0
+                            for l, dd in enumerate(tsf):
+                                if dd == 'dct1':
+                                    M *= 2*(C.shape[axes[l]]-1)
+                                elif dd == 'dst1':
+                                    M *= 2*(C.shape[axes[l]]+1)
+                                else:
+                                    M *= 2*C.shape[axes[l]]
+                            assert allclose(C2/M, A)
+                            if typecode is not 'g' and not any(f in kds for f in (fftw.FFTW_RODFT11, fftw.FFTW_REDFT11)):
                                 for m, ts in enumerate(tsf):
                                     A = eval('scipy.fftpack.'+ts[:-1])(A, axis=axes[m], type=int(ts[-1]))
                                 assert allclose(C, A), np.linalg.norm(C-A)
+
+    fftw.xfftn.export_wisdom('wisdom.dat')
+    fftw.xfftn.import_wisdom('wisdom.dat')
 
 if __name__ == '__main__':
     test_fftw()
