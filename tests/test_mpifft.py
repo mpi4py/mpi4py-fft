@@ -18,8 +18,8 @@ def test_mpifft():
     from itertools import product
 
     comm = MPI.COMM_WORLD
-    dims  = (2, 3, 4)
-    sizes = (14, 23)
+    dims  = (2, 3)
+    sizes = (14, 17)
     types = 'fFdDgG' # + 'gG'
 
     for typecode in types:

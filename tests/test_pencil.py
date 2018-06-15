@@ -7,7 +7,7 @@ from mpi4py_fft.pencil import Subcomm, Pencil
 def test_pencil():
     from itertools import product
     comm = MPI.COMM_WORLD
-    dims = (2, 3, 4)
+    dims = (2, 3)
     sizes = (7, 8, 9)
     types = 'fdFD' #'hilfdgFDG'
 

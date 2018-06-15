@@ -12,7 +12,7 @@ def allclose(a, b):
 def test_libfft():
     from itertools import product
 
-    dims  = (1, 2, 3, 4)
+    dims  = (1, 2, 3)
     sizes = (7, 8, 9)
     types = 'fdgFDG'
 

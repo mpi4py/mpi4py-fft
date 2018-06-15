@@ -1,0 +1,1 @@
+../examples/spectral_dns_solver.py

@@ -27,7 +27,7 @@ def allclose(a, b):
 def test_fftw():
     from itertools import product
 
-    dims = (1, 2, 3, 4)
+    dims = (1, 2, 3)
     sizes = (7, 8, 9)
     types = 'fdg'
     fflags = (fftw.FFTW_MEASURE, fftw.FFTW_DESTROY_INPUT)
