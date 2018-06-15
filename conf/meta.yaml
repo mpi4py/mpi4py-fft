@@ -29,6 +29,9 @@ requirements:
     - scipy
 
 test:
+  requires:
+    - coverage
+
   source_files:
     - tests
 

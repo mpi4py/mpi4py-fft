@@ -22,7 +22,6 @@ jobs:
             conda update -q conda
             conda config --add channels conda-forge
             conda install -n root conda-build
-            conda install --quiet --yes coverage
             #conda install --yes --quiet conda-forge-build-setup
             #source run_conda_forge_build_setup
 

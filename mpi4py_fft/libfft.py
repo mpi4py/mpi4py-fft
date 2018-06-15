@@ -228,7 +228,7 @@ class FFT(FFTBase):
         return pyfftw.empty_aligned(shape, dtype=dtype)
 
 
-class FFTNumPy(FFTBase):
+class FFTNumPy(FFTBase): #pragma: no cover
 
     # pylint: disable=too-few-public-methods
 
