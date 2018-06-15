@@ -49,7 +49,8 @@ jobs:
           command: |
             source ~/miniconda/bin/activate root
             cd tests
-            codecov
+            curl -s -o codecov.sh https://codecov.io/bash
+            bash codecov.sh -X gcov -X fix
             coverage xml
             python-codacy-coverage -r coverage.xml
            
