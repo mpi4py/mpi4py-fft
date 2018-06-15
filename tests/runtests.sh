@@ -2,6 +2,7 @@
 set -e
 
 PY=$(python -c 'import sys; print(sys.version_info.major)')
+export OMPI_MCA_rmaps_base_oversubscribe=yes
 
 if [ $PY -eq 3 ]; then
     # coverage only for python version 3
