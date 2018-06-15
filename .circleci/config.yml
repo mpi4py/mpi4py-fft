@@ -35,9 +35,11 @@ jobs:
           name: Build and test Python 3.6
           command: |
             source ~/miniconda/bin/activate root
-            conda build --no-test --python 3.6 ./conf
-            export PYTHONPATH=/home/circleci/project/mpi4py_fft:$PYTHONPATH
-            python setup.py build_ext --inplace
+            #conda build --no-test --python 3.6 ./conf
+            #cd mpi4py_fft
+            #export PYTHONPATH=/home/circleci/project/mpi4py_fft:$PYTHONPATH
+            #python setup.py build_ext --inplace
+            conda install mpi4py_fft --use-local
             cd tests
             ./runtests.sh
 

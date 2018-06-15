@@ -5,6 +5,7 @@ PY=`python -c 'import sys; print(sys.version_info.major)'`
 
 if [ $PY -eq 3 ]; then
     # coverage only for python version 3
+
     python -m coverage erase
     
     python -m coverage run -m test_fftw
