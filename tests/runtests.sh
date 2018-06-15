@@ -24,6 +24,9 @@ if [ $PY -eq 3 ]; then
     python -m coverage combine
     
     codecov
+    coverage xml
+    python-codacy-coverage -r coverage.xml
+
 else
     python test_fftw.py
     python test_libfft.py
