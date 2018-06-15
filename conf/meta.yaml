@@ -30,9 +30,8 @@ requirements:
 
 test:
   requires:
-    - coverage
-    - codecov
-    - codacy-coverage
+    - coverage # [py3]
+    - codecov # [py3]
 
   source_files:
     - tests
