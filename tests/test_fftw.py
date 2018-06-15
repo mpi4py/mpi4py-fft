@@ -41,7 +41,7 @@ def test_fftw():
                     for i in range(dim):
                         for j in range(i+1, dim):
                             axes = allaxes[i:j]
-                            print(shape, axes, typecode, threads)
+                            #print(shape, axes, typecode, threads)
                             # r2c - c2r
                             A = np.random.random(shape).astype(typecode)
                             outshape = list(copy(shape))

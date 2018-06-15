@@ -44,10 +44,10 @@ def test_mpifft():
                                            padding=padding, slab=slab, collapse=collapse,
                                            use_pyfftw=use_pyfftw)
 
-                                if comm.rank == 0:
-                                    grid = [c.size for c in fft.subcomm]
-                                    print('grid:{} shape:{} typecode:{} use_pyfftw:{} axes:{}'
-                                          .format(grid, shape, typecode, use_pyfftw, axes))
+                                #if comm.rank == 0:
+                                #    grid = [c.size for c in fft.subcomm]
+                                #    print('grid:{} shape:{} typecode:{} use_pyfftw:{} axes:{}'
+                                #          .format(grid, shape, typecode, use_pyfftw, axes))
 
                                 assert len(fft.axes) == len(fft.xfftn)
                                 assert len(fft.axes) == len(fft.transfer) + 1
@@ -90,10 +90,10 @@ def test_mpifft():
                             fft = PFFT(comm, shape, axes=axes, dtype=typecode,
                                        padding=padding, slab=slab, use_pyfftw=use_pyfftw)
 
-                            if comm.rank == 0:
-                                grid = [c.size for c in fft.subcomm]
-                                print('grid:{} shape:{} typecode:{} use_pyfftw:{} axes:{}'
-                                      .format(grid, shape, typecode, use_pyfftw, axes))
+                            #if comm.rank == 0:
+                            #    grid = [c.size for c in fft.subcomm]
+                            #    print('grid:{} shape:{} typecode:{} use_pyfftw:{} axes:{}'
+                            #          .format(grid, shape, typecode, use_pyfftw, axes))
 
                             assert len(fft.axes) == len(fft.xfftn)
                             assert len(fft.axes) == len(fft.transfer) + 1
