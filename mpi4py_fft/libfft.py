@@ -98,15 +98,6 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
 
 
 class _Xfftn_wrap(object):
-    """Wrapper class for serial transform methods
-
-    Parameters
-    ----------
-    xfftn_obj :
-        Callable transform object
-    input_array, output_array : arrays
-        input and output arrays of type np.ndarray
-    """
 
     # pylint: disable=too-few-public-methods
 
@@ -263,7 +254,7 @@ class FFT(FFTBase):
         plan = _Xfftn_plan_pyfftw if use_pyfftw is True else _Xfftn_plan_mpi4py
         self.fwd, self.bck = plan(self.shape, self.axes, self.dtype, kw)
         U, V = self.fwd.input_array, self.fwd.output_array
-        self.M = 1./np.prod(np.take(shape, axes))
+        self.M = 1./np.prod(np.take(self.shape, self.axes))
         self.padding_factor = 1.0
         if padding is not False:
             self.padding_factor = padding[self.axes[-1]] if np.ndim(padding) else padding

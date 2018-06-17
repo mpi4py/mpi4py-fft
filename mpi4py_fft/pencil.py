@@ -39,7 +39,7 @@ class Subcomm(tuple):
             cartcomm = comm
         else:
             if dims is None:
-                dims = [0, 0]
+                dims = [0]
             elif np.ndim(dims) > 0:
                 assert len(dims) > 0
                 dims = [max(0, d) for d in dims]

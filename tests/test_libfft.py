@@ -24,28 +24,26 @@ def test_libfft():
                     allaxes = tuple(reversed(range(dim)))
                     for i in range(dim):
                         for j in range(i+1, dim):
+                            for axes in (None, allaxes[i:j]):
+                                #print(shape, axes, typecode)
+                                fft = FFT(shape, axes, dtype=typecode,
+                                          use_pyfftw=use_pyfftw)
+                                A = fft.forward.input_array
+                                B = fft.forward.output_array
 
-                            axes = allaxes[i:j]
+                                A[...] = np.random.random(A.shape).astype(typecode)
+                                X = A.copy()
 
-                            #print(shape, axes, typecode)
-                            fft = FFT(shape, axes, dtype=typecode,
-                                      use_pyfftw=use_pyfftw)
-                            A = fft.forward.input_array
-                            B = fft.forward.output_array
+                                B.fill(0)
+                                t0 -= time()
+                                B = fft.forward(A, B)
+                                t0 += time()
 
-                            A[...] = np.random.random(A.shape).astype(typecode)
-                            X = A.copy()
-
-                            B.fill(0)
-                            t0 -= time()
-                            B = fft.forward(A, B)
-                            t0 += time()
-
-                            A.fill(0)
-                            t0 -= time()
-                            A = fft.backward(B, A)
-                            t0 += time()
-                            assert allclose(A, X)
+                                A.fill(0)
+                                t0 -= time()
+                                A = fft.backward(B, A)
+                                t0 += time()
+                                assert allclose(A, X)
         print(use_pyfftw, t0)
     # Padding is different because the physical space is padded and as such
     # difficult to initialize. We solve this problem by making one extra
@@ -58,6 +56,7 @@ def test_libfft():
                         allaxes = tuple(reversed(range(dim)))
                         for i in range(dim):
                             axis = allaxes[i]
+                            axis -= len(shape)
                             shape = list(shape)
                             shape[axis] = int(shape[axis]*padding)
 

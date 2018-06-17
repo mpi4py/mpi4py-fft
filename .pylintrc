@@ -1,6 +1,7 @@
 [MASTER]
 disable = locally-disabled,
     too-few-public-methods,
+    too-many-instance-attributes,
     invalid-name,
     missing-docstring,
     redefined-builtin,

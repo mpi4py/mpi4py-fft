@@ -166,7 +166,6 @@ class PFFT(object):
                     if axis < 0:
                         axis = axis + len(shape)
                     assert 0 <= axis < len(shape)
-                    assert axes[-1] != axis
                 dims = [1] * len(shape)
                 dims[axis] = comm.Get_size()
             self.subcomm = Subcomm(comm, dims)
@@ -252,34 +251,6 @@ class PFFT(object):
     def output_shape(self):
         return self._output_shape
 
-    def get_local_mesh(self, L):
-        """Returns local mesh."""
-        X = np.ogrid[self.local_slice(False)]
-        N = self.input_shape()
-        for i in range(len(N)):
-            X[i] = (X[i]*L[i]/N[i])
-        X = [np.broadcast_to(x, self.local_shape(False)) for x in X]
-        return X
-
-    def get_local_wavenumbermesh(self, L):
-        """Returns local wavenumber mesh."""
-
-        s = self.local_slice()
-        N = self.input_shape()
-
-        # Set wavenumbers in grid
-        k = [np.fft.fftfreq(n, 1./n).astype(int) for n in N[:-1]]
-        if self.forward.input_array.dtype.char in 'fdg':
-            k.append(np.fft.rfftfreq(N[-1], 1./N[-1]).astype(int))
-        else:
-            k.append(np.fft.fftfreq(N[-1], 1./N[-1]).astype(int))
-        K = [ki[si] for ki, si in zip(k, s)]
-        Ks = np.meshgrid(*K, indexing='ij', sparse=True)
-        Lp = 2*np.pi/L
-        for i in range(len(Ks)):
-            Ks[i] = (Ks[i]*Lp[i]).astype(float)
-        return [np.broadcast_to(k, self.local_shape(True)) for k in Ks]
-
 
 class Function(np.ndarray):
     """Distributed Numpy array for instance of PFFT class
@@ -300,11 +271,10 @@ class Function(np.ndarray):
 
     Examples
     --------
-    from mpi4py_fft import MPI, PFFT, Function
-
-    FFT = PFFT(MPI.COMM_WORLD, [64, 64, 64])
-    u = Function(FFT, tensor=3)
-    uhat = Function(FFT, False, tensor=3)
+    >>> from mpi4py_fft import MPI, PFFT, Function
+    >>> FFT = PFFT(MPI.COMM_WORLD, [64, 64, 64])
+    >>> u = Function(FFT, tensor=3)
+    >>> uhat = Function(FFT, False, tensor=3)
 
     """
 

@@ -19,10 +19,11 @@ def test_pencil():
 
                     if axis1 == axis2: continue
                     if axis2 == axis3: continue
+                    axis3 -= len(shape)
                     #if comm.rank == 0:
                     #    print(shape, axis1, axis2, axis3, typecode)
 
-                    for pdim in [len(shape)-1]:#[None] + range(1, dim-1):
+                    for pdim in [None] + list(range(1, dim-1)):
 
                         subcomm = Subcomm(comm, pdim)
                         pencil0 = Pencil(subcomm, shape)

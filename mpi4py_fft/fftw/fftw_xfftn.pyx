@@ -72,32 +72,34 @@ cdef class FFT:
         The axes to transform over, starting from the last
     kind : int or tuple of ints
         Any one of
-        - FFTW_FORWARD (-1)
-        - FFTW_R2HC (0)
-        - FFTW_BACKWARD (1)
-        - FFTW_HC2R (1)
-        - FFTW_DHT (2)
-        - FFTW_REDFT00 (3)
-        - FFTW_REDFT01 (4)
-        - FFTW_REDFT10 (5)
-        - FFTW_REDFT11 (6)
-        - FFTW_RODFT00 (7)
-        - FFTW_RODFT01 (8)
-        - FFTW_RODFT10 (9)
-        - FFTW_RODFT11 (10)
+
+            - FFTW_FORWARD (-1)
+            - FFTW_R2HC (0)
+            - FFTW_BACKWARD (1)
+            - FFTW_HC2R (1)
+            - FFTW_DHT (2)
+            - FFTW_REDFT00 (3)
+            - FFTW_REDFT01 (4)
+            - FFTW_REDFT10 (5)
+            - FFTW_REDFT11 (6)
+            - FFTW_RODFT00 (7)
+            - FFTW_RODFT01 (8)
+            - FFTW_RODFT10 (9)
+            - FFTW_RODFT11 (10)
     threads : int
         Number of threads to use in transforms
     flags : int or tuple of ints
         Any one of, but not necessarily for all transforms or all combinations
-        - FFTW_MEASURE (0)
-        - FFTW_DESTROY_INPUT (1)
-        - FFTW_UNALIGNED (2)
-        - FFTW_CONSERVE_MEMORY (4)
-        - FFTW_EXHAUSTIVE (8)
-        - FFTW_PRESERVE_INPUT (16)
-        - FFTW_PATIENT (32)
-        - FFTW_ESTIMATE (64)
-        - FFTW_WISDOM_ONLY (2097152)
+
+            - FFTW_MEASURE (0)
+            - FFTW_DESTROY_INPUT (1)
+            - FFTW_UNALIGNED (2)
+            - FFTW_CONSERVE_MEMORY (4)
+            - FFTW_EXHAUSTIVE (8)
+            - FFTW_PRESERVE_INPUT (16)
+            - FFTW_PATIENT (32)
+            - FFTW_ESTIMATE (64)
+            - FFTW_WISDOM_ONLY (2097152)
     normalization : int
         Normalization factor
 

@@ -2,6 +2,7 @@ from __future__ import print_function
 import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT
+from mpi4py_fft.pencil import Subcomm
 
 abstol = dict(f=0.1, d=2e-10, g=1e-10)
 
@@ -14,12 +15,19 @@ def random_like(array):
     dtype = array.dtype
     return np.random.random(shape).astype(dtype)
 
+def random_true_or_false(comm):
+    r = 0
+    if comm.rank == 0:
+        r = np.random.randint(2)
+    r = comm.bcast(r)
+    return r
+
 def test_mpifft():
     from itertools import product
 
     comm = MPI.COMM_WORLD
     dims  = (2, 3)
-    sizes = (14, 17)
+    sizes = (16, 17)
     types = 'fFdDgG' # + 'gG'
 
     for typecode in types:
@@ -39,9 +47,25 @@ def test_mpifft():
                              for axes in [None, (-1,), (-2,),
                                           (-1, -2,), (-2, -1),
                                           (-1, 0), (0, -1)]:
-
-                                fft = PFFT(comm, shape, axes=axes, dtype=typecode,
-                                           padding=padding, slab=slab, collapse=collapse,
+                                _slab = slab
+                                # Test also the slab is number interface
+                                if slab is True and axes is not None:
+                                    _slab = (axes[-1] + 1)
+                                _comm = comm
+                                # Test also the comm is Subcomm interfaces
+                                # For PFFT the Subcomm needs to be as long as shape
+                                if len(shape) > 2 and axes is None and slab is False:
+                                    _dims = [0] * len(shape)
+                                    _dims[-1] = 1 # distribute all but last axis (axes is None)
+                                    _comm = comm
+                                    if random_true_or_false(comm) == 1:
+                                        # then test Subcomm with a MPI.CART argument
+                                        _dims = MPI.Compute_dims(comm.Get_size(), _dims)
+                                        _comm = comm.Create_cart(_dims)
+                                        _dims = None
+                                    _comm = Subcomm(_comm, _dims)
+                                fft = PFFT(_comm, shape, axes=axes, dtype=typecode,
+                                           padding=padding, slab=_slab, collapse=collapse,
                                            use_pyfftw=use_pyfftw)
 
                                 #if comm.rank == 0:
@@ -59,6 +83,8 @@ def test_mpifft():
                                         fft.backward.input_array.shape)
                                 assert (fft.backward.output_pencil.subshape ==
                                         fft.backward.output_array.shape)
+                                assert np.alltrue(np.array(fft.output_shape()) == np.array(fft.pencil[1].shape))
+                                assert np.alltrue(np.array(fft.input_shape()) == np.array(fft.pencil[0].shape))
                                 ax = -1 if axes is None else axes[-1]
                                 assert fft.forward.input_pencil.substart[ax] == 0
                                 assert fft.backward.output_pencil.substart[ax] == 0
