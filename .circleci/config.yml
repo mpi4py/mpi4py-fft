@@ -6,7 +6,7 @@ jobs:
       - checkout
 
       - restore_cache:
-          key: v2-miniconda-{{ .Branch }}
+          key: v3-miniconda-{{ .Branch }}
 
       - run:
           name: install miniconda
@@ -23,6 +23,11 @@ jobs:
             conda config --add channels conda-forge
             conda install -n root conda-build coverage codecov
             pip install --no-deps codacy-coverage
+
+      - save_cache:
+          key: v3-miniconda-{{ .Branch }}
+          paths:
+            - /home/circleci/miniconda
 
       - run:
           name: Build and test Python 3.6
@@ -47,9 +52,4 @@ jobs:
             bash codecov.sh -X gcov -X fix
             coverage xml
             python-codacy-coverage -r coverage.xml
-           
-      - save_cache:
-          key: v2-miniconda-{{ .Branch }}
-          paths:
-            - /home/circleci/miniconda
 
