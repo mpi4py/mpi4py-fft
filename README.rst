@@ -8,8 +8,8 @@ mpi4py-fft
 .. image:: https://api.codacy.com/project/badge/Grade/edf0f9ed1e114ab090ac4f9863c05fa3    
     :target: https://www.codacy.com/app/mikaem/mpi4py-fft?utm_source=mpi4py@bitbucket.org&amp;utm_medium=referral&amp;utm_content=mpi4py/mpi4py-fft&amp;utm_campaign=Badge_Grade
 
-.. image:: https://api.codacy.com/project/badge/Coverage/edf0f9ed1e114ab090ac4f9863c05fa3    
-    :target: https://www.codacy.com/app/mikaem/mpi4py-fft?utm_source=mpi4py@bitbucket.org&amp;utm_medium=referral&amp;utm_content=mpi4py/mpi4py-fft&amp;utm_campaign=Badge_Coverage
+.. image:: https://codecov.io/bb/mpi4py/mpi4py-fft/branch/master/graph/badge.svg
+  :target: https://codecov.io/bb/mpi4py/mpi4py-fft
 
 mpi4py-fft is a Python package for computing Fast Fourier Transforms (FFTs). 
 Large arrays are distributed and communications are handled under the hood by MPI for Python (mpi4py). 
