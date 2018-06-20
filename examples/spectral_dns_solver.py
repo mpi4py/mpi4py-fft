@@ -6,7 +6,8 @@ vortex and evolved in time with a 4'th order Runge Kutta method.
 """
 from time import time
 import numpy as np
-from mpi4py_fft.mpifft import MPI, PFFT, Function
+from mpi4py import MPI
+from mpi4py_fft.mpifft import PFFT, Function
 
 # Set viscosity, end time and time step
 nu = 0.000625
