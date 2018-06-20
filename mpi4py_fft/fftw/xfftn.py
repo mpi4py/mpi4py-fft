@@ -1,5 +1,4 @@
 import six
-import warnings
 import numpy as np
 from . import fftwf_xfftn, fftw_xfftn, fftwl_xfftn
 from .utilities import FFTW_FORWARD, FFTW_BACKWARD, FFTW_REDFT00, FFTW_REDFT01, \

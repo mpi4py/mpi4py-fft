@@ -1,5 +1,4 @@
 from __future__ import print_function
-from copy import copy
 import six
 import numpy as np
 import scipy

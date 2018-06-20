@@ -1,6 +1,5 @@
 from copy import copy
 import numpy as np
-from mpi4py import MPI
 
 from .libfft import FFT
 from .pencil import Pencil
