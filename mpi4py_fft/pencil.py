@@ -30,7 +30,36 @@ def _subarraytypes(comm, shape, axis, subshape, dtype):
 
 
 class Subcomm(tuple):
+    r"""Class returning a tuple of subcommunicators of any dimensionality
 
+    Parameters
+    ----------
+    comm : A communicator or group of communicators
+    dims : None, int or list/tuple of ints
+        dims = [0, 0, 1] will give communicators distributed in the two first
+        indices, whereas the thirs will not be distributed
+
+    Examples
+    --------
+    >>> import subprocess
+    >>> fx = open('subcomm_script.py', 'w')
+    >>> h=fx.write('from mpi4py import MPI\n')
+    >>> h=fx.write('comm = MPI.COMM_WORLD\n')
+    >>> h=fx.write('from mpi4py_fft.pencil import Subcomm\n')
+    >>> h=fx.write('subcomms = Subcomm(comm, [0, 0, 1])\n')
+    >>> h=fx.write('if comm.Get_rank() == 0:\n')
+    >>> h=fx.write('    for subcomm in subcomms:\n')
+    >>> h=fx.write('        print(subcomm.Get_size())')
+    >>> fx.close()
+    >>> print(subprocess.getoutput('mpirun -np 4 python subcomm_script.py'))
+    2
+    2
+    1
+    >>> print(subprocess.getoutput('mpirun -np 6 python subcomm_script.py'))
+    3
+    2
+    1
+    """
     def __new__(cls, comm, dims=None, reorder=True):
         assert not comm.Is_inter()
         if comm.Get_topology() == MPI.CART:
@@ -89,9 +118,9 @@ class Transfer(object):
 
     Methods
     -------
-    forward
+    forward(array A, array B)
         Global redistribution from pencil A to pencil B
-    backward
+    backward(array B, array A)
         Global redistribution from pencil B to pencil A
     """
     def __init__(self,
@@ -186,6 +215,7 @@ class Pencil(object):
         self.substart = tuple(substart)
 
     def pencil(self, axis):
+        """Return a Pencil aligned with axis"""
         assert -len(self.shape) <= axis < len(self.shape)
         if axis < 0:
             axis += len(self.shape)
@@ -195,6 +225,11 @@ class Pencil(object):
         return Pencil(subcomm, self.shape, axis)
 
     def transfer(self, pencil, dtype):
+        """Return an appropriate instance of the :class:`.Transfer` class
+
+        The returned :class:`.Transfer` class is used for global redistribution
+        from this pencil's instance to the pencil instance provided.
+        """
         penA, penB = self, pencil
         assert penA.shape == penB.shape
         assert penA.axis != penB.axis

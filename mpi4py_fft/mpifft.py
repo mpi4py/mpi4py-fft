@@ -18,15 +18,7 @@ class Transform(object):
         The two pencils represent the input and final output configuration of
         the distributed global arrays
 
-    Attributes
-    -------
-    input_array
-    output_array
-    input_pencil
-    output_pencil
-
     """
-
     def __init__(self, xfftn, transfer, pencil):
         assert len(xfftn) == len(transfer) + 1 and len(pencil) == 2
         self._xfftn = tuple(xfftn)
@@ -35,18 +27,22 @@ class Transform(object):
 
     @property
     def input_array(self):
+        """Return input array of Transform"""
         return self._xfftn[0].input_array
 
     @property
     def output_array(self):
+        """Return output array of Transform"""
         return self._xfftn[-1].output_array
 
     @property
     def input_pencil(self):
+        """Return input pencil of Transform"""
         return self._pencil[0]
 
     @property
     def output_pencil(self):
+        """Return output pencil of Transform"""
         return self._pencil[1]
 
     def __call__(self, input_array=None, output_array=None, **kw):
@@ -110,9 +106,11 @@ class PFFT(object):
     Methods
     -------
     forward
-        Parallel forward transform. Instance of Transform class
+        Parallel forward transform. The method is an instance of the
+        :class:`.Transform` class
     backward
-        Parallel backward transform. Instance of Transform class
+        Parallel backward transform. The method is an instance of the
+        :class:`.Transform` class
     """
 
     def __init__(self, comm, shape, axes=None, dtype=float,
@@ -228,13 +226,28 @@ class PFFT(object):
             trans.destroy()
 
     def local_shape(self, spectral=True):
+        """The local (to each processor) shape of data
+
+        Parameters
+        ----------
+        spectral : bool, optional
+            Return shape of output array (spectral space) if True, else return
+            shape of input array (physical space)
+        """
         if not spectral:
             return self.forward.input_pencil.subshape
-        else:
-            return self.backward.input_pencil.subshape
+        return self.backward.input_pencil.subshape
 
     def local_slice(self, spectral=True):
-        """The local view into the global data"""
+        """The local view into the global data
+
+        Parameters
+        ----------
+        spectral : bool, optional
+            Return local slices of output array (spectral space) if True, else
+            return local slices of input array (physical space)
+
+        """
         if spectral is not True:
             ip = self.forward.input_pencil
             s = [slice(start, start+shape) for start, shape in zip(ip.substart,
@@ -246,14 +259,19 @@ class PFFT(object):
         return s
 
     def input_shape(self):
+        """Return global shape of input array"""
         return self._input_shape
 
     def output_shape(self):
+        """Return global shape of output array"""
         return self._output_shape
 
 
 class Function(np.ndarray):
     """Distributed Numpy array for instance of PFFT class
+
+    Basically just a Numpy array created with the shape according to the input
+    PFFT instance
 
     Parameters
     ----------
@@ -271,15 +289,12 @@ class Function(np.ndarray):
 
     Examples
     --------
-    >>> from mpi4py_fft import MPI, PFFT, Function
+    >>> from mpi4py_fft.mpifft import MPI, PFFT, Function
     >>> FFT = PFFT(MPI.COMM_WORLD, [64, 64, 64])
     >>> u = Function(FFT, tensor=3)
     >>> uhat = Function(FFT, False, tensor=3)
 
     """
-
-    # pylint: disable=too-few-public-methods,too-many-arguments
-
     def __new__(cls, pfft, forward_output=True, val=0, tensor=None):
 
         shape = pfft.forward.input_array.shape

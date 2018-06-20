@@ -34,7 +34,7 @@ jobs:
           command: |
             source ~/miniconda/bin/activate root
             conda build --no-test --python 3.6 ./conf
-            conda create --name mpi4py_fft python=3.6 mpi4py_fft coverage codecov --use-local
+            conda create --name mpi4py_fft python=3.6 mpi4py_fft coverage --use-local
             conda activate mpi4py_fft
             cd tests && ./runtests.sh
 

@@ -25,7 +25,13 @@ for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn
         os.system(sedcmd + " 's/fftw_/{0}/g' {1}".format(p, os.path.join(fftwdir, fp)))
         os.system(sedcmd + " 's/double/{0}/g' {1}".format(prec[p], os.path.join(fftwdir, fp)))
 
-ext = []
+ext = cythonize([Extension("mpi4py_fft.fftw.utilities".format(p),
+                           sources=[os.path.join(fftwdir, "utilities.pyx".format(p))],
+                                    libraries=libs[p],
+                           include_dirs=[get_include(),
+                                         os.path.join(sys.prefix, 'include')],
+                           library_dirs=[os.path.join(sys.prefix, 'lib')])])
+
 for p in ('fftw_', 'fftwf_', 'fftwl_'):
     ext.append(cythonize([Extension("mpi4py_fft.fftw.{}xfftn".format(p),
                                     sources=[os.path.join(fftwdir, "{}xfftn.pyx".format(p)),

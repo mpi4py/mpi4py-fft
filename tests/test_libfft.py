@@ -16,7 +16,7 @@ def test_libfft():
     sizes = (7, 8, 9)
     types = 'fdgFDG'
 
-    for use_pyfftw in (True, False):
+    for use_pyfftw in (False, True):
         t0 = 0
         for typecode in types:
             for dim in dims:
@@ -27,7 +27,7 @@ def test_libfft():
                             for axes in (None, allaxes[i:j]):
                                 #print(shape, axes, typecode)
                                 fft = FFT(shape, axes, dtype=typecode,
-                                          use_pyfftw=use_pyfftw)
+                                          use_pyfftw=use_pyfftw, planner_effort='FFTW_ESTIMATE')
                                 A = fft.forward.input_array
                                 B = fft.forward.output_array
 
@@ -62,7 +62,7 @@ def test_libfft():
 
                             #print(shape, axis, typecode)
                             fft = FFT(shape, axis, dtype=typecode,
-                                      padding=padding, use_pyfftw=use_pyfftw)
+                                      padding=padding, use_pyfftw=use_pyfftw, planner_effort='FFTW_ESTIMATE')
                             A = fft.forward.input_array
                             B = fft.forward.output_array
 

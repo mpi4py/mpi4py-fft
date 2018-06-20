@@ -1,4 +1,5 @@
 cimport fftw_xfftn
+from utilities import *
 import numpy as np
 cimport numpy as np
 from libc.stdint cimport intptr_t
@@ -45,21 +46,11 @@ cdef generic_function _get_execute_function(kind):
         return _fftw_execute_dft_c2r
     return _fftw_execute_r2r
 
-cdef int _get_alignment(array):
-   """Return alignment assuming highest allowed is 32"""
-   cdef int i, n
-   cdef intptr_t addr = <intptr_t>np.PyArray_DATA(array)
-   for i in range(5, -1, -1):
-       n = 1 << i
-       if addr % n == 0:
-           break
-   return n
-
 cdef class FFT:
     """
     Unified class for FFTs of multidimensional arrays
 
-    The class can be used for any type of transform defined in the user manual
+    This class is used for any type of transform defined in the user manual
     of `FFTW <http://www.fftw.org/fftw3_doc>`_.
 
     Parameters
@@ -162,8 +153,73 @@ cdef class FFT:
         free(axs)
         free(knd)
 
-    def __call__(self, input_array=None, output_array=None, implicit=True,
+    def __dealloc__(self):
+        self.destroy()
+
+    def destroy(self):
+        fftw_destroy_plan(<fftw_plan>self._plan)
+
+    @property
+    def input_array(self):
+        return self._input_array
+
+    @property
+    def output_array(self):
+        return self._output_array
+
+    def print_plan(self):
+        fftw_print_plan(<fftw_plan>self._plan)
+
+    def update_arrays(self, input_array, output_array):
+        assert self.input_shape == input_array.shape
+        assert self.input_strides == input_array.strides
+        assert self._input_array.dtype == input_array.dtype
+        assert (<intptr_t>np.PyArray_DATA(input_array) %
+                get_alignment(self._input_array) == 0)
+        assert self.output_shape == output_array.shape
+        assert self.output_strides == output_array.strides
+        assert self._output_array.dtype == output_array.dtype
+        assert (<intptr_t>np.PyArray_DATA(output_array) %
+                get_alignment(self._output_array) == 0)
+        self._input_array = input_array
+        self._output_array = output_array
+
+    def __call__(self, input_array=None, output_array=None, implicit=False,
                  normalize_idft=False, **kw):
+        """
+        Signature::
+
+            __call__(input_array=None, output_array=None, implicit=True, normalize_idft=False, **kw)
+
+        Compute transform and return output array
+
+        Parameters
+        ----------
+        input_array : array, optional
+            If not provided, then use internally stored array
+        output_array : array, optional
+            If not provided, then use internally stored array
+        implicit : bool, optional
+            If True, then use an implicit method that acts by applying the plan
+            directly on the given input array.
+            If False, then use an explicit method that first copies the given
+            input_array into the internal _input_array.
+            The explicit method is generally safer, because it always preserves
+            the provided input_array. The implicit method can be faster because
+            it may be done without any copying. However, the contents of the
+            input_array may be destroyed during computation. So use with care!
+        normalize_idft : bool, optional
+            Normalize inverse transform if True.
+        kw : dict, optional
+
+        Note
+        ----
+        If the transform has been planned with FFTW_PRESERVE_INPUT, then both
+        the two methods (implicit=True/False) will preserve the provided
+        input_array. If not planned with this flag, then the implicit=True
+        method may cause the input_array to be overwritten during computation.
+
+        """
         if implicit:
             return self._apply_implicit(input_array, output_array,
                                         normalize_idft, **kw)
@@ -198,11 +254,13 @@ cdef class FFT:
         cdef generic_function apply_plan = _get_execute_function(self.kind)
 
         if input_array is not None:
-            assert self.input_shape == input_array.shape
-            assert self.input_strides == input_array.strides
-            assert self._input_array.dtype == input_array.dtype
-            if (<intptr_t>np.PyArray_DATA(input_array) %
-                _get_alignment(self._input_array) != 0):
+            try:
+                assert self.input_shape == input_array.shape
+                assert self.input_strides == input_array.strides
+                assert self._input_array.dtype == input_array.dtype
+                assert (<intptr_t>np.PyArray_DATA(input_array) %
+                        get_alignment(self._input_array) == 0)
+            except AssertionError:
                 self._input_array[...] = input_array
                 input_array = self._input_array
         else:
@@ -213,7 +271,7 @@ cdef class FFT:
             assert self.output_strides == output_array.strides
             assert self._output_array.dtype == output_array.dtype
             assert (<intptr_t>np.PyArray_DATA(output_array) %
-                    _get_alignment(self._output_array) == 0), \
+                    get_alignment(self._output_array) == 0), \
                 "output_array has wrong alignment"
         else:
             output_array = self._output_array
@@ -225,21 +283,4 @@ cdef class FFT:
         if normalize_idft:
             self._output_array *= self._M
         return self._output_array
-
-    def __dealloc__(self):
-        self.destroy()
-
-    def destroy(self):
-        fftw_destroy_plan(<fftw_plan>self._plan)
-
-    @property
-    def input_array(self):
-        return self._input_array
-
-    @property
-    def output_array(self):
-        return self._output_array
-
-    def print_plan(self):
-        fftw_print_plan(<fftw_plan>self._plan)
 

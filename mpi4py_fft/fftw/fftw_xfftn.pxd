@@ -59,34 +59,3 @@ cdef extern from "fftw_planxfftn.h":
 
 ctypedef void (*generic_function)(void *plan, void *_in, void *_out) nogil
 
-cpdef enum:
-    FFTW_FORWARD  = -1
-    FFTW_R2HC     = 0
-    FFTW_BACKWARD = 1
-    FFTW_HC2R     = 1
-    FFTW_DHT      = 2
-    FFTW_REDFT00  = 3
-    FFTW_REDFT01  = 4
-    FFTW_REDFT10  = 5
-    FFTW_REDFT11  = 6
-    FFTW_RODFT00  = 7
-    FFTW_RODFT01  = 8
-    FFTW_RODFT10  = 9
-    FFTW_RODFT11  = 10
-
-cpdef enum:
-    C2C_FORWARD = -1
-    C2C_BACKWARD = 1
-    R2C = -2
-    C2R = 2
-
-cpdef enum:
-    FFTW_MEASURE = 0
-    FFTW_DESTROY_INPUT = 1
-    FFTW_UNALIGNED = 2
-    FFTW_CONSERVE_MEMORY = 4
-    FFTW_EXHAUSTIVE = 8
-    FFTW_PRESERVE_INPUT = 16
-    FFTW_PATIENT = 32
-    FFTW_ESTIMATE = 64
-    FFTW_WISDOM_ONLY = 2097152

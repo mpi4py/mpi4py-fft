@@ -73,26 +73,22 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
              fftw.flag_dict[opts['overwrite_input']])
     threads = opts['threads']
 
-    outshape = list(shape)
     if np.issubdtype(dtype, np.floating):
         plan_fwd = fftw.rfftn
         plan_bck = fftw.irfftn
-        outshape[axes[-1]] = shape[axes[-1]]//2 + 1
     else:
         plan_fwd = fftw.fftn
         plan_bck = fftw.ifftn
+    s = tuple(np.take(shape, axes))
 
     U = pyfftw.empty_aligned(shape, dtype=dtype)
-    V = pyfftw.empty_aligned(outshape, dtype=U.dtype.char.upper())
-
-    xfftn_fwd = plan_fwd(U, V, axes, threads, flags)
+    xfftn_fwd = plan_fwd(U, s, axes, threads, flags)
     U.fill(0)
-    V.fill(0)
-
+    V = xfftn_fwd.output_array
     if np.issubdtype(dtype, np.floating):
-        flags = (fftw.flag_dict[opts['planner_effort']])
+        flags = (fftw.flag_dict[opts['planner_effort']],)
 
-    xfftn_bck = plan_bck(V, U, axes, threads, flags)
+    xfftn_bck = plan_bck(V, s, axes, threads, flags, output_array=U)
 
     return (xfftn_fwd, xfftn_bck)
 
@@ -243,9 +239,7 @@ class FFT(FFTBase):
     Methods
     -------
     forward(input_array, output_array, options)
-        The forward transform
     backward(input_array, output_array, options)
-        The backward transform
 
     """
     def __init__(self, shape, axes=None, dtype=float, padding=False,
@@ -292,7 +286,7 @@ class FFT(FFTBase):
 
 
 class FFTNumPy(FFTBase): #pragma: no cover
-    """Class for serial FFT transforms
+    """Class for serial FFT transforms using Numpy FFT
 
     Parameters
     ----------
