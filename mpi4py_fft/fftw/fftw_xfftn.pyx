@@ -184,7 +184,7 @@ cdef class FFT:
         self._input_array = input_array
         self._output_array = output_array
 
-    def __call__(self, input_array=None, output_array=None, implicit=False,
+    def __call__(self, input_array=None, output_array=None, implicit=True,
                  normalize_idft=False, **kw):
         """
         Signature::

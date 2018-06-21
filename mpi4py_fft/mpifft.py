@@ -288,7 +288,8 @@ class Function(np.ndarray):
 
     Examples
     --------
-    >>> from mpi4py_fft.mpifft import MPI, PFFT, Function
+    >>> from mpi4py import MPI
+    >>> from mpi4py_fft.mpifft import PFFT, Function
     >>> FFT = PFFT(MPI.COMM_WORLD, [64, 64, 64])
     >>> u = Function(FFT, tensor=3)
     >>> uhat = Function(FFT, False, tensor=3)

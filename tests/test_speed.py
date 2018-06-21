@@ -5,7 +5,7 @@ import scipy.fftpack as sp
 from mpi4py_fft import fftw
 
 try:
-    fftw.xfftn.import_wisdom('wisdom.dat')
+    fftw.import_wisdom('wisdom.dat')
 except AssertionError:
     pass
 
@@ -16,23 +16,16 @@ threads = 1
 implicit = True
 flags = (fftw.FFTW_PATIENT, fftw.FFTW_DESTROY_INPUT)
 
-def empty_aligned(shape, n=32, dtype=np.dtype('d')):
-    M = np.prod(shape)*dtype.itemsize
-    a = np.empty(M+n, dtype=np.dtype('uint8'))
-    offset = a.ctypes.data % n
-    offset = 0 if offset == 0 else (n - offset)
-    return np.frombuffer(a[offset:(offset+M)].data, dtype=dtype).reshape(shape)
-
 # Transform complex to complex
 #A = pyfftw.byte_align(np.random.random(N).astype('D'))
 #A = np.random.random(N).astype(np.dtype('D'))
-A = empty_aligned(N, n=8, dtype=np.dtype('D'))
+A = fftw.aligned(N, n=8, dtype=np.dtype('D'))
 A[:] = np.random.random(N).astype(np.dtype('D'))
 
 #print(A.ctypes.data % 32)
 
-input_array = empty_aligned(A.shape, n=32, dtype=A.dtype)
-output_array = empty_aligned(A.shape, n=32, dtype=A.dtype)
+input_array = fftw.aligned(A.shape, n=32, dtype=A.dtype)
+output_array = fftw.aligned(A.shape, n=32, dtype=A.dtype)
 
 ptime = [[], []]
 ftime = [[], []]
@@ -50,7 +43,7 @@ for axis in ((1, 2), 0, 1, 2):
     ptime[0].append(time()-t0)
 
     # us
-    fft = fftw.fftn(input_array, output_array, axes, threads, flags)
+    fft = fftw.fftn(input_array, None, axes, threads, flags, output_array)
     t0 = time()
     for i in range(loops):
         C2 = fft(A, implicit=implicit)
@@ -76,7 +69,7 @@ for axis in ((1, 2), 0, 1, 2):
     ptime[1].append(time()-t0)
 
     # us
-    ifft = fftw.ifftn(output_array, input_array, axes, threads, flags)
+    ifft = fftw.ifftn(output_array, None, axes, threads, flags, input_array)
     t0 = time()
     for i in range(loops):
         B2 = ifft(C, normalize_idft=True, implicit=implicit)
@@ -125,7 +118,7 @@ for axis in ((1, 2), 0, 1, 2):
     ptime[0].append(time()-t0)
 
     # us
-    rfft = fftw.rfftn(input_array, C.copy(), axes, threads, flags)
+    rfft = fftw.rfftn(input_array, None, axes, threads, flags)
     t0 = time()
     for i in range(loops):
         C2 = rfft(A, implicit=implicit)
@@ -142,7 +135,7 @@ for axis in ((1, 2), 0, 1, 2):
     ptime[1].append(time()-t0)
 
     # us
-    irfft = fftw.irfftn(C.copy(), input_array, axes, threads, flags)
+    irfft = fftw.irfftn(C.copy(), np.take(input_array.shape, axes), axes, threads, flags)
     t0 = time()
     for i in range(loops):
         C2[:] = C
@@ -157,4 +150,4 @@ print("Timing real backward transform axes (1, 2), 0, 1, 2")
 print("pyfftw  {0:2.4e}  {1:2.4e}  {2:2.4e} {3:2.4e}".format(*ptime[1]))
 print("mpi4py  {0:2.4e}  {1:2.4e}  {2:2.4e} {3:2.4e}".format(*ftime[1]))
 
-fftw.xfftn.export_wisdom('wisdom.dat')
+fftw.export_wisdom('wisdom.dat')

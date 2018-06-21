@@ -81,7 +81,7 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
         plan_bck = fftw.ifftn
     s = tuple(np.take(shape, axes))
 
-    U = pyfftw.empty_aligned(shape, dtype=dtype)
+    U = fftw.aligned(shape, dtype=dtype)
     xfftn_fwd = plan_fwd(U, s, axes, threads, flags)
     U.fill(0)
     V = xfftn_fwd.output_array
@@ -277,12 +277,12 @@ class FFT(FFTBase):
         if not self.real_transform:
             shape = list(shape)
             shape[axis] = int(np.round(shape[axis] / self.padding_factor))
-            return pyfftw.empty_aligned(shape, dtype=dtype)
+            return fftw.aligned(shape, dtype=dtype)
 
         shape = list(shape)
         shape[axis] = int(np.round(shape[axis] / self.padding_factor))
         shape[axis] = shape[axis]//2 + 1
-        return pyfftw.empty_aligned(shape, dtype=dtype)
+        return fftw.aligned(shape, dtype=dtype)
 
 
 class FFTNumPy(FFTBase): #pragma: no cover
