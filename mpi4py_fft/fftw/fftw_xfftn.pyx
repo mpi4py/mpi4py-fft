@@ -234,7 +234,7 @@ cdef class FFT:
         if implicit:
             return self._apply_implicit(input_array, output_array,
                                         norm, **kw)
-        return self._apply_explicit(input_array, output_array, normalize, **kw)
+        return self._apply_explicit(input_array, output_array, norm, **kw)
 
     def _apply_explicit(self, input_array, output_array, normalize, **kw):
         """Apply plan with explicit (and safe) update of work arrays"""

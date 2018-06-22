@@ -29,7 +29,7 @@ def test_mpifft():
     from itertools import product
 
     comm = MPI.COMM_WORLD
-    dims  = (4,)
+    dims  = (2, 3, 4,)
     sizes = (16, 17)
     types = 'fFdDgG' # + 'gG'
 
