@@ -7,7 +7,7 @@ from .pencil import Subcomm
 
 
 class Transform(object):
-    """Class for performing any parallel transform
+    """Class for performing any parallel transform, forward or backward
 
     Parameters
     ----------
@@ -50,9 +50,7 @@ class Transform(object):
         Parameters
         ----------
         input_array : array, optional
-            Function values on quadrature mesh
         output_array : array, optional
-            Expansion coefficients
         kw : dict
             parameters to serial transforms
 
@@ -85,20 +83,29 @@ class PFFT(object):
     Parameters
     ----------
     comm : MPI communicator
-    shape : list or tuple of ints
+    shape : sequence of ints
         shape of input array planned for
-    axes : None, int or tuple of ints, optional
-        axes to transform over. If None transform over all axes
+    axes : None, int, sequence of ints or sequence of sequence of ints, optional
+        axes to transform over.
+
+        - None -> All axes are transformed
+        - int -> Just one axis to transform over
+        - sequence of ints -> e.g., (0, 1, 2) or (0, 2, 1)
+        - sequence of sequence of ints -> e.g., ((0,), (1,)) or ((0,), (1, 2))
+          For seq. of seq. of ints only the last inner sequence may be longer
+          than 1. This corresponds to collapsing axes, where serial FFTs are
+          performed for all collapsed axes in one single call
     dtype : np.dtype, optional
         Type of input array
     slab : bool, optional
         If True then distribute only one index of the global array
-    padding : bool, number or list of numbers, optional
+    padding : bool, number or sequence of numbers, optional
         If False, then no padding. If number, then apply this number as padding
-        factor for all axes. If list of numbers, then each number gives the
-        padding for each axis. Must be same length as axes.
+        factor for all axes. If sequence of numbers, then each number gives the
+        padding for each axis. Must be same length as axes. Cannot be used with
+        collapsing axes.
     collapse : bool, optional
-        If True try to collapse several serial transforms into one object
+        If True try to collapse several serial transforms into one
     use_pyfftw : bool, optional
         Use pyfftw for serial transforms instead of local wrappers
 
@@ -110,34 +117,66 @@ class PFFT(object):
     backward
         Parallel backward transform. The method is an instance of the
         :class:`.Transform` class
-    """
 
+    Examples
+    --------
+    >>> import numpy as np
+    >>> from mpi4py import MPI
+    >>> from mpi4py_fft.mpifft import PFFT, Function
+    >>> N = np.array([12, 14, 15], dtype=int)
+    >>> fft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2))
+    >>> u = Function(fft, False)
+    >>> u[:] = np.random.random(u.shape).astype(u.dtype)
+    >>> u_hat = fft.forward(u)
+    >>> uj = np.zeros_like(u)
+    >>> uj = fft.backward(u_hat, uj)
+    >>> assert np.allclose(uj, u)
+
+    """
     def __init__(self, comm, shape, axes=None, dtype=float,
                  slab=False, padding=False, collapse=False,
-                 use_pyfftw=False, **kw):
+                 use_pyfftw=False, transforms=None, **kw):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
 
         if axes is not None:
             axes = list(axes) if np.ndim(axes) else [axes]
-            for i, axis in enumerate(axes):
-                if axis < 0:
-                    axes[i] = axis + len(shape)
         else:
             axes = list(range(len(shape)))
-        assert min(axes) >= 0
-        assert max(axes) < len(shape)
-        assert 0 < len(axes) <= len(shape)
-        assert sorted(axes) == sorted(set(axes))
+
+        for i, ax in enumerate(axes):
+            if isinstance(ax, int):
+                if ax < 0:
+                    ax += len(shape)
+                axes[i] = (ax,)
+            else:
+                assert isinstance(ax, (tuple, list))
+                ax = list(ax)
+                if i < len(axes)-1: # only last may be collapsed
+                    assert len(ax) == 1
+                for j, a in enumerate(ax):
+                    assert isinstance(a, int)
+                    if a < 0:
+                        a += len(shape)
+                        ax[j] = a
+                axes[i] = ax
+            assert min(axes[i]) >= 0
+            assert max(axes[i]) < len(shape)
+            assert 0 < len(axes[i]) <= len(shape)
+            assert sorted(axes[i]) == sorted(set(axes[i]))
+
+        self.axes = axes
 
         shape = list(shape)
         if padding is not False:
             assert len(padding) == len(shape)
-            for axis in axes:
-                old = np.float(shape[axis])
-                shape[axis] = int(np.floor(shape[axis]*padding[axis]))
-                padding[axis] = shape[axis] / old
+            for ax in axes:
+                assert len(ax) == 1 # No collapsing with padding
+                for axis in ax:
+                    old = np.float(shape[axis])
+                    shape[axis] = int(np.floor(shape[axis]*padding[axis]))
+                    padding[axis] = shape[axis] / old
 
         self._input_shape = copy(shape)
         assert len(shape) > 0
@@ -149,15 +188,16 @@ class PFFT(object):
         if isinstance(comm, Subcomm):
             assert slab is False
             assert len(comm) == len(shape)
-            assert comm[axes[-1]].Get_size() == 1
+            assert np.all([comm[ax].Get_size() == 1 for ax in axes[-1]])
             self.subcomm = comm
         else:
             if slab is False or slab is None:
                 dims = [0] * len(shape)
-                dims[axes[-1]] = 1
+                for ax in axes[-1]:
+                    dims[ax] = 1
             else:
                 if slab is True:
-                    axis = (axes[-1] + 1) % len(shape)
+                    axis = (axes[-1][-1] + 1) % len(shape)
                 else:
                     axis = slab
                     if axis < 0:
@@ -165,6 +205,7 @@ class PFFT(object):
                     assert 0 <= axis < len(shape)
                 dims = [1] * len(shape)
                 dims[axis] = comm.Get_size()
+
             self.subcomm = Subcomm(comm, dims)
 
         if padding is not False:
@@ -173,14 +214,13 @@ class PFFT(object):
 
         if collapse is True:
             groups = [[]]
-            for axis in reversed(axes):
-                if self.subcomm[axis].Get_size() == 1:
-                    groups[0].insert(0, axis)
-                else:
-                    groups.insert(0, [axis])
-            self.axes = tuple(map(tuple, groups))
-        else:
-            self.axes = tuple((axis,) for axis in axes)
+            for ax in reversed(axes):
+                for axis in ax:
+                    if self.subcomm[axis].Get_size() == 1:
+                        groups[0].insert(0, axis)
+                    else:
+                        groups.insert(0, [axis])
+                self.axes = tuple(map(tuple, groups))
 
         self.xfftn = []
         self.transfer = []
@@ -188,7 +228,7 @@ class PFFT(object):
 
         axes = self.axes[-1]
         pencil = Pencil(self.subcomm, shape, axes[-1])
-        xfftn = FFT(pencil.subshape, axes, dtype, padding, use_pyfftw, **kw)
+        xfftn = FFT(pencil.subshape, axes, dtype, padding, use_pyfftw, transforms, **kw)
         self.xfftn.append(xfftn)
         self.pencil[0] = pencilA = pencil
         if not shape[axes[-1]] == xfftn.forward.output_array.shape[axes[-1]]:
@@ -199,11 +239,12 @@ class PFFT(object):
         for axes in reversed(self.axes[:-1]):
             pencilB = pencilA.pencil(axes[-1])
             transAB = pencilA.transfer(pencilB, dtype)
-            xfftn = FFT(pencilB.subshape, axes, dtype, padding, use_pyfftw, **kw)
+            xfftn = FFT(pencilB.subshape, axes, dtype, padding, use_pyfftw, transforms, **kw)
             self.xfftn.append(xfftn)
             self.transfer.append(transAB)
             pencilA = pencilB
             if not shape[axes[-1]] == xfftn.forward.output_array.shape[axes[-1]]:
+                dtype = xfftn.forward.output_array.dtype
                 shape[axes[-1]] = xfftn.forward.output_array.shape[axes[-1]]
                 pencilA = Pencil(pencilB.subcomm, shape, axes[-1])
 
@@ -275,16 +316,18 @@ class Function(np.ndarray):
     Parameters
     ----------
 
-    pfft : Instance of PFFT class
-    forward_output: boolean.
-        If False then create Function of shape/type for input to PFFT.forward,
-        otherwise create Function of shape/type for output from PFFT.forward
+    pfft : Instance of :class:`.PFFT` class
+    forward_output: boolean, optional
+        If False then create Function of shape/type for input to
+        forward transform, otherwise create Function of shape/type for
+        output from forward transform.
     val : int or float
-        Value used to initialize array
+        Value used to initialize array.
     tensor: int or tuple
         For tensorvalued Functions, e.g., tensor=(3) for a vector in 3D.
 
-    For more information, see numpy.ndarray
+
+    For more information, see `numpy.ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_
 
     Examples
     --------
@@ -292,7 +335,7 @@ class Function(np.ndarray):
     >>> from mpi4py_fft.mpifft import PFFT, Function
     >>> FFT = PFFT(MPI.COMM_WORLD, [64, 64, 64])
     >>> u = Function(FFT, tensor=3)
-    >>> uhat = Function(FFT, False, tensor=3)
+    >>> u_hat = Function(FFT, False, tensor=3)
 
     """
     def __new__(cls, pfft, forward_output=True, val=0, tensor=None):

@@ -3,6 +3,9 @@ import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT
 from mpi4py_fft.pencil import Subcomm
+from mpi4py_fft import fftw
+from collections import defaultdict
+import pyfftw
 
 abstol = dict(f=0.1, d=2e-10, g=1e-10)
 
@@ -26,7 +29,7 @@ def test_mpifft():
     from itertools import product
 
     comm = MPI.COMM_WORLD
-    dims  = (2, 3)
+    dims  = (4,)
     sizes = (16, 17)
     types = 'fFdDgG' # + 'gG'
 
@@ -44,13 +47,40 @@ def test_mpifft():
                     padding = False
                     for collapse in (True, False):
                         for use_pyfftw in (True, False):
-                             for axes in [None, (-1,), (-2,),
-                                          (-1, -2,), (-2, -1),
-                                          (-1, 0), (0, -1)]:
+                            if dim < 3:
+                                allaxes = [None, (-1,), (-2,),
+                                           (-1, -2,), (-2, -1),
+                                           (-1, 0), (0, -1),
+                                           ((0,), (1,))]
+                            elif dim < 4:
+                                allaxes = [None, ((0,), (1, 2)),
+                                           ((0,), (-2, -1))]
+                            elif dim > 3:
+                                allaxes = [None, ((0,), (1,), (-2,), (-1)),
+                                           ((0,), (1, 2, 3)),
+                                           ((0,), (1,), (2, 3))]
+                                if use_pyfftw:
+                                    rfftn, irfftn, fftn, ifftn = (pyfftw.builders.rfftn,
+                                                                  pyfftw.builders.irfftn,
+                                                                  pyfftw.builders.fftn,
+                                                                  pyfftw.builders.ifftn)
+                                else:
+                                    rfftn, irfftn, fftn, ifftn = (fftw.rfftn,
+                                                                  fftw.irfftn,
+                                                                  fftw.fftn,
+                                                                  fftw.ifftn)
+
+                                transforms = defaultdict(lambda : (fftn, ifftn),
+                                                         {(3,): (rfftn, irfftn),
+                                                          (2, 3): (rfftn, irfftn),
+                                                          (1, 2, 3): (rfftn, irfftn),
+                                                          (0, 1, 2, 3): (rfftn, irfftn)})
+                            for axes in allaxes:
                                 _slab = slab
                                 # Test also the slab is number interface
                                 if slab is True and axes is not None:
-                                    _slab = (axes[-1] + 1)
+                                    ax = axes[-1] if isinstance(axes[-1], int) else axes[-1][-1]
+                                    _slab = (ax+1) % len(shape)
                                 _comm = comm
                                 # Test also the comm is Subcomm interfaces
                                 # For PFFT the Subcomm needs to be as long as shape
@@ -85,10 +115,10 @@ def test_mpifft():
                                         fft.backward.output_array.shape)
                                 assert np.alltrue(np.array(fft.output_shape()) == np.array(fft.pencil[1].shape))
                                 assert np.alltrue(np.array(fft.input_shape()) == np.array(fft.pencil[0].shape))
-                                ax = -1 if axes is None else axes[-1]
+                                ax = -1 if axes is None else axes[-1] if isinstance(axes[-1], int) else axes[-1][-1]
                                 assert fft.forward.input_pencil.substart[ax] == 0
                                 assert fft.backward.output_pencil.substart[ax] == 0
-                                ax = 0 if axes is None else axes[0]
+                                ax = 0 if axes is None else axes[0] if isinstance(axes[0], int) else axes[0][0]
                                 assert fft.forward.output_pencil.substart[ax] == 0
                                 assert fft.backward.input_pencil.substart[ax] == 0
 
@@ -109,9 +139,19 @@ def test_mpifft():
 
                     padding = [1.5]*len(shape)
                     for use_pyfftw in (True, False):
-                        for axes in [None, (-1,), (-2,),
-                                     (-1, -2,), (-2, -1),
-                                     (-1, 0), (0, -1)]:
+                        if dim < 3:
+                            allaxes = [None, (-1,), (-2,),
+                                       (-1, -2,), (-2, -1),
+                                       (-1, 0), (0, -1),
+                                       ((0,), (1,))]
+                        elif dim < 4:
+                            allaxes = [None, ((0,), (1,), (2,)),
+                                       ((0,), (-2,), (-1,))]
+                        elif dim > 3:
+                            allaxes = [None, (0, 1, -2, -1),
+                                       ((0,), (1,), (2,), (3,))]
+
+                        for axes in allaxes:
 
                             fft = PFFT(comm, shape, axes=axes, dtype=typecode,
                                        padding=padding, slab=slab, use_pyfftw=use_pyfftw)
@@ -131,10 +171,10 @@ def test_mpifft():
                                     fft.backward.input_array.shape)
                             assert (fft.backward.output_pencil.subshape ==
                                     fft.backward.output_array.shape)
-                            ax = -1 if axes is None else axes[-1]
+                            ax = -1 if axes is None else axes[-1] if isinstance(axes[-1], int) else axes[-1][-1]
                             assert fft.forward.input_pencil.substart[ax] == 0
                             assert fft.backward.output_pencil.substart[ax] == 0
-                            ax = 0 if axes is None else axes[0]
+                            ax = 0 if axes is None else axes[0] if isinstance(axes[0], int) else axes[0][0]
                             assert fft.forward.output_pencil.substart[ax] == 0
                             assert fft.backward.input_pencil.substart[ax] == 0
 

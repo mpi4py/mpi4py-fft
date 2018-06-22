@@ -35,7 +35,7 @@ class Subcomm(tuple):
     Parameters
     ----------
     comm : A communicator or group of communicators
-    dims : None, int or list/tuple of ints
+    dims : None, int or sequence of ints
         dims = [0, 0, 1] will give communicators distributed in the two first
         indices, whereas the thirs will not be distributed
 
@@ -103,15 +103,15 @@ class Transfer(object):
     Parameters
     ----------
     comm : MPI communicator
-    shape : list or tuple of ints
+    shape : sequence of ints
         shape of input array planned for
     dtype : np.dtype, optional
         Type of input array
-    subshapeA : list of ints
+    subshapeA : sequence of ints
         Shape of input pencil
     axisA : int
         Input array aligned in this direction
-    subshapeB : list of ints
+    subshapeB : sequence of ints
         Shape of output pencil
     axisB : int
         Output array aligned in this direction
@@ -168,7 +168,7 @@ class Pencil(object):
     Parameters
     ----------
     subcomm : MPI communicator
-    shape : tuple or list of ints
+    shape : sequence of ints
         Shape of pencil (local array)
     axis : int, optional
         Pencil is aligned in this direction
@@ -180,8 +180,8 @@ class Pencil(object):
         redistribution from this pencil instance to the given pencil instance
     pencil(axis)
         Return an instance of the :class:`.Pencil` class aligned along axis
-    """
 
+    """
     def __init__(self, subcomm, shape, axis=-1):
         assert len(shape) >= 2
         assert min(shape) >= 1

@@ -2,7 +2,7 @@ import numpy as np
 import pyfftw
 from . import fftw
 
-def _Xfftn_plan_pyfftw(shape, axes, dtype, options):
+def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
     """Plan serial transforms using pyfftw
 
     Parameters
@@ -26,12 +26,15 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, options):
     )
     opts.update(options)
 
-    if np.issubdtype(dtype, np.floating):
-        plan_fwd = pyfftw.builders.rfftn
-        plan_bck = pyfftw.builders.irfftn
+    if transforms is None:
+        if np.issubdtype(dtype, np.floating):
+            plan_fwd = pyfftw.builders.rfftn
+            plan_bck = pyfftw.builders.irfftn
+        else:
+            plan_fwd = pyfftw.builders.fftn
+            plan_bck = pyfftw.builders.ifftn
     else:
-        plan_fwd = pyfftw.builders.fftn
-        plan_bck = pyfftw.builders.ifftn
+        plan_fwd, plan_bck = transforms[tuple(axes)]
 
     s = tuple(np.take(shape, axes))
 
@@ -49,7 +52,7 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, options):
 
     return (xfftn_fwd, xfftn_bck)
 
-def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
+def _Xfftn_plan_mpi4py(shape, axes, dtype, transforms, options):
     """Plan serial transforms using local wrapper
 
     Parameters
@@ -73,22 +76,26 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, options):
              fftw.flag_dict[opts['overwrite_input']])
     threads = opts['threads']
 
-    if np.issubdtype(dtype, np.floating):
-        plan_fwd = fftw.rfftn
-        plan_bck = fftw.irfftn
+    if transforms is None:
+        if np.issubdtype(dtype, np.floating):
+            plan_fwd = fftw.rfftn
+            plan_bck = fftw.irfftn
+        else:
+            plan_fwd = fftw.fftn
+            plan_bck = fftw.ifftn
     else:
-        plan_fwd = fftw.fftn
-        plan_bck = fftw.ifftn
+        plan_fwd, plan_bck = transforms[tuple(axes)]
+
     s = tuple(np.take(shape, axes))
 
     U = fftw.aligned(shape, dtype=dtype)
-    xfftn_fwd = plan_fwd(U, s, axes, threads, flags)
+    xfftn_fwd = plan_fwd(U, s=s, axes=axes, threads=threads, flags=flags)
     U.fill(0)
     V = xfftn_fwd.output_array
     if np.issubdtype(dtype, np.floating):
         flags = (fftw.flag_dict[opts['planner_effort']],)
 
-    xfftn_bck = plan_bck(V, s, axes, threads, flags, output_array=U)
+    xfftn_bck = plan_bck(V, s=s, axes=axes, threads=threads, flags=flags, output_array=U)
 
     return (xfftn_fwd, xfftn_bck)
 
@@ -243,12 +250,15 @@ class FFT(FFTBase):
 
     """
     def __init__(self, shape, axes=None, dtype=float, padding=False,
-                 use_pyfftw=False, **kw):
+                 use_pyfftw=False, transforms=None, **kw):
         FFTBase.__init__(self, shape, axes, dtype, padding)
         plan = _Xfftn_plan_pyfftw if use_pyfftw is True else _Xfftn_plan_mpi4py
-        self.fwd, self.bck = plan(self.shape, self.axes, self.dtype, kw)
+        self.fwd, self.bck = plan(self.shape, self.axes, self.dtype, transforms, kw)
         U, V = self.fwd.input_array, self.fwd.output_array
-        self.M = 1./np.prod(np.take(self.shape, self.axes))
+        if use_pyfftw:
+            self.M = 1./np.prod(np.take(self.shape, self.axes))
+        else:
+            self.M = 1./self.fwd.get_normalization()
         self.padding_factor = 1.0
         if padding is not False:
             self.padding_factor = padding[self.axes[-1]] if np.ndim(padding) else padding

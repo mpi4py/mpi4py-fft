@@ -17,17 +17,6 @@ fftlib = {
     'G': fftwl_xfftn
 }
 
-inverse = {
-    FFTW_RODFT11: FFTW_RODFT11,
-    FFTW_REDFT11: FFTW_REDFT11,
-    FFTW_RODFT01: FFTW_RODFT10,
-    FFTW_RODFT10: FFTW_RODFT01,
-    FFTW_REDFT01: FFTW_REDFT10,
-    FFTW_REDFT10: FFTW_REDFT01,
-    FFTW_RODFT00: FFTW_RODFT00,
-    FFTW_REDFT00: FFTW_REDFT00
-}
-
 def FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD, threads=1,
         flags=(FFTW_MEASURE,), normalize=1):
     dtype = input_array.dtype.char
@@ -77,7 +66,7 @@ def fftn(input_array, s=None, axes=(-1,), threads=1,
     Examples
     --------
     >>> import numpy as np
-    >>> from mpi4py_fft.fftw.xfftn import fftn as plan_fftn
+    >>> from mpi4py_fft.fftw import fftn as plan_fftn
     >>> from mpi4py_fft.fftw import FFTW_ESTIMATE, aligned
     >>> A = aligned(4, dtype='D')
     >>> fftn = plan_fftn(A, flags=(FFTW_ESTIMATE,))
@@ -98,7 +87,11 @@ def fftn(input_array, s=None, axes=(-1,), threads=1,
     else:
         assert input_array.shape == output_array.shape
         assert output_array.dtype.char == input_array.dtype.char.upper()
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1)
+    sz = input_array.shape
+    M = 1.0
+    for axis in axes:
+        M *= sz[axis]
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
 def ifftn(input_array, s=None, axes=(-1,), threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -145,7 +138,7 @@ def ifftn(input_array, s=None, axes=(-1,), threads=1,
     Examples
     --------
     >>> import numpy as np
-    >>> from mpi4py_fft.fftw.xfftn import ifftn as plan_ifftn
+    >>> from mpi4py_fft.fftw import ifftn as plan_ifftn
     >>> from mpi4py_fft.fftw import FFTW_ESTIMATE, FFTW_PRESERVE_INPUT, aligned
     >>> A = aligned(4, dtype='D')
     >>> ifftn = plan_ifftn(A, flags=(FFTW_ESTIMATE, FFTW_PRESERVE_INPUT))
@@ -164,10 +157,10 @@ def ifftn(input_array, s=None, axes=(-1,), threads=1,
     else:
         assert input_array.shape == output_array.shape
     sz = input_array.shape
-    M = 1
+    M = 1.0
     for axis in axes:
         M *= sz[axis]
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def rfftn(input_array, s=None, axes=(-1,), threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -212,7 +205,7 @@ def rfftn(input_array, s=None, axes=(-1,), threads=1,
     Examples
     --------
     >>> import numpy as np
-    >>> from mpi4py_fft.fftw.xfftn import rfftn as plan_rfftn
+    >>> from mpi4py_fft.fftw import rfftn as plan_rfftn
     >>> from mpi4py_fft.fftw import FFTW_ESTIMATE, aligned
     >>> A = aligned(4, dtype='d')
     >>> rfftn = plan_rfftn(A, flags=(FFTW_ESTIMATE,))
@@ -235,7 +228,11 @@ def rfftn(input_array, s=None, axes=(-1,), threads=1,
         output_array = aligned(sz, n=n, dtype=np.dtype(D))
     else:
         assert input_array.shape[axes[-1]]//2+1 == output_array.shape[axes[-1]]
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1)
+    M = 1.0
+    sz = input_array.shape
+    for axis in axes:
+        M *= sz[axis]
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
 def irfftn(input_array, s=None, axes=(-1,), threads=1,
            flags=(FFTW_MEASURE,), output_array=None):
@@ -284,7 +281,7 @@ def irfftn(input_array, s=None, axes=(-1,), threads=1,
     Examples
     --------
     >>> import numpy as np
-    >>> from mpi4py_fft.fftw.xfftn import irfftn as plan_irfftn
+    >>> from mpi4py_fft.fftw import irfftn as plan_irfftn
     >>> from mpi4py_fft.fftw import FFTW_ESTIMATE, aligned
     >>> A = aligned(4, dtype='D')
     >>> irfftn = plan_irfftn(A, flags=(FFTW_ESTIMATE,)) # no shape given for output
@@ -319,14 +316,14 @@ def irfftn(input_array, s=None, axes=(-1,), threads=1,
         assert list(output_array.shape) == sz
 
     assert sz[axes[-1]]//2+1 == input_array.shape[axes[-1]]
-    M = 1
+    M = 1.0
     sz = output_array.shape
     for axis in axes:
-        M *= sz[axis]
+        M /= sz[axis]
     return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
-def dct(input_array, s=None, axes=(-1,), type=2, threads=1,
-        flags=(FFTW_MEASURE,), output_array=None):
+def dctn(input_array, s=None, axes=(-1,), type=2, threads=1,
+         flags=(FFTW_MEASURE,), output_array=None):
     """Return discrete cosine transform object
 
     Parameters
@@ -367,7 +364,7 @@ def dct(input_array, s=None, axes=(-1,), type=2, threads=1,
     Examples
     --------
     >>> import numpy as np
-    >>> from mpi4py_fft.fftw.xfftn import dct as plan_dct
+    >>> from mpi4py_fft.fftw import dctn as plan_dct
     >>> from mpi4py_fft.fftw import FFTW_ESTIMATE, aligned
     >>> A = aligned(4, dtype='d')
     >>> dct = plan_dct(A, flags=(FFTW_ESTIMATE,))
@@ -384,19 +381,29 @@ def dct(input_array, s=None, axes=(-1,), type=2, threads=1,
         output_array = aligned_like(input_array)
     else:
         assert input_array.shape == output_array.shape
+    sz = input_array.shape
+    M = 1
     if type == 1:
         kind = FFTW_REDFT00
+        for axis in axes:
+            M *= 2*(sz[axis]-1)
     elif type == 2:
         kind = FFTW_REDFT10  # inverse is type 3
+        for axis in axes:
+            M *= 2*sz[axis]
     elif type == 3:
         kind = FFTW_REDFT01  # inverse is type 2
+        for axis in axes:
+            M *= 2*sz[axis]
     elif type == 4:
         kind = FFTW_REDFT11
+        for axis in axes:
+            M *= 2*sz[axis]
     kind = [kind]*len(axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1)
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
-def idct(input_array, s=None, axes=(-1,), type=2, threads=1,
-         flags=(FFTW_MEASURE,), output_array=None):
+def idctn(input_array, s=None, axes=(-1,), type=2, threads=1,
+          flags=(FFTW_MEASURE,), output_array=None):
     """Return inverse discrete cosine transform object
 
     Parameters
@@ -437,7 +444,7 @@ def idct(input_array, s=None, axes=(-1,), type=2, threads=1,
     Examples
     --------
     >>> import numpy as np
-    >>> from mpi4py_fft.fftw.xfftn import idct as plan_idct
+    >>> from mpi4py_fft.fftw import idctn as plan_idct
     >>> from mpi4py_fft.fftw import FFTW_ESTIMATE, aligned
     >>> A = aligned(4, dtype='d')
     >>> idct = plan_idct(A, flags=(FFTW_ESTIMATE,))
@@ -473,10 +480,10 @@ def idct(input_array, s=None, axes=(-1,), type=2, threads=1,
         for axis in axes:
             M *= 2*sz[axis]
     kind = [kind]*len(axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return FFT(input_array, output_array, axes, kind, threads, flags, 1./M)
 
-def dst(input_array, s=None, axes=(-1,), type=2, threads=1,
-        flags=(FFTW_MEASURE,), output_array=None):
+def dstn(input_array, s=None, axes=(-1,), type=2, threads=1,
+         flags=(FFTW_MEASURE,), output_array=None):
     """Return discrete sine transform object
 
     Parameters
@@ -517,7 +524,7 @@ def dst(input_array, s=None, axes=(-1,), type=2, threads=1,
     Examples
     --------
     >>> import numpy as np
-    >>> from mpi4py_fft.fftw.xfftn import dst as plan_dst
+    >>> from mpi4py_fft.fftw import dstn as plan_dst
     >>> from mpi4py_fft.fftw import FFTW_ESTIMATE, aligned
     >>> A = aligned(4, dtype='d')
     >>> dst = plan_dst(A, flags=(FFTW_ESTIMATE,))
@@ -534,19 +541,29 @@ def dst(input_array, s=None, axes=(-1,), type=2, threads=1,
         output_array = aligned_like(input_array)
     else:
         assert input_array.shape == output_array.shape
+    sz = input_array.shape
+    M = 1
     if type == 1:
         kind = FFTW_RODFT00
+        for axis in axes:
+            M *= 2*(sz[axis]+1)
     elif type == 2:
         kind = FFTW_RODFT10  # inverse is type 3
+        for axis in axes:
+            M *= 2*sz[axis]
     elif type == 3:
         kind = FFTW_RODFT01  # inverse is type 2
+        for axis in axes:
+            M *= 2*sz[axis]
     elif type == 4:
         kind = FFTW_RODFT11
+        for axis in axes:
+            M *= 2*sz[axis]
     kind = [kind]*len(axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1)
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
-def idst(input_array, s=None, axes=(-1,), type=2, threads=1,
-         flags=(FFTW_MEASURE,), output_array=None):
+def idstn(input_array, s=None, axes=(-1,), type=2, threads=1,
+          flags=(FFTW_MEASURE,), output_array=None):
     """Return inverse discrete sine transform object
 
     Parameters
@@ -587,7 +604,7 @@ def idst(input_array, s=None, axes=(-1,), type=2, threads=1,
     Examples
     --------
     >>> import numpy as np
-    >>> from mpi4py_fft.fftw.xfftn import idst as plan_idst
+    >>> from mpi4py_fft.fftw import idstn as plan_idst
     >>> from mpi4py_fft.fftw import FFTW_ESTIMATE, aligned
     >>> A = aligned(4, dtype='d')
     >>> idst = plan_idst(A, flags=(FFTW_ESTIMATE,))
@@ -623,7 +640,7 @@ def idst(input_array, s=None, axes=(-1,), type=2, threads=1,
         for axis in axes:
             M *= 2*sz[axis]
     kind = [kind]*len(axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return FFT(input_array, output_array, axes, kind, threads, flags, 1./M)
 
 def ihfftn(input_array, s=None, axes=(-1,), threads=1,
            flags=(FFTW_MEASURE,), output_array=None):
@@ -667,7 +684,7 @@ def ihfftn(input_array, s=None, axes=(-1,), threads=1,
     Examples
     --------
     >>> import numpy as np
-    >>> from mpi4py_fft.fftw.xfftn import ihfftn as plan_ihfftn
+    >>> from mpi4py_fft.fftw import ihfftn as plan_ihfftn
     >>> from mpi4py_fft.fftw import FFTW_ESTIMATE, aligned
     >>> A = aligned(4, dtype='d')
     >>> ihfftn = plan_ihfftn(A, flags=(FFTW_ESTIMATE,))
@@ -693,7 +710,7 @@ def ihfftn(input_array, s=None, axes=(-1,), threads=1,
     M = 1
     for axis in axes:
         M *= sz[axis]
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return FFT(input_array, output_array, axes, kind, threads, flags, 1./M)
 
 def hfftn(input_array, s=None, axes=(-1,), threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -737,7 +754,7 @@ def hfftn(input_array, s=None, axes=(-1,), threads=1,
     Examples
     --------
     >>> import numpy as np
-    >>> from mpi4py_fft.fftw.xfftn import hfftn as plan_hfftn
+    >>> from mpi4py_fft.fftw import hfftn as plan_hfftn
     >>> from mpi4py_fft.fftw import FFTW_ESTIMATE, aligned
     >>> A = aligned(4, dtype='D')
     >>> hfftn = plan_hfftn(A, flags=(FFTW_ESTIMATE,)) # no shape given for output
@@ -770,7 +787,10 @@ def hfftn(input_array, s=None, axes=(-1,), threads=1,
     else:
         assert list(output_array.shape) == sz
     assert sz[axes[-1]]//2+1 == input_array.shape[axes[-1]]
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1)
+    M = 1
+    for axis in axes:
+        M *= sz[axis]
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
 def export_wisdom(filename):
     """Export FFTW wisdom
@@ -819,4 +839,25 @@ def import_wisdom(filename):
     for key, lib in six.iteritems(fftlib):
         e.append(lib.import_wisdom(bytearray(key+'_'+filename, 'utf-8')))
     assert np.all(np.array(e) == 1), "Not able to import wisdom {}".format(filename)
+
+inverse = {
+    FFTW_RODFT11: FFTW_RODFT11,
+    FFTW_REDFT11: FFTW_REDFT11,
+    FFTW_RODFT01: FFTW_RODFT10,
+    FFTW_RODFT10: FFTW_RODFT01,
+    FFTW_REDFT01: FFTW_REDFT10,
+    FFTW_REDFT10: FFTW_REDFT01,
+    FFTW_RODFT00: FFTW_RODFT00,
+    FFTW_REDFT00: FFTW_REDFT00,
+    rfftn: irfftn,
+    irfftn: rfftn,
+    fftn: ifftn,
+    ifftn: fftn,
+    dctn: idctn,
+    idctn: dctn,
+    dstn: idstn,
+    idstn: dstn,
+    hfftn: ihfftn,
+    ihfftn: hfftn
+}
 

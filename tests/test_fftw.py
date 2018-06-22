@@ -57,13 +57,13 @@ def test_fftw():
                             sa = np.take(input_array.shape, axes) if shape[axes[-1]] % 2 == 1 else None
                             irfftn = fftw.irfftn(output_array, sa, axes, threads, iflags, output_array=ia)
                             irfftn.input_array[...] = B2
-                            A2 = irfftn(normalize_idft=True)
+                            A2 = irfftn(normalize=True)
                             assert allclose(A, A2), np.linalg.norm(A-A2)
                             hfftn = fftw.hfftn(output_array, sa, axes, threads, fflags, output_array=ia)
                             hfftn.input_array[...] = B2
                             AC = hfftn().copy()
                             ihfftn = fftw.ihfftn(input_array, None, axes, threads, iflags, output_array=oa)
-                            A2 = ihfftn(AC, implicit=False, normalize_idft=True)
+                            A2 = ihfftn(AC, implicit=False, normalize=True)
                             assert allclose(A2, B2), print(np.linalg.norm(A2-B2))
 
                             # c2c
@@ -76,7 +76,7 @@ def test_fftw():
                             D = fftn().copy()
                             ifftn = fftw.ifftn(input_array, None, axes, threads, iflags, output_array=oa)
                             ifftn.input_array[...] = D
-                            C2 = ifftn(normalize_idft=True)
+                            C2 = ifftn(normalize=True)
                             assert allclose(C, C2), np.linalg.norm(C-C2)
                             D2 = pyfftw.interfaces.numpy_fft.fftn(C, axes=axes)
                             assert allclose(D, D2), np.linalg.norm(D-D2)
@@ -86,19 +86,19 @@ def test_fftw():
                             output_array = fftw.aligned_like(input_array)
                             oa = output_array if typecode=='d' else None
                             for type in (1, 2, 3, 4):
-                                dct = fftw.dct(input_array, None, axes, type, threads, fflags, output_array=oa)
+                                dct = fftw.dctn(input_array, None, axes, type, threads, fflags, output_array=oa)
                                 B = dct(A).copy()
-                                idct = fftw.idct(input_array, None, axes, type, threads, iflags, output_array=oa)
-                                A2 = idct(B, implicit=False, normalize_idft=True)
+                                idct = fftw.idctn(input_array, None, axes, type, threads, iflags, output_array=oa)
+                                A2 = idct(B, implicit=False, normalize=True)
                                 assert allclose(A, A2), np.linalg.norm(A-A2)
                                 if typecode is not 'g' and not type is 4:
                                     B2 = scipy.fftpack.dctn(A, axes=axes, type=type)
                                     assert allclose(B, B2), np.linalg.norm(B-B2)
 
-                                dst = fftw.dst(input_array, None, axes, type, threads, fflags, output_array=oa)
+                                dst = fftw.dstn(input_array, None, axes, type, threads, fflags, output_array=oa)
                                 B = dst(A).copy()
-                                idst = fftw.idst(input_array, None, axes, type, threads, iflags, output_array=oa)
-                                A2 = idst(B, implicit=False, normalize_idft=True)
+                                idst = fftw.idstn(input_array, None, axes, type, threads, iflags, output_array=oa)
+                                A2 = idst(B, implicit=False, normalize=True)
                                 assert allclose(A, A2), np.linalg.norm(A-A2)
                                 if typecode is not 'g' and not type is 4:
                                     B2 = scipy.fftpack.dstn(A, axes=axes, type=type)

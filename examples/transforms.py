@@ -1,13 +1,20 @@
 import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT, Function
-
+from mpi4py_fft.fftw import rfftn, irfftn, fftn, ifftn, dctn, idctn
+import functools
 
 # Set global size of the computational box
-N = np.array([4, 4, 4], dtype=int)
+N = np.array([8, 8, 8], dtype=int)
 
-fft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), collapse=False, slab=True)
-pfft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), padding=[1.5, 1.5, 1.5], slab=True)
+dct = functools.partial(dctn, type=3)
+idct = functools.partial(idctn, type=3)
+
+transforms = {(0,): (fftn, ifftn), (1,): (rfftn, irfftn), (2,): (dct, idct)}
+#transforms = None
+
+fft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), collapse=False, slab=True, transforms=transforms)
+pfft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2), padding=[1.5, 1.5, 1.0], slab=True, transforms=transforms)
 
 u = Function(fft, False)
 u[:] = np.random.random(u.shape).astype(u.dtype)
@@ -18,7 +25,7 @@ uj = np.zeros_like(u)
 uj = fft.backward(u_hat, uj)
 assert np.allclose(uj, u)
 
-u_padded = np.zeros(pfft.forward.input_array.shape)
+u_padded = Function(pfft, False)
 uc = u_hat.copy()
 u_padded = pfft.backward(u_hat, u_padded)
 u_hat = pfft.forward(u_padded, u_hat)
