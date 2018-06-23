@@ -243,7 +243,6 @@ cdef class FFT:
         with nogil:
             fftw_execute(<fftw_plan>self._plan)
         if normalize:
-            print("debugging explicit", self._M)
             self._output_array *= self._M
         if output_array is not None:
             output_array[...] = self._output_array
@@ -293,7 +292,6 @@ cdef class FFT:
             apply_plan(<fftw_plan>self._plan, _in, _out)
         if normalize:
             self._output_array *= self._M
-            print("debugging implicit", self._M)
 
         return self._output_array
 
