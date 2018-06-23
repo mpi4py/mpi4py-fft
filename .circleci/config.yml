@@ -22,7 +22,7 @@ jobs:
             conda update -q conda
             conda config --add channels conda-forge
             conda install -n root conda-build
-            pip install --no-deps codacy-coverage
+            pip install --no-deps codacy-coverage coverage
 
       - save_cache:
           key: v3-miniconda-{{ .Branch }}
@@ -47,7 +47,7 @@ jobs:
       - deploy:
           name: Deploy
           command: |
-            source ~/miniconda/bin/activate mpi4py_fft
+            source ~/miniconda/bin/activate root
             cd tests
             curl -s -o codecov.sh https://codecov.io/bash
             coverage xml
