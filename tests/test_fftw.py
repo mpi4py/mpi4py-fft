@@ -117,15 +117,8 @@ def test_fftw():
                                           threads=threads, flags=iflags)
 
                             C2 = TI(C)
-                            M = 1.0
-                            for l, dd in enumerate(tsf):
-                                if dd == 'dct1':
-                                    M *= 2*(C.shape[axes[l]]-1)
-                                elif dd == 'dst1':
-                                    M *= 2*(C.shape[axes[l]]+1)
-                                else:
-                                    M *= 2*C.shape[axes[l]]
-                            assert allclose(C2/M, A)
+                            M = fftw.get_normalization(kds, input_array.shape, axes)
+                            assert allclose(C2*M, A)
                             if typecode is not 'g' and not any(f in kds for f in (fftw.FFTW_RODFT11, fftw.FFTW_REDFT11)):
                                 for m, ts in enumerate(tsf):
                                     A = eval('scipy.fftpack.'+ts[:-1])(A, axis=axes[m], type=int(ts[-1]))

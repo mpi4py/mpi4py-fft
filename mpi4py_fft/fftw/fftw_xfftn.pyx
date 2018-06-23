@@ -185,11 +185,7 @@ cdef class FFT:
         self._output_array = output_array
 
     def get_normalization(self):
-        """Return 1./np.prod(np.take(shape, axes))
-
-        where shape is the global shape of the array that is input to the
-        forward transform, and axes are the axes transformed over.
-        """
+        """Return the internally set normalization factor"""
         return self._M
 
     def __call__(self, input_array=None, output_array=None, implicit=True,
@@ -197,7 +193,7 @@ cdef class FFT:
         """
         Signature::
 
-            __call__(input_array=None, output_array=None, implicit=True, normalize_idft=False, normalize_dft=False, **kw)
+            __call__(input_array=None, output_array=None, implicit=True, normalize=False, normalize_idft=False, **kw)
 
         Compute transform and return output array
 

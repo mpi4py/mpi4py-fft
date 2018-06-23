@@ -14,8 +14,32 @@ flag_dict = {key: val for key, val in six.iteritems(locals())
 fftlib = {
     'F': fftwf_xfftn,
     'D': fftw_xfftn,
-    'G': fftwl_xfftn
-}
+    'G': fftwl_xfftn}
+
+dct_type = {
+    1: FFTW_REDFT00,
+    2: FFTW_REDFT10,
+    3: FFTW_REDFT01,
+    4: FFTW_REDFT11}
+
+idct_type = {
+    1: FFTW_REDFT00,
+    2: FFTW_REDFT01,
+    3: FFTW_REDFT10,
+    4: FFTW_REDFT11}
+
+dst_type = {
+    1: FFTW_RODFT00,
+    2: FFTW_RODFT10,
+    3: FFTW_RODFT01,
+    4: FFTW_RODFT11}
+
+idst_type = {
+    1: FFTW_RODFT00,
+    2: FFTW_RODFT01,
+    3: FFTW_RODFT10,
+    4: FFTW_RODFT11}
+
 
 def FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD, threads=1,
         flags=(FFTW_MEASURE,), normalize=1):
@@ -87,10 +111,7 @@ def fftn(input_array, s=None, axes=(-1,), threads=1,
     else:
         assert input_array.shape == output_array.shape
         assert output_array.dtype.char == input_array.dtype.char.upper()
-    sz = input_array.shape
-    M = 1.0
-    for axis in axes:
-        M *= sz[axis]
+    M = np.prod(np.take(input_array.shape, axes))
     return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def ifftn(input_array, s=None, axes=(-1,), threads=1,
@@ -156,10 +177,7 @@ def ifftn(input_array, s=None, axes=(-1,), threads=1,
         output_array = aligned_like(input_array)
     else:
         assert input_array.shape == output_array.shape
-    sz = input_array.shape
-    M = 1.0
-    for axis in axes:
-        M *= sz[axis]
+    M = np.prod(np.take(input_array.shape, axes))
     return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def rfftn(input_array, s=None, axes=(-1,), threads=1,
@@ -228,10 +246,7 @@ def rfftn(input_array, s=None, axes=(-1,), threads=1,
         output_array = aligned(sz, n=n, dtype=np.dtype(D))
     else:
         assert input_array.shape[axes[-1]]//2+1 == output_array.shape[axes[-1]]
-    M = 1.0
-    sz = input_array.shape
-    for axis in axes:
-        M *= sz[axis]
+    M = np.prod(np.take(input_array.shape, axes))
     return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def irfftn(input_array, s=None, axes=(-1,), threads=1,
@@ -316,10 +331,7 @@ def irfftn(input_array, s=None, axes=(-1,), threads=1,
         assert list(output_array.shape) == sz
 
     assert sz[axes[-1]]//2+1 == input_array.shape[axes[-1]]
-    M = 1.0
-    sz = output_array.shape
-    for axis in axes:
-        M *= sz[axis]
+    M = np.prod(np.take(output_array.shape, axes))
     return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def dctn(input_array, s=None, axes=(-1,), type=2, threads=1,
@@ -381,26 +393,10 @@ def dctn(input_array, s=None, axes=(-1,), type=2, threads=1,
         output_array = aligned_like(input_array)
     else:
         assert input_array.shape == output_array.shape
-    sz = input_array.shape
-    M = 1
-    if type == 1:
-        kind = FFTW_REDFT00
-        for axis in axes:
-            M *= 2*(sz[axis]-1)
-    elif type == 2:
-        kind = FFTW_REDFT10  # inverse is type 3
-        for axis in axes:
-            M *= 2*sz[axis]
-    elif type == 3:
-        kind = FFTW_REDFT01  # inverse is type 2
-        for axis in axes:
-            M *= 2*sz[axis]
-    elif type == 4:
-        kind = FFTW_REDFT11
-        for axis in axes:
-            M *= 2*sz[axis]
+    kind = dct_type[type]
     kind = [kind]*len(axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
+    M = get_normalization(kind, input_array.shape, axes)
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
 def idctn(input_array, s=None, axes=(-1,), type=2, threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -461,26 +457,10 @@ def idctn(input_array, s=None, axes=(-1,), type=2, threads=1,
         output_array = aligned_like(input_array)
     else:
         assert input_array.shape == output_array.shape
-    sz = input_array.shape
-    M = 1
-    if type == 1:
-        kind = FFTW_REDFT00
-        for axis in axes:
-            M *= 2*(sz[axis]-1)
-    elif type == 2:
-        kind = FFTW_REDFT01
-        for axis in axes:
-            M *= 2*sz[axis]
-    elif type == 3:
-        kind = FFTW_REDFT10
-        for axis in axes:
-            M *= 2*sz[axis]
-    elif type == 4:
-        kind = FFTW_REDFT11
-        for axis in axes:
-            M *= 2*sz[axis]
+    kind = idct_type[type]
     kind = [kind]*len(axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1./M)
+    M = get_normalization(kind, input_array.shape, axes)
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
 def dstn(input_array, s=None, axes=(-1,), type=2, threads=1,
          flags=(FFTW_MEASURE,), output_array=None):
@@ -541,26 +521,10 @@ def dstn(input_array, s=None, axes=(-1,), type=2, threads=1,
         output_array = aligned_like(input_array)
     else:
         assert input_array.shape == output_array.shape
-    sz = input_array.shape
-    M = 1
-    if type == 1:
-        kind = FFTW_RODFT00
-        for axis in axes:
-            M *= 2*(sz[axis]+1)
-    elif type == 2:
-        kind = FFTW_RODFT10  # inverse is type 3
-        for axis in axes:
-            M *= 2*sz[axis]
-    elif type == 3:
-        kind = FFTW_RODFT01  # inverse is type 2
-        for axis in axes:
-            M *= 2*sz[axis]
-    elif type == 4:
-        kind = FFTW_RODFT11
-        for axis in axes:
-            M *= 2*sz[axis]
+    kind = dst_type[type]
     kind = [kind]*len(axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
+    M = get_normalization(kind, input_array.shape, axes)
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
 def idstn(input_array, s=None, axes=(-1,), type=2, threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -621,26 +585,10 @@ def idstn(input_array, s=None, axes=(-1,), type=2, threads=1,
         output_array = aligned_like(input_array)
     else:
         assert input_array.shape == output_array.shape
-    sz = input_array.shape
-    M = 1
-    if type == 1:
-        kind = FFTW_RODFT00
-        for axis in axes:
-            M *= 2*(sz[axis]+1)
-    elif type == 2:
-        kind = FFTW_RODFT01
-        for axis in axes:
-            M *= 2*sz[axis]
-    elif type == 3:
-        kind = FFTW_RODFT10
-        for axis in axes:
-            M *= 2*sz[axis]
-    elif type == 4:
-        kind = FFTW_RODFT11
-        for axis in axes:
-            M *= 2*sz[axis]
+    kind = idst_type[type]
     kind = [kind]*len(axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1./M)
+    M = get_normalization(kind, input_array.shape, axes)
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
 def ihfftn(input_array, s=None, axes=(-1,), threads=1,
            flags=(FFTW_MEASURE,), output_array=None):
@@ -706,11 +654,8 @@ def ihfftn(input_array, s=None, axes=(-1,), threads=1,
         output_array = aligned(sz, n=n, dtype=np.dtype(input_array.dtype.char.upper()))
     else:
         assert input_array.shape[axes[-1]]//2+1 == output_array.shape[axes[-1]]
-    sz = input_array.shape
-    M = 1
-    for axis in axes:
-        M *= sz[axis]
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1./M)
+    M = get_normalization(kind, input_array.shape, axes)
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
 
 def hfftn(input_array, s=None, axes=(-1,), threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -787,10 +732,63 @@ def hfftn(input_array, s=None, axes=(-1,), threads=1,
     else:
         assert list(output_array.shape) == sz
     assert sz[axes[-1]]//2+1 == input_array.shape[axes[-1]]
+    M = get_normalization(kind, sz, axes)
+    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+
+def get_normalization(kind, shape, axes):
+    """Return normalization factor for multidimensional transform
+
+    Parameters
+    ----------
+    kind : sequence of ints
+        The kind of transform along each axis
+    shape : sequence of ints
+        The shape of the global transformed array (input to the forward
+        transform)
+    axes : sequence of ints
+        The axes transformed over
+
+    The normalization factor is, for Fourier transforms::
+
+        1./np.prod(np.take(shape, axes))
+
+    where shape is the global shape of the array that is input to the
+    forward transform, and axes are the axes transformed over.
+
+    For real-to-real transforms the normalization factor for each axis is
+
+        - REDFT00 - 2(N-1)
+        - REDFT01 - 2N
+        - REDFT10 - 2N
+        - REDFT11 - 2N
+        - RODFT00 - 2(N+1)
+        - RODFT01 - 2N
+        - RODFT10 - 2N
+        - RODFT11 - 2N
+
+    where N is the length of the input array along that axis.
+
+    Note
+    ----
+    The returned normalization factor is the *inverse* of the product of the
+    normalization factors for the axes it is transformed over.
+
+    """
+    kind = [kind]*len(axes) if isinstance(kind, int) else kind
+    assert len(kind) == len(axes)
     M = 1
-    for axis in axes:
-        M *= sz[axis]
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
+    for knd, axis in zip(kind, axes):
+        N = shape[axis]
+        if knd == FFTW_RODFT00:
+            M *= 2*(N+1)
+        elif knd == FFTW_REDFT00:
+            M *= 2*(N-1)
+        elif knd in (FFTW_RODFT01, FFTW_RODFT10, FFTW_RODFT11,
+                     FFTW_REDFT01, FFTW_REDFT10, FFTW_REDFT11):
+            M *= 2*N
+        else:
+            M *= N
+    return 1./M
 
 def export_wisdom(filename):
     """Export FFTW wisdom
