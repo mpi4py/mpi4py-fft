@@ -185,10 +185,15 @@ cdef class FFT:
         self._output_array = output_array
 
     def get_normalization(self):
+        """Return 1./np.prod(np.take(shape, axes))
+
+        where shape is the global shape of the array that is input to the
+        forward transform, and axes are the axes transformed over.
+        """
         return self._M
 
     def __call__(self, input_array=None, output_array=None, implicit=True,
-                 normalize=False, **kw):
+                 normalize=False, normalize_idft=False, **kw):
         """
         Signature::
 
@@ -212,14 +217,16 @@ cdef class FFT:
             it may be done without any copying. However, the contents of the
             input_array may be destroyed during computation. So use with care!
         normalize : bool, optional
-            Normalize transform if True. If true, then forward transform is
-            multiplied by M, whereas inverse transform is multiplied by 1/M.
-            Here M = np.prod(np.take(shape, axes)), where shape is the shape of
-            the array that is input to the forward transform, and axes are the
-            axes we are transforming over.
+            If True, normalize transform by 1/M, where::
+
+                M = np.prod(np.take(shape, axes))
+
+            where shape is the shape of the array that is input to the forward
+            transform, and axes are the axes we are transforming over.
             For compatibility with pyfftw we also normalize if a keyword
             argument normalize_idft is set to True and the transform is of
-            inverse kind.
+            inverse kind. The parameter 1/M is possible to obtain through
+            :func:`FFT.get_normalization`
         kw : dict, optional
 
         Note
@@ -230,10 +237,10 @@ cdef class FFT:
         method may cause the input_array to be overwritten during computation.
 
         """
-        norm = normalize or (kw.get('normalize_idft', False) and self.kind==FFTW_BACKWARD) # For compatibility with pyfftw
+        norm = normalize or (kw.get('normalize_idft', False) and
+                             self.kind==FFTW_BACKWARD) # For compatibility with pyfftw
         if implicit:
-            return self._apply_implicit(input_array, output_array,
-                                        norm, **kw)
+            return self._apply_implicit(input_array, output_array, norm, **kw)
         return self._apply_explicit(input_array, output_array, norm, **kw)
 
     def _apply_explicit(self, input_array, output_array, normalize, **kw):

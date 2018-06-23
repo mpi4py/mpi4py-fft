@@ -91,7 +91,7 @@ def fftn(input_array, s=None, axes=(-1,), threads=1,
     M = 1.0
     for axis in axes:
         M *= sz[axis]
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def ifftn(input_array, s=None, axes=(-1,), threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -232,7 +232,7 @@ def rfftn(input_array, s=None, axes=(-1,), threads=1,
     sz = input_array.shape
     for axis in axes:
         M *= sz[axis]
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def irfftn(input_array, s=None, axes=(-1,), threads=1,
            flags=(FFTW_MEASURE,), output_array=None):
@@ -319,8 +319,8 @@ def irfftn(input_array, s=None, axes=(-1,), threads=1,
     M = 1.0
     sz = output_array.shape
     for axis in axes:
-        M /= sz[axis]
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+        M *= sz[axis]
+    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def dctn(input_array, s=None, axes=(-1,), type=2, threads=1,
          flags=(FFTW_MEASURE,), output_array=None):
@@ -400,7 +400,7 @@ def dctn(input_array, s=None, axes=(-1,), type=2, threads=1,
         for axis in axes:
             M *= 2*sz[axis]
     kind = [kind]*len(axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def idctn(input_array, s=None, axes=(-1,), type=2, threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -560,7 +560,7 @@ def dstn(input_array, s=None, axes=(-1,), type=2, threads=1,
         for axis in axes:
             M *= 2*sz[axis]
     kind = [kind]*len(axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def idstn(input_array, s=None, axes=(-1,), type=2, threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -790,7 +790,7 @@ def hfftn(input_array, s=None, axes=(-1,), threads=1,
     M = 1
     for axis in axes:
         M *= sz[axis]
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
 
 def export_wisdom(filename):
     """Export FFTW wisdom

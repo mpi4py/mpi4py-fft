@@ -258,7 +258,7 @@ class FFT(FFTBase):
         if use_pyfftw:
             self.M = 1./np.prod(np.take(self.shape, self.axes))
         else:
-            self.M = 1./self.fwd.get_normalization()
+            self.M = self.fwd.get_normalization()
         self.padding_factor = 1.0
         if padding is not False:
             self.padding_factor = padding[self.axes[-1]] if np.ndim(padding) else padding
