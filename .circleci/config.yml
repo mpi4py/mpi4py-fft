@@ -47,10 +47,10 @@ jobs:
       - deploy:
           name: Deploy
           command: |
-            source ~/miniconda/bin/activate root
+            source ~/miniconda/bin/activate mpi4py_fft
             cd tests
             curl -s -o codecov.sh https://codecov.io/bash
-            bash codecov.sh -X gcov -X fix
             coverage xml
+            bash codecov.sh -X gcov -X fix
             python-codacy-coverage -r coverage.xml
 
