@@ -215,13 +215,11 @@ class PFFT(object):
         if collapse is True:
             groups = [[]]
             for ax in reversed(axes):
-                for axis in ax:
-                    if self.subcomm[axis].Get_size() == 1:
-                        groups[0].insert(0, axis)
-                    else:
-                        groups.insert(0, [axis])
+                if np.all([self.subcomm[axis].Get_size() == 1 for axis in ax]):
+                    [groups[0].insert(0, axis) for axis in reversed(ax)]
+                else:
+                    groups.insert(0, ax)
                 self.axes = tuple(map(tuple, groups))
-
         self.xfftn = []
         self.transfer = []
         self.pencil = [None, None]

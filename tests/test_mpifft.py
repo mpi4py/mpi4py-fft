@@ -46,7 +46,8 @@ def test_mpifft():
                 for slab in (True, False):
                     padding = False
                     for collapse in (True, False):
-                        for use_pyfftw in (True, False):
+                        for use_pyfftw in (False, True):
+                            transforms = None
                             if dim < 3:
                                 allaxes = [None, (-1,), (-2,),
                                            (-1, -2,), (-2, -1),
@@ -56,7 +57,7 @@ def test_mpifft():
                                 allaxes = [None, ((0,), (1, 2)),
                                            ((0,), (-2, -1))]
                             elif dim > 3:
-                                allaxes = [None, ((0,), (1,), (-2,), (-1)),
+                                allaxes = [None, ((0,), (1,), (2,), (3)),
                                            ((0,), (1, 2, 3)),
                                            ((0,), (1,), (2, 3))]
                                 if use_pyfftw:
@@ -70,11 +71,15 @@ def test_mpifft():
                                                                   fftw.fftn,
                                                                   fftw.ifftn)
 
-                                transforms = defaultdict(lambda : (fftn, ifftn),
-                                                         {(3,): (rfftn, irfftn),
-                                                          (2, 3): (rfftn, irfftn),
-                                                          (1, 2, 3): (rfftn, irfftn),
-                                                          (0, 1, 2, 3): (rfftn, irfftn)})
+                                if typecode in 'FDG':
+                                    transforms = defaultdict(lambda : (fftn, ifftn))
+                                else:
+                                    transforms = defaultdict(lambda : (fftn, ifftn),
+                                                             {(3,): (rfftn, irfftn),
+                                                              (2, 3): (rfftn, irfftn),
+                                                              (1, 2, 3): (rfftn, irfftn),
+                                                              (0, 1, 2, 3): (rfftn, irfftn)})
+
                             for axes in allaxes:
                                 _slab = slab
                                 # Test also the slab is number interface
@@ -94,9 +99,10 @@ def test_mpifft():
                                         _comm = comm.Create_cart(_dims)
                                         _dims = None
                                     _comm = Subcomm(_comm, _dims)
+                                #print(typecode, shape, axes)
                                 fft = PFFT(_comm, shape, axes=axes, dtype=typecode,
                                            padding=padding, slab=_slab, collapse=collapse,
-                                           use_pyfftw=use_pyfftw)
+                                           use_pyfftw=use_pyfftw, transforms=transforms)
 
                                 #if comm.rank == 0:
                                 #    grid = [c.size for c in fft.subcomm]
