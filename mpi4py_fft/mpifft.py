@@ -209,13 +209,14 @@ class PFFT(object):
 
         self.collapse = collapse
         if collapse is True:
-            axesc = copy(axes)
-            axes = [[]]
-            for ax in reversed(axesc):
+            groups = [[]]
+            for ax in reversed(axes):
                 if np.all([self.subcomm[axis].Get_size() == 1 for axis in ax]):
-                    [axes[0].insert(0, axis) for axis in reversed(ax)]
+                    [groups[0].insert(0, axis) for axis in reversed(ax)]
                 else:
-                    axes.insert(0, ax)
+                    groups.insert(0, ax)
+            axes = groups
+
         self.axes = tuple(map(tuple, axes))
         self.xfftn = []
         self.transfer = []
@@ -223,7 +224,8 @@ class PFFT(object):
 
         axes = self.axes[-1]
         pencil = Pencil(self.subcomm, shape, axes[-1])
-        xfftn = FFT(pencil.subshape, axes, dtype, padding, use_pyfftw, transforms, **kw)
+        xfftn = FFT(pencil.subshape, axes, dtype, padding, use_pyfftw,
+                    transforms, **kw)
         self.xfftn.append(xfftn)
         self.pencil[0] = pencilA = pencil
         if not shape[axes[-1]] == xfftn.forward.output_array.shape[axes[-1]]:
@@ -234,7 +236,8 @@ class PFFT(object):
         for axes in reversed(self.axes[:-1]):
             pencilB = pencilA.pencil(axes[-1])
             transAB = pencilA.transfer(pencilB, dtype)
-            xfftn = FFT(pencilB.subshape, axes, dtype, padding, use_pyfftw, transforms, **kw)
+            xfftn = FFT(pencilB.subshape, axes, dtype, padding, use_pyfftw,
+                        transforms, **kw)
             self.xfftn.append(xfftn)
             self.transfer.append(transAB)
             pencilA = pencilB

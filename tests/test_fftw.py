@@ -136,16 +136,16 @@ def test_timelimit():
     limit = 0.001
     input_array = fftw.aligned((128, 128), dtype='d')
     t0 = time()
-    rfftn = fftw.rfftn(input_array, flags=fftw.FFTW_PATIENT)
+    fftw.rfftn(input_array, flags=fftw.FFTW_PATIENT)
     t1 = time()-t0
-    fftw.factory.forget_wisdom()
-    fftw.factory.set_timelimit(limit)
+    fftw.forget_wisdom()
+    fftw.set_timelimit(limit)
     t0 = time()
-    rfftn = fftw.rfftn(input_array, flags=fftw.FFTW_PATIENT)
+    fftw.rfftn(input_array, flags=fftw.FFTW_PATIENT)
     t2 = time()-t0
     assert t1 > t2
     assert abs(t2-limit) < 0.5*limit
-    fftw.factory.cleanup()
+    fftw.cleanup()
 
 if __name__ == '__main__':
     test_fftw()
