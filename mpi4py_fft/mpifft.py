@@ -172,11 +172,10 @@ class PFFT(object):
         if padding is not False:
             assert len(padding) == len(shape)
             for ax in axes:
-                assert len(ax) == 1 # No collapsing with padding
-                for axis in ax:
-                    old = np.float(shape[axis])
-                    shape[axis] = int(np.floor(shape[axis]*padding[axis]))
-                    padding[axis] = shape[axis] / old
+                if len(ax) == 1 and padding[ax[0]] > 1.0+1e-6:
+                    old = np.float(shape[ax[0]])
+                    shape[ax[0]] = int(np.floor(shape[ax[0]]*padding[ax[0]]))
+                    padding[ax[0]] = shape[ax[0]] / old
 
         self._input_shape = copy(shape)
         assert len(shape) > 0
@@ -208,18 +207,16 @@ class PFFT(object):
 
             self.subcomm = Subcomm(comm, dims)
 
-        if padding is not False:
-            collapse = False
         self.collapse = collapse
-
         if collapse is True:
-            groups = [[]]
-            for ax in reversed(axes):
+            axesc = copy(axes)
+            axes = [[]]
+            for ax in reversed(axesc):
                 if np.all([self.subcomm[axis].Get_size() == 1 for axis in ax]):
-                    [groups[0].insert(0, axis) for axis in reversed(ax)]
+                    [axes[0].insert(0, axis) for axis in reversed(ax)]
                 else:
-                    groups.insert(0, ax)
-                self.axes = tuple(map(tuple, groups))
+                    axes.insert(0, ax)
+        self.axes = tuple(map(tuple, axes))
         self.xfftn = []
         self.transfer = []
         self.pencil = [None, None]

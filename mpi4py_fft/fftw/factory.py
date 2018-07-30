@@ -111,4 +111,16 @@ def import_wisdom(filename):
         e.append(lib.import_wisdom(bytearray(key+'_'+filename, 'utf-8')))
     assert np.all(np.array(e) == 1), "Not able to import wisdom {}".format(filename)
 
+def forget_wisdom():
+    for lib in fftlib.values():
+        lib.forget_wisdom()
+
+def set_timelimit(limit):
+    for lib in fftlib.values():
+        lib.set_timelimit(limit) # limit's precision handled by cython
+
+def cleanup():
+    for lib in fftlib.values():
+        lib.cleanup()
+        lib.cleanup_threads()
 
