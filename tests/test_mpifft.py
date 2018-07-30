@@ -31,7 +31,7 @@ def test_mpifft():
     comm = MPI.COMM_WORLD
     dims  = (2, 3, 4,)
     sizes = (16, 17)
-    types = 'fFdDgG' # + 'gG'
+    types = 'fFdDgG'
 
     for typecode in types:
         for dim in dims:
@@ -130,7 +130,7 @@ def test_mpifft():
 
                                 U = random_like(fft.forward.input_array)
 
-                                if 1:
+                                if random_true_or_false(comm) == 1:
                                     F = fft.forward(U)
                                     V = fft.backward(F)
                                     assert allclose(V, U)
@@ -187,7 +187,7 @@ def test_mpifft():
                             U = random_like(fft.forward.input_array)
                             F = fft.forward(U)
 
-                            if 1:
+                            if random_true_or_false(comm) == 1:
                                 Fc = F.copy()
                                 V = fft.backward(F)
                                 F = fft.forward(V)

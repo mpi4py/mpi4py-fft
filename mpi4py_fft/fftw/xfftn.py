@@ -1,20 +1,15 @@
 import six
 import numpy as np
-from . import fftwf_xfftn, fftw_xfftn, fftwl_xfftn
 from .utilities import FFTW_FORWARD, FFTW_BACKWARD, FFTW_REDFT00, FFTW_REDFT01, \
     FFTW_REDFT10, FFTW_REDFT11, FFTW_RODFT00, FFTW_RODFT01, FFTW_RODFT10, \
     FFTW_RODFT11, FFTW_MEASURE, FFTW_DESTROY_INPUT, FFTW_UNALIGNED, \
     FFTW_CONSERVE_MEMORY, FFTW_EXHAUSTIVE, FFTW_PRESERVE_INPUT, FFTW_PATIENT, \
     FFTW_ESTIMATE, FFTW_WISDOM_ONLY, C2C_FORWARD, C2C_BACKWARD, R2C, C2R, \
     FFTW_R2HC, FFTW_HC2R, FFTW_DHT, get_alignment, aligned, aligned_like
+from .factory import get_planned_FFT, export_wisdom, import_wisdom
 
 flag_dict = {key: val for key, val in six.iteritems(locals())
              if key.startswith('FFTW_')}
-
-fftlib = {
-    'F': fftwf_xfftn,
-    'D': fftw_xfftn,
-    'G': fftwl_xfftn}
 
 dct_type = {
     1: FFTW_REDFT00,
@@ -39,13 +34,6 @@ idst_type = {
     2: FFTW_RODFT01,
     3: FFTW_RODFT10,
     4: FFTW_RODFT11}
-
-
-def FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD, threads=1,
-        flags=(FFTW_MEASURE,), normalize=1):
-    dtype = input_array.dtype.char
-    _fft = fftlib[dtype.upper()]
-    return _fft.FFT(input_array, output_array, axes, kind, threads, flags, normalize)
 
 def fftn(input_array, s=None, axes=(-1,), threads=1,
          flags=(FFTW_MEASURE,), output_array=None):
@@ -112,7 +100,8 @@ def fftn(input_array, s=None, axes=(-1,), threads=1,
         assert input_array.shape == output_array.shape
         assert output_array.dtype.char == input_array.dtype.char.upper()
     M = np.prod(np.take(input_array.shape, axes))
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
+    return get_planned_FFT(input_array, output_array, axes, kind, threads,
+                           flags, 1.0/M)
 
 def ifftn(input_array, s=None, axes=(-1,), threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -178,7 +167,8 @@ def ifftn(input_array, s=None, axes=(-1,), threads=1,
     else:
         assert input_array.shape == output_array.shape
     M = np.prod(np.take(input_array.shape, axes))
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
+    return get_planned_FFT(input_array, output_array, axes, kind, threads,
+                           flags, 1.0/M)
 
 def rfftn(input_array, s=None, axes=(-1,), threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -240,14 +230,14 @@ def rfftn(input_array, s=None, axes=(-1,), threads=1,
     if output_array is None:
         sz = list(input_array.shape)
         sz[axes[-1]] = input_array.shape[axes[-1]]//2+1
-        D = input_array.dtype.char.upper()
-        _fft = fftlib[D]
-        n = _fft.get_alignment(input_array)
-        output_array = aligned(sz, n=n, dtype=np.dtype(D))
+        dtype = input_array.dtype.char
+        n = get_alignment(input_array)
+        output_array = aligned(sz, n=n, dtype=np.dtype(dtype.upper()))
     else:
         assert input_array.shape[axes[-1]]//2+1 == output_array.shape[axes[-1]]
     M = np.prod(np.take(input_array.shape, axes))
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
+    return get_planned_FFT(input_array, output_array, axes, kind, threads,
+                           flags, 1.0/M)
 
 def irfftn(input_array, s=None, axes=(-1,), threads=1,
            flags=(FFTW_MEASURE,), output_array=None):
@@ -324,15 +314,16 @@ def irfftn(input_array, s=None, axes=(-1,), threads=1,
     else:
         sz[axes[-1]] = 2*sz[axes[-1]]-2
     if output_array is None:
-        _fft = fftlib[input_array.dtype.char]
-        n = _fft.get_alignment(input_array)
-        output_array = aligned(sz, n=n, dtype=np.dtype(input_array.dtype.char.lower()))
+        dtype = input_array.dtype.char
+        n = get_alignment(input_array)
+        output_array = aligned(sz, n=n, dtype=np.dtype(dtype.lower()))
     else:
         assert list(output_array.shape) == sz
 
     assert sz[axes[-1]]//2+1 == input_array.shape[axes[-1]]
     M = np.prod(np.take(output_array.shape, axes))
-    return FFT(input_array, output_array, axes, kind, threads, flags, 1.0/M)
+    return get_planned_FFT(input_array, output_array, axes, kind, threads,
+                           flags, 1.0/M)
 
 def dctn(input_array, s=None, axes=(-1,), type=2, threads=1,
          flags=(FFTW_MEASURE,), output_array=None):
@@ -396,7 +387,8 @@ def dctn(input_array, s=None, axes=(-1,), type=2, threads=1,
     kind = dct_type[type]
     kind = [kind]*len(axes)
     M = get_normalization(kind, input_array.shape, axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return get_planned_FFT(input_array, output_array, axes, kind, threads,
+                           flags, M)
 
 def idctn(input_array, s=None, axes=(-1,), type=2, threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -460,7 +452,8 @@ def idctn(input_array, s=None, axes=(-1,), type=2, threads=1,
     kind = idct_type[type]
     kind = [kind]*len(axes)
     M = get_normalization(kind, input_array.shape, axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return get_planned_FFT(input_array, output_array, axes, kind, threads,
+                           flags, M)
 
 def dstn(input_array, s=None, axes=(-1,), type=2, threads=1,
          flags=(FFTW_MEASURE,), output_array=None):
@@ -524,7 +517,8 @@ def dstn(input_array, s=None, axes=(-1,), type=2, threads=1,
     kind = dst_type[type]
     kind = [kind]*len(axes)
     M = get_normalization(kind, input_array.shape, axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return get_planned_FFT(input_array, output_array, axes, kind, threads,
+                           flags, M)
 
 def idstn(input_array, s=None, axes=(-1,), type=2, threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -588,7 +582,8 @@ def idstn(input_array, s=None, axes=(-1,), type=2, threads=1,
     kind = idst_type[type]
     kind = [kind]*len(axes)
     M = get_normalization(kind, input_array.shape, axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return get_planned_FFT(input_array, output_array, axes, kind, threads,
+                           flags, M)
 
 def ihfftn(input_array, s=None, axes=(-1,), threads=1,
            flags=(FFTW_MEASURE,), output_array=None):
@@ -647,15 +642,16 @@ def ihfftn(input_array, s=None, axes=(-1,), threads=1,
     kind = R2C
     assert input_array.dtype.char in 'fdg'
     if output_array is None:
+        dtype = input_array.dtype.char
         sz = list(input_array.shape)
         sz[axes[-1]] = input_array.shape[axes[-1]]//2+1
-        _fft = fftlib[input_array.dtype.char.upper()]
-        n = _fft.get_alignment(input_array)
-        output_array = aligned(sz, n=n, dtype=np.dtype(input_array.dtype.char.upper()))
+        n = get_alignment(input_array)
+        output_array = aligned(sz, n=n, dtype=np.dtype(dtype.upper()))
     else:
         assert input_array.shape[axes[-1]]//2+1 == output_array.shape[axes[-1]]
     M = get_normalization(kind, input_array.shape, axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return get_planned_FFT(input_array, output_array, axes, kind, threads,
+                           flags, M)
 
 def hfftn(input_array, s=None, axes=(-1,), threads=1,
           flags=(FFTW_MEASURE,), output_array=None):
@@ -726,14 +722,15 @@ def hfftn(input_array, s=None, axes=(-1,), threads=1,
     else:
         sz[axes[-1]] = 2*sz[axes[-1]]-2
     if output_array is None:
-        _fft = fftlib[input_array.dtype.char]
-        n = _fft.get_alignment(input_array)
-        output_array = aligned(sz, n=n, dtype=np.dtype(input_array.dtype.char.lower()))
+        dtype = input_array.dtype.char
+        n = get_alignment(input_array)
+        output_array = aligned(sz, n=n, dtype=np.dtype(dtype.lower()))
     else:
         assert list(output_array.shape) == sz
     assert sz[axes[-1]]//2+1 == input_array.shape[axes[-1]]
     M = get_normalization(kind, sz, axes)
-    return FFT(input_array, output_array, axes, kind, threads, flags, M)
+    return get_planned_FFT(input_array, output_array, axes, kind, threads,
+                           flags, M)
 
 def get_normalization(kind, shape, axes):
     """Return normalization factor for multidimensional transform
@@ -789,54 +786,6 @@ def get_normalization(kind, shape, axes):
         else:
             M *= N
     return 1./M
-
-def export_wisdom(filename):
-    """Export FFTW wisdom
-
-    Parameters
-    ----------
-    filename : str
-        Name of file used to export wisdom to
-
-    Note
-    ----
-    Wisdom is stored for all three precisions, float, double and long double,
-    using, respectively, prefix ``F_``, ``D_`` and ``G_``. Wisdom is
-    imported using :func:`.import_wisdom`.
-
-    See also
-    --------
-    :func:`.import_wisdom`
-
-    """
-    e = []
-    for key, lib in six.iteritems(fftlib):
-        e.append(lib.export_wisdom(bytearray(key+'_'+filename, 'utf-8')))
-    assert np.all(np.array(e) == 1), "Not able to export wisdom {}".format(filename)
-
-def import_wisdom(filename):
-    """Import FFTW wisdom
-
-    Parameters
-    ----------
-    filename : str
-        Name of file used to import wisdom from
-
-    Note
-    ----
-    Wisdom is imported for all three precisions, float, double and long double,
-    using, respectively, prefix ``F_``, ``D_`` and ``G_``. Wisdom is
-    exported using :func:`.export_wisdom`.
-
-    See also
-    --------
-    :func:`.export_wisdom`
-
-    """
-    e = []
-    for key, lib in six.iteritems(fftlib):
-        e.append(lib.import_wisdom(bytearray(key+'_'+filename, 'utf-8')))
-    assert np.all(np.array(e) == 1), "Not able to import wisdom {}".format(filename)
 
 inverse = {
     FFTW_RODFT11: FFTW_RODFT11,

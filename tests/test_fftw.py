@@ -16,7 +16,7 @@ kinds = {'dst4': fftw.FFTW_RODFT11, # no scipy to compare with
          'dct1': fftw.FFTW_REDFT00,
          'dst1': fftw.FFTW_RODFT00}
 
-ds = {val: key for key, val in six.iteritems(kinds)}
+rkinds = {val: key for key, val in six.iteritems(kinds)}
 
 def allclose(a, b):
     atol = abstol[a.dtype.char.lower()]
@@ -107,23 +107,25 @@ def test_fftw():
                             # Different r2r transforms along all axes. Just pick
                             # any naxes transforms and compare with scipy
                             naxes = len(axes)
-                            kds = np.random.randint(3, 11, size=naxes) # get naxes transforms
-                            tsf = [ds[k] for k in kds]
-                            T = fftw.FFT(input_array, input_array.copy(), axes=axes,
+                            kds = np.random.randint(3, 11, size=naxes) # get naxes random transforms
+                            tsf = [rkinds[k] for k in kds]
+                            T = fftw.get_planned_FFT(input_array, input_array.copy(), axes=axes,
                                          kind=kds, threads=threads, flags=fflags)
                             C = T(A)
-                            TI = fftw.FFT(input_array.copy(), input_array.copy(), axes=axes,
+                            TI = fftw.get_planned_FFT(input_array.copy(), input_array.copy(), axes=axes,
                                           kind=list([fftw.inverse[kd] for kd in kds]),
                                           threads=threads, flags=iflags)
 
                             C2 = TI(C)
                             M = fftw.get_normalization(kds, input_array.shape, axes)
                             assert allclose(C2*M, A)
+                            # Test vs scipy for transforms available in scipy
                             if typecode is not 'g' and not any(f in kds for f in (fftw.FFTW_RODFT11, fftw.FFTW_REDFT11)):
                                 for m, ts in enumerate(tsf):
                                     A = eval('scipy.fftpack.'+ts[:-1])(A, axis=axes[m], type=int(ts[-1]))
                                 assert allclose(C, A), np.linalg.norm(C-A)
 
+    # Test a simple export/import call
     fftw.export_wisdom('wisdom.dat')
     fftw.import_wisdom('wisdom.dat')
 

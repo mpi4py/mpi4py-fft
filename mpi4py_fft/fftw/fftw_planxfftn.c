@@ -71,7 +71,8 @@ fftw_plan fftw_planxfftn(int      ndims,
                               ndims-naxes, dims,
                               (fftw_real *)_in,
                               (fftw_real *)_out,
-                              (fftw_r2r_kind *)kind, flags);
+                              (fftw_r2r_kind *)kind,
+                              flags);
   }
 }
 

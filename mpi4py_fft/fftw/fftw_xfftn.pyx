@@ -59,9 +59,9 @@ cdef class FFT:
         real or complex input array
     output_array : array
         real or complex output array
-    axes : sequence of ints
+    axes : sequence of ints, optional
         The axes to transform over, starting from the last
-    kind : int or sequence of ints
+    kind : int or sequence of ints, optional
         Any one of
 
             - FFTW_FORWARD (-1)
@@ -77,9 +77,9 @@ cdef class FFT:
             - FFTW_RODFT01 (8)
             - FFTW_RODFT10 (9)
             - FFTW_RODFT11 (10)
-    threads : int
+    threads : int, optional
         Number of threads to use in transforms
-    flags : int or sequence of ints
+    flags : int or sequence of ints, optional
         Any one of, but not necessarily for all transforms or all combinations
 
             - FFTW_MEASURE (0)
@@ -91,7 +91,7 @@ cdef class FFT:
             - FFTW_PATIENT (32)
             - FFTW_ESTIMATE (64)
             - FFTW_WISDOM_ONLY (2097152)
-    normalization : int
+    normalization : int, optional
         Normalization factor
 
     """
@@ -213,16 +213,11 @@ cdef class FFT:
             it may be done without any copying. However, the contents of the
             input_array may be destroyed during computation. So use with care!
         normalize : bool, optional
-            If True, normalize transform by 1/M, where::
-
-                M = np.prod(np.take(shape, axes))
-
-            where shape is the shape of the array that is input to the forward
-            transform, and axes are the axes we are transforming over.
-            For compatibility with pyfftw we also normalize if a keyword
+            If True, normalize transform with internally stored normalization
+            factor. For compatibility with pyfftw we also normalize if a keyword
             argument normalize_idft is set to True and the transform is of
-            inverse kind. The parameter 1/M is possible to obtain through
-            :func:`FFT.get_normalization`
+            inverse kind. The internally set normalization factor is possible to
+            obtain through :func:`FFT.get_normalization`
         kw : dict, optional
 
         Note
