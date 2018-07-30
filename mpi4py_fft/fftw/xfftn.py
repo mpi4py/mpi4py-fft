@@ -336,6 +336,13 @@ def dctn(input_array, s=None, axes=(-1,), type=2, threads=1,
         Not used - included for compatibility with Numpy
     axes : sequence of ints, optional
         Axes over which to compute the real-to-real dct.
+    type : int, optional
+        Type of `dct <http://www.fftw.org/fftw3_doc/Real_002dto_002dReal-Transform-Kinds.html>`_
+
+            - 1 - FFTW_REDFT00
+            - 2 - FFTW_REDFT10,
+            - 3 - FFTW_REDFT01,
+            - 4 - FFTW_REDFT11
     threads : int, optional
         Number of threads used in computing dct.
     flags : sequence of ints, optional
@@ -401,6 +408,13 @@ def idctn(input_array, s=None, axes=(-1,), type=2, threads=1,
         Not used - included for compatibility with Numpy
     axes : sequence of ints, optional
         Axes over which to compute the real-to-real idct.
+    type : int, optional
+        Type of `idct <http://www.fftw.org/fftw3_doc/Real_002dto_002dReal-Transform-Kinds.html>`_
+
+            - 1 - FFTW_REDFT00
+            - 2 - FFTW_REDFT01
+            - 3 - FFTW_REDFT10
+            - 4 - FFTW_REDFT11
     threads : int, optional
         Number of threads used in computing idct.
     flags : sequence of ints, optional
@@ -466,6 +480,13 @@ def dstn(input_array, s=None, axes=(-1,), type=2, threads=1,
         Not used - included for compatibility with Numpy
     axes : sequence of ints, optional
         Axes over which to compute the real-to-real dst.
+    type : int, optional
+        Type of `dst <http://www.fftw.org/fftw3_doc/Real_002dto_002dReal-Transform-Kinds.html>`_
+
+            - 1 - FFTW_RODFT00
+            - 2 - FFTW_RODFT10
+            - 3 - FFTW_RODFT01
+            - 4 - FFTW_RODFT11
     threads : int, optional
         Number of threads used in computing dst.
     flags : sequence of ints, optional
@@ -531,6 +552,13 @@ def idstn(input_array, s=None, axes=(-1,), type=2, threads=1,
         Not used - included for compatibility with Numpy
     axes : sequence of ints, optional
         Axes over which to compute the real-to-real inverse dst.
+    type : int, optional
+        Type of `idst <http://www.fftw.org/fftw3_doc/Real_002dto_002dReal-Transform-Kinds.html>`_
+
+            - 1 - FFTW_RODFT00
+            - 2 - FFTW_RODFT01
+            - 3 - FFTW_RODFT10
+            - 4 - FFTW_RODFT11
     threads : int, optional
         Number of threads used in computing inverse dst.
     flags : sequence of ints, optional
@@ -735,16 +763,6 @@ def hfftn(input_array, s=None, axes=(-1,), threads=1,
 def get_normalization(kind, shape, axes):
     """Return normalization factor for multidimensional transform
 
-    Parameters
-    ----------
-    kind : sequence of ints
-        The kind of transform along each axis
-    shape : sequence of ints
-        The shape of the global transformed array (input to the forward
-        transform)
-    axes : sequence of ints
-        The axes transformed over
-
     The normalization factor is, for Fourier transforms::
 
         1./np.prod(np.take(shape, axes))
@@ -764,6 +782,16 @@ def get_normalization(kind, shape, axes):
         - RODFT11 - 2N
 
     where N is the length of the input array along that axis.
+
+    Parameters
+    ----------
+    kind : sequence of ints
+        The kind of transform along each axis
+    shape : sequence of ints
+        The shape of the global transformed array (input to the forward
+        transform)
+    axes : sequence of ints
+        The axes transformed over
 
     Note
     ----

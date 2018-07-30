@@ -102,12 +102,24 @@ class PFFT(object):
     padding : bool, number or sequence of numbers, optional
         If False, then no padding. If number, then apply this number as padding
         factor for all axes. If sequence of numbers, then each number gives the
-        padding for each axis. Must be same length as axes. Cannot be used with
-        collapsing axes.
+        padding for each axis. Must be same length as axes.
     collapse : bool, optional
         If True try to collapse several serial transforms into one
     use_pyfftw : bool, optional
         Use pyfftw for serial transforms instead of local wrappers
+    transforms : None or dict, optional
+        Dictionary of axes to serial transforms (forward and backward) along
+        those axes. For example::
+
+            {(0,): (fftn, ifftn), (1,): (rfftn, irfftn), (0, 1): (rfftn, irfftn)}
+
+        would work for any 2D real-to-complex Fourier transform, where the last
+        axis is transformed over first. In that case the transform over axis 1
+        is real-to-complex, whereas the transform over axis 0 is
+        complex-to-complex. The default transforms are (rfftn, irfftn) for real
+        input arrays and (fftn, ifftn) for complex input arrays.
+        Real-to-real transforms can be configured using this dictionary and
+        real-to-real transforms from the :mod:`.fftw.xfftn` module. See Examples.
 
     Methods
     -------
@@ -130,6 +142,21 @@ class PFFT(object):
     >>> u_hat = fft.forward(u)
     >>> uj = np.zeros_like(u)
     >>> uj = fft.backward(u_hat, uj)
+    >>> assert np.allclose(uj, u)
+
+    Now configure with real-to-real discrete cosine transform
+
+    >>> from mpi4py_fft.fftw import rfftn, irfftn, dctn, idctn
+    >>> import functools
+    >>> dct = functools.partial(dctn, type=3)
+    >>> idct = functools.partial(idctn, type=3)
+    >>> transforms = {(0,): (rfftn, irfftn), (1, 2): (dct, idct)}
+    >>> r2c = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1,2)), transforms=transforms)
+    >>> u = Function(r2c, False)
+    >>> u[:] = np.random.random(u.shape).astype(u.dtype)
+    >>> u_hat = r2c.forward(u)
+    >>> uj = np.zeros_like(u)
+    >>> uj = r2c.backward(u_hat, uj)
     >>> assert np.allclose(uj, u)
 
     """

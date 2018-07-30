@@ -25,7 +25,7 @@ def get_planned_FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD,
     axes : sequence of ints, optional
         The axes to transform over, starting from the last
     kind : int or sequence of ints, optional
-        Any one of
+        Any one of (or possibly several for real-to-real)
 
             - FFTW_FORWARD (-1)
             - FFTW_R2HC (0)
