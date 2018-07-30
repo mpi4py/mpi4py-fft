@@ -59,9 +59,9 @@ cdef class FFT:
         real or complex input array
     output_array : array
         real or complex output array
-    axes : tuple if ints
+    axes : sequence of ints, optional
         The axes to transform over, starting from the last
-    kind : int or tuple of ints
+    kind : int or sequence of ints, optional
         Any one of
 
             - FFTW_FORWARD (-1)
@@ -77,9 +77,9 @@ cdef class FFT:
             - FFTW_RODFT01 (8)
             - FFTW_RODFT10 (9)
             - FFTW_RODFT11 (10)
-    threads : int
+    threads : int, optional
         Number of threads to use in transforms
-    flags : int or tuple of ints
+    flags : int or sequence of ints, optional
         Any one of, but not necessarily for all transforms or all combinations
 
             - FFTW_MEASURE (0)
@@ -91,7 +91,7 @@ cdef class FFT:
             - FFTW_PATIENT (32)
             - FFTW_ESTIMATE (64)
             - FFTW_WISDOM_ONLY (2097152)
-    normalization : int
+    normalization : int, optional
         Normalization factor
 
     """
@@ -107,7 +107,7 @@ cdef class FFT:
 
     def __cinit__(self, input_array, output_array, axes=(-1,),
                   kind=FFTW_FORWARD, int threads=1,
-                  flags=FFTW_MEASURE, int normalization=1):
+                  flags=FFTW_MEASURE, fftw_real normalization=1.0):
         cdef int ndims = len(input_array.shape)
         cdef int naxes = len(axes)
         cdef int flag, i
@@ -138,7 +138,7 @@ cdef class FFT:
 
         self._input_array = input_array
         self._output_array = output_array
-        self._M = 1./normalization
+        self._M = normalization
         for i in range(ndims):
             sz_in[i] = input_array.shape[i]
             sz_out[i] = output_array.shape[i]
@@ -184,12 +184,16 @@ cdef class FFT:
         self._input_array = input_array
         self._output_array = output_array
 
+    def get_normalization(self):
+        """Return the internally set normalization factor"""
+        return self._M
+
     def __call__(self, input_array=None, output_array=None, implicit=True,
-                 normalize_idft=False, **kw):
+                 normalize=False, normalize_idft=False, **kw):
         """
         Signature::
 
-            __call__(input_array=None, output_array=None, implicit=True, normalize_idft=False, **kw)
+            __call__(input_array=None, output_array=None, implicit=True, normalize=False, normalize_idft=False, **kw)
 
         Compute transform and return output array
 
@@ -208,8 +212,12 @@ cdef class FFT:
             the provided input_array. The implicit method can be faster because
             it may be done without any copying. However, the contents of the
             input_array may be destroyed during computation. So use with care!
-        normalize_idft : bool, optional
-            Normalize inverse transform if True.
+        normalize : bool, optional
+            If True, normalize transform with internally stored normalization
+            factor. For compatibility with pyfftw we also normalize if a keyword
+            argument normalize_idft is set to True and the transform is of
+            inverse kind. The internally set normalization factor is possible to
+            obtain through :func:`FFT.get_normalization`
         kw : dict, optional
 
         Note
@@ -220,26 +228,26 @@ cdef class FFT:
         method may cause the input_array to be overwritten during computation.
 
         """
+        norm = normalize or (kw.get('normalize_idft', False) and
+                             self.kind==FFTW_BACKWARD) # For compatibility with pyfftw
         if implicit:
-            return self._apply_implicit(input_array, output_array,
-                                        normalize_idft, **kw)
-        return self._apply_explicit(input_array, output_array, normalize_idft,
-                                    **kw)
+            return self._apply_implicit(input_array, output_array, norm, **kw)
+        return self._apply_explicit(input_array, output_array, norm, **kw)
 
-    def _apply_explicit(self, input_array, output_array, normalize_idft, **kw):
+    def _apply_explicit(self, input_array, output_array, normalize, **kw):
         """Apply plan with explicit (and safe) update of work arrays"""
         if input_array is not None:
             self._input_array[...] = input_array
         with nogil:
             fftw_execute(<fftw_plan>self._plan)
-        if normalize_idft:
+        if normalize:
             self._output_array *= self._M
         if output_array is not None:
             output_array[...] = self._output_array
             return output_array
         return self._output_array
 
-    def _apply_implicit(self, input_array, output_array, normalize_idft, **kw):
+    def _apply_implicit(self, input_array, output_array, normalize, **kw):
         """Apply plan with direct use of work arrays if possible
 
         This version of apply will use the provided input and output arrays
@@ -280,7 +288,8 @@ cdef class FFT:
         _out = <void *>np.PyArray_DATA(output_array)
         with nogil:
             apply_plan(<fftw_plan>self._plan, _in, _out)
-        if normalize_idft:
+        if normalize:
             self._output_array *= self._M
+
         return self._output_array
 

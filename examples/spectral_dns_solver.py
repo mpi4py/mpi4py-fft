@@ -3,6 +3,9 @@ Demo program that solves the Navier Stokes equations in a triply
 periodic domain. The solution is initialized using the Taylor-Green
 vortex and evolved in time with a 4'th order Runge Kutta method.
 
+Please note that this is not an optimized solver. For fast solvers, see
+http://github.com/spectralDNS/spectralDNS
+
 """
 from time import time
 import numpy as np
@@ -35,7 +38,6 @@ a = [1./6., 1./3., 1./3., 1./6.]         # Runge-Kutta parameter
 b = [0.5, 0.5, 1.]                       # Runge-Kutta parameter
 dU = Function(FFT, tensor=3)             # Right hand side of ODEs
 curl = Function(FFT, False, tensor=3)
-
 U_pad = Function(FFT_pad, False, tensor=3)
 curl_pad = Function(FFT_pad, False, tensor=3)
 
@@ -77,13 +79,11 @@ def cross(x, y, z):
     z[2] = FFT_pad.forward(x[0]*y[1]-x[1]*y[0], z[2])
     return z
 
-
 def compute_curl(x, z):
     z[2] = FFT_pad.backward(1j*(K[0]*x[1]-K[1]*x[0]), z[2])
     z[1] = FFT_pad.backward(1j*(K[2]*x[0]-K[0]*x[2]), z[1])
     z[0] = FFT_pad.backward(1j*(K[1]*x[2]-K[2]*x[1]), z[0])
     return z
-
 
 def compute_rhs(rhs):
     for j in range(3):
@@ -95,7 +95,6 @@ def compute_rhs(rhs):
     rhs -= P_hat*K
     rhs -= nu*K2*U_hat
     return rhs
-
 
 # Initialize a Taylor Green vortex
 U[0] = np.sin(X[0])*np.cos(X[1])*np.cos(X[2])
