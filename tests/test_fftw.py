@@ -1,5 +1,6 @@
 from __future__ import print_function
 import six
+from time import time
 import numpy as np
 import scipy
 import pyfftw
@@ -125,10 +126,29 @@ def test_fftw():
                                     A = eval('scipy.fftpack.'+ts[:-1])(A, axis=axes[m], type=int(ts[-1]))
                                 assert allclose(C, A), np.linalg.norm(C-A)
 
+def test_wisdom():
     # Test a simple export/import call
     fftw.export_wisdom('wisdom.dat')
     fftw.import_wisdom('wisdom.dat')
+    fftw.forget_wisdom()
+
+def test_timelimit():
+    limit = 0.001
+    input_array = fftw.aligned((128, 128), dtype='d')
+    t0 = time()
+    rfftn = fftw.rfftn(input_array, flags=fftw.FFTW_PATIENT)
+    t1 = time()-t0
+    fftw.factory.forget_wisdom()
+    fftw.factory.set_timelimit(limit)
+    t0 = time()
+    rfftn = fftw.rfftn(input_array, flags=fftw.FFTW_PATIENT)
+    t2 = time()-t0
+    assert t1 > t2
+    assert abs(t2-limit) < 0.5*limit
+    fftw.factory.cleanup()
 
 if __name__ == '__main__':
     test_fftw()
+    test_wisdom()
+    test_timelimit()
 

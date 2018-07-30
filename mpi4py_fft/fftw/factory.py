@@ -122,5 +122,4 @@ def set_timelimit(limit):
 def cleanup():
     for lib in fftlib.values():
         lib.cleanup()
-        lib.cleanup_threads()
 

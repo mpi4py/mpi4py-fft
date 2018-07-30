@@ -86,6 +86,8 @@ def test_mpifft():
                                 if slab is True and axes is not None:
                                     ax = axes[-1] if isinstance(axes[-1], int) else axes[-1][-1]
                                     _slab = (ax+1) % len(shape)
+                                    if random_true_or_false(comm) == 1:
+                                        _slab -= len(shape) # Test neg axes interface
                                 _comm = comm
                                 # Test also the comm is Subcomm interfaces
                                 # For PFFT the Subcomm needs to be as long as shape
