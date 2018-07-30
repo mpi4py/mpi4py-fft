@@ -7,4 +7,7 @@ dependencies:
   - numpy
   - scipy
   - pyfftw
+  - mpi4py
+  - six
+  - pip
 
