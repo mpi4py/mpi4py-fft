@@ -123,12 +123,35 @@ class PFFT(object):
 
     Methods
     -------
-    forward
+    forward(input_array=None, output_array=None, **kw)
         Parallel forward transform. The method is an instance of the
-        :class:`.Transform` class
-    backward
+        :class:`.Transform` class. See :meth:`.Transform.__call__`
+
+        Parameters
+        ----------
+        input_array : array, optional
+        output_array : array, optional
+        kw : dict
+            parameters to serial transforms
+
+        Returns
+        -------
+        output_array : array
+
+    backward(input_array=None, output_array=None, **kw)
         Parallel backward transform. The method is an instance of the
-        :class:`.Transform` class
+        :class:`.Transform` class. See :meth:`.Transform.__call__`
+
+        Parameters
+        ----------
+        input_array : array, optional
+        output_array : array, optional
+        kw : dict
+            parameters to serial transforms
+
+        Returns
+        -------
+        output_array : array
 
     Examples
     --------
@@ -380,3 +403,7 @@ class Function(np.ndarray):
                                  dtype=dtype)
         obj.fill(val)
         return obj
+
+    def __init__(self, pfft, forward_output=True, val=0, tensor=None):
+        pass
+

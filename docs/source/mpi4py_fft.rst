@@ -33,7 +33,7 @@ mpi4py\_fft.pencil module
 
 .. automodule:: mpi4py_fft.pencil
     :members:
-    :undoc-members:
+    :undoc-members: 
     :show-inheritance:
 
 

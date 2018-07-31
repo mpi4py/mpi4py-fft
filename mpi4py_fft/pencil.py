@@ -115,13 +115,6 @@ class Transfer(object):
         Shape of output pencil
     axisB : int
         Output array aligned in this direction
-
-    Methods
-    -------
-    forward(array A, array B)
-        Global redistribution from pencil A to pencil B
-    backward(array B, array A)
-        Global redistribution from pencil B to pencil A
     """
     def __init__(self,
                  comm, shape, dtype,
@@ -138,6 +131,15 @@ class Transfer(object):
         self._counts_displs = ([1] * size, [0] * size)  # XXX (None, None)
 
     def forward(self, arrayA, arrayB):
+        """Global redistribution from arrayA to arrayB
+
+        Parameters
+        ----------
+            arrayA : array
+                Array of shape subshapeA, containing data to be redistributed
+            arrayB : array
+                Array of shape subshapeB, for receiving data
+        """
         assert self.subshapeA == arrayA.shape
         assert self.subshapeB == arrayB.shape
         assert self.dtype == arrayA.dtype
@@ -146,6 +148,16 @@ class Transfer(object):
                             [arrayB, self._counts_displs, self._subtypesB])
 
     def backward(self, arrayB, arrayA):
+        """Global redistribution from arrayB to arrayA
+
+        Parameters
+        ----------
+            arrayB : array
+                Array of shape subshapeB, containing data to be redistributed
+            arrayA : array
+                Array of shape subshapeA, for receiving data
+
+        """
         assert self.subshapeA == arrayA.shape
         assert self.subshapeB == arrayB.shape
         assert self.dtype == arrayA.dtype
@@ -172,14 +184,6 @@ class Pencil(object):
         Shape of pencil (local array)
     axis : int, optional
         Pencil is aligned in this direction
-
-    Methods
-    -------
-    transfer(pencil, dtype)
-        Return an instance of the :class:`.Transfer` class for global
-        redistribution from this pencil instance to the given pencil instance
-    pencil(axis)
-        Return an instance of the :class:`.Pencil` class aligned along axis
 
     """
     def __init__(self, subcomm, shape, axis=-1):
@@ -215,7 +219,13 @@ class Pencil(object):
         self.substart = tuple(substart)
 
     def pencil(self, axis):
-        """Return a Pencil aligned with axis"""
+        """Return a Pencil aligned with axis
+
+        Parameters
+        ----------
+            axis : int
+                The axis along which the pencil is aligned
+        """
         assert -len(self.shape) <= axis < len(self.shape)
         if axis < 0:
             axis += len(self.shape)
@@ -229,6 +239,13 @@ class Pencil(object):
 
         The returned :class:`.Transfer` class is used for global redistribution
         from this pencil's instance to the pencil instance provided.
+
+        Parameters
+        ----------
+            pencil : :class:`.Pencil`
+                The receiving pencil of a forward transform
+            dtype : dtype
+                The type of the sending pencil
         """
         penA, penB = self, pencil
         assert penA.shape == penB.shape
