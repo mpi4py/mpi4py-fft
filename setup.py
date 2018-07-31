@@ -6,7 +6,7 @@ import shutil
 from setuptools import setup, find_packages
 from setuptools.extension import Extension
 from numpy import get_include
-from Cython.Build import cythonize
+#from Cython.Build import cythonize
 
 cwd = os.path.abspath(os.path.dirname(__file__))
 fftwdir = os.path.join(cwd, 'mpi4py_fft', 'fftw')
@@ -27,22 +27,22 @@ for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn
         os.system(sedcmd + " 's/fftw_/{0}/g' {1}".format(p, os.path.join(fftwdir, fp)))
         os.system(sedcmd + " 's/double/{0}/g' {1}".format(prec[p], os.path.join(fftwdir, fp)))
 
-ext = cythonize([Extension("mpi4py_fft.fftw.utilities",
+ext = [Extension("mpi4py_fft.fftw.utilities",
                            sources=[os.path.join(fftwdir, "utilities.pyx")],
                                     libraries=libs[p],
                            include_dirs=[get_include(),
                                          os.path.join(sys.prefix, 'include')],
-                           library_dirs=[os.path.join(sys.prefix, 'lib')])])
+                           library_dirs=[os.path.join(sys.prefix, 'lib')])]
 
 for p in ('fftw_', 'fftwf_', 'fftwl_'):
-    ext.append(cythonize([Extension("mpi4py_fft.fftw.{}xfftn".format(p),
+    ext.append(Extension("mpi4py_fft.fftw.{}xfftn".format(p),
                                     sources=[os.path.join(fftwdir, "{}xfftn.pyx".format(p)),
                                              os.path.join(fftwdir, "{}planxfftn.c".format(p))],
                                     #define_macros=[('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
                                     libraries=libs[p],
                                     include_dirs=[get_include(),
                                                   os.path.join(sys.prefix, 'include')],
-                                    library_dirs=[os.path.join(sys.prefix, 'lib')])])[0])
+                                    library_dirs=[os.path.join(sys.prefix, 'lib')]))
 
 setup(name="mpi4py-fft",
       version="1.0-beta",
@@ -54,5 +54,6 @@ setup(name="mpi4py-fft",
       #          "mpi4py_fft.fftw"],
       packages=find_packages(),
       package_dir={"mpi4py_fft": "mpi4py_fft"},
-      ext_modules=ext
+      ext_modules=ext,
+      setup_requires=["setuptools>=18.0", "cython>=0.25"]
 )
