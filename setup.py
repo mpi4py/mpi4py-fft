@@ -2,11 +2,9 @@
 
 import os, sys
 import shutil
-#from distutils.core import setup, Extension
-from setuptools import setup, find_packages
+from setuptools import setup
 from setuptools.extension import Extension
 from numpy import get_include
-#from Cython.Build import cythonize
 
 cwd = os.path.abspath(os.path.dirname(__file__))
 fftwdir = os.path.join(cwd, 'mpi4py_fft', 'fftw')
@@ -28,21 +26,21 @@ for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn
         os.system(sedcmd + " 's/double/{0}/g' {1}".format(prec[p], os.path.join(fftwdir, fp)))
 
 ext = [Extension("mpi4py_fft.fftw.utilities",
-                           sources=[os.path.join(fftwdir, "utilities.pyx")],
-                                    libraries=libs[p],
-                           include_dirs=[get_include(),
-                                         os.path.join(sys.prefix, 'include')],
-                           library_dirs=[os.path.join(sys.prefix, 'lib')])]
+                 sources=[os.path.join(fftwdir, "utilities.pyx")],
+                          libraries=libs[p],
+                 include_dirs=[get_include(),
+                               os.path.join(sys.prefix, 'include')],
+                 library_dirs=[os.path.join(sys.prefix, 'lib')])]
 
 for p in ('fftw_', 'fftwf_', 'fftwl_'):
     ext.append(Extension("mpi4py_fft.fftw.{}xfftn".format(p),
-                                    sources=[os.path.join(fftwdir, "{}xfftn.pyx".format(p)),
-                                             os.path.join(fftwdir, "{}planxfftn.c".format(p))],
-                                    #define_macros=[('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
-                                    libraries=libs[p],
-                                    include_dirs=[get_include(),
-                                                  os.path.join(sys.prefix, 'include')],
-                                    library_dirs=[os.path.join(sys.prefix, 'lib')]))
+                         sources=[os.path.join(fftwdir, "{}xfftn.pyx".format(p)),
+                                  os.path.join(fftwdir, "{}planxfftn.c".format(p))],
+                         #define_macros=[('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
+                         libraries=libs[p],
+                         include_dirs=[get_include(),
+                                       os.path.join(sys.prefix, 'include')],
+                         library_dirs=[os.path.join(sys.prefix, 'lib')]))
 
 setup(name="mpi4py-fft",
       version="1.0-beta",
@@ -50,9 +48,8 @@ setup(name="mpi4py-fft",
       long_description="",
       author="Lisandro Dalcin and Mikael Mortensen",
       url='https://bitbucket.org/mpi4py/mpi4py-fft',
-      #packages=["mpi4py_fft",
-      #          "mpi4py_fft.fftw"],
-      packages=find_packages(),
+      packages=["mpi4py_fft",
+                "mpi4py_fft.fftw"],
       package_dir={"mpi4py_fft": "mpi4py_fft"},
       ext_modules=ext,
       setup_requires=["setuptools>=18.0", "cython>=0.25"]
