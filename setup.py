@@ -2,7 +2,9 @@
 
 import os, sys
 import shutil
-from distutils.core import setup, Extension
+#from distutils.core import setup, Extension
+from setuptools import setup, find_packages
+from setuptools.extension import Extension
 from numpy import get_include
 from Cython.Build import cythonize
 
@@ -48,8 +50,9 @@ setup(name="mpi4py-fft",
       long_description="",
       author="Lisandro Dalcin and Mikael Mortensen",
       url='https://bitbucket.org/mpi4py/mpi4py-fft',
-      packages=["mpi4py_fft",
-                "mpi4py_fft.fftw"],
-      package_dir={"mpi4py_fft":"mpi4py_fft"},
+      #packages=["mpi4py_fft",
+      #          "mpi4py_fft.fftw"],
+      packages=find_packages(),
+      package_dir={"":"mpi4py_fft"},
       ext_modules=ext
 )
