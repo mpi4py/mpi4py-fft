@@ -53,6 +53,6 @@ setup(name="mpi4py-fft",
       #packages=["mpi4py_fft",
       #          "mpi4py_fft.fftw"],
       packages=find_packages(),
-      package_dir={"":"mpi4py_fft"},
+      package_dir={"mpi4py_fft": "mpi4py_fft"},
       ext_modules=ext
 )
