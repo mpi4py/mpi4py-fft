@@ -1,12 +1,12 @@
 import six
 import numpy as np
+from .factory import get_planned_FFT
 from .utilities import FFTW_FORWARD, FFTW_BACKWARD, FFTW_REDFT00, FFTW_REDFT01, \
     FFTW_REDFT10, FFTW_REDFT11, FFTW_RODFT00, FFTW_RODFT01, FFTW_RODFT10, \
     FFTW_RODFT11, FFTW_MEASURE, FFTW_DESTROY_INPUT, FFTW_UNALIGNED, \
     FFTW_CONSERVE_MEMORY, FFTW_EXHAUSTIVE, FFTW_PRESERVE_INPUT, FFTW_PATIENT, \
     FFTW_ESTIMATE, FFTW_WISDOM_ONLY, C2C_FORWARD, C2C_BACKWARD, R2C, C2R, \
     FFTW_R2HC, FFTW_HC2R, FFTW_DHT, get_alignment, aligned, aligned_like
-from .factory import get_planned_FFT
 
 flag_dict = {key: val for key, val in six.iteritems(locals())
              if key.startswith('FFTW_')}
