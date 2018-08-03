@@ -10,15 +10,15 @@ Furthermore, mpi4py-fft can also be used simply to perform global redistribution
 (distribute and communicate) of large arrays with MPI, without any transforms 
 at all.
 
-The main contribution of mpi4py-fft can be found in just a few classes and
-modules:
+The main contribution of mpi4py-fft can be found in just a few classes in
+the main modules:
 
-    * :class:`.PFFT`
+    * :mod:`.mpifft`
     * :mod:`.pencil`
-    * :class:`.libfft.FFT`
+    * :mod:`.libfft`
     * :mod:`.fftw`
 
-The :class:`.PFFT` class is the major entry point for most users. It is a 
+The :class:`.mpifft.PFFT` class is the major entry point for most users. It is a 
 highly configurable class, which under the hood distributes large dataarrays and
 performs any type of transform, along any axis of a multidimensional array.
 
@@ -27,7 +27,7 @@ However, this module is rarely used on its own, unless one simply needs to do
 global redistributions without any transforms at all. The :mod:`.pencil` module
 is used heavily by the :class:`.PFFT` class.
 
-The :class:`libfft.FFT` class provides a common interface to any of the serial
+The :mod:`.libfft` module provides a common interface to any of the serial
 transforms in the `FFTW <http://www.fftw.org>`_  library.
 
 The :mod:`.fftw` module contains wrappers to the transforms provided by the 

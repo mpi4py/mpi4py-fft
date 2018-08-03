@@ -1,5 +1,5 @@
-Global Redistribution
-=====================
+Global Redistributions
+======================
 
 In high performance computing large multidimensional arrays are often 
 distributed and shared amongst a large number of different processors. Two
@@ -113,7 +113,7 @@ An image can be used to illustrate:
 
 .. image:: 2Dpencil.png
     :width: 500px
-    :height: 200px
+    :height: 300px
 
 Mathematically, we will denote the entries of a two-dimensional array 
 as :math:`u_{j_0, j_1}`, where :math:`j_0\in \textbf{j}_0=[0, 1, \ldots, N_0-1]`
@@ -214,6 +214,8 @@ of using more groups is that you can then use more processors in total. Assuming
 :math:`N = N_0 = N_1 = N_2 = N_3`, you can use :math:`N^p`, where :math:`p` is
 the number of processor groups. So for an array of shape :math:`(8,8,8,8)`
 it is possible to use 8, 64 and 512 number of processors for 1, 2 and 3 
-processor groups, respectively. 
+processor groups, respectively. On the other hand, if you can get away with it,
+or if you do not have access to a great number of processors, then fewer groups 
+are usually found to be faster for the same number of processors in total.
 
 
