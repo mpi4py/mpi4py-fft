@@ -12,10 +12,6 @@ def get_planned_FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD,
                     threads=1, flags=(FFTW_MEASURE,), normalize=1):
     """Return instance of transform class
 
-    Returned class instance is either :class:`.fftwf_xfftn.FFT`,
-    :class:`.fftw_xfftn.FFT` or :class:`.fftwl_xfftn.FFT` depending on the type
-    of the input array
-
     Parameters
     ----------
     input_array : array
@@ -56,6 +52,11 @@ def get_planned_FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD,
             - FFTW_WISDOM_ONLY (2097152)
     normalization : int, optional
         Normalization factor
+
+    Returns
+    -------
+    :class:`.fftwf_xfftn.FFT`, :class:`.fftw_xfftn.FFT` or :class:`.fftwl_xfftn.FFT`
+        An instance of the return type configured for the desired transforms
 
     """
     dtype = input_array.dtype.char
@@ -116,6 +117,13 @@ def forget_wisdom():
         lib.forget_wisdom()
 
 def set_timelimit(limit):
+    """Set time limit for planning
+
+    Parameters
+    ----------
+    limit : number
+        The new time limit set for planning of serial transforms
+    """
     for lib in fftlib.values():
         lib.set_timelimit(limit) # limit's precision handled by cython
 

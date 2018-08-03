@@ -6,11 +6,16 @@
 Welcome to mpi4py-fft's documentation!
 ======================================
 
+.. include:: ../../README.rst
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
 
-
+   introduction
+   global
+   dft
+   parallel
 
 Indices and tables
 ==================

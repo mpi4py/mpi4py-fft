@@ -36,7 +36,6 @@ mpi4py\_fft.pencil module
     :undoc-members: 
     :show-inheritance:
 
-
 Module contents
 ---------------
 
