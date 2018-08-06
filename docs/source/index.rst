@@ -6,7 +6,7 @@
 Welcome to mpi4py-fft's documentation!
 ======================================
 
-.. include:: ../../README.rst
+.. include:: README.rst
 
 .. toctree::
    :maxdepth: 2
