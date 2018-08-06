@@ -40,7 +40,7 @@ However, there is a minor difference. Numpy performs by default the
 forward as shown in :eq:`dft`. These are merely different conventions and
 not important as long as one is aware of them. We use
 the scaling on the forward transform simply because this follows naturally 
-when using the harmonic functions :math:`e^{2 \pi k x}` as basis functions 
+when using the harmonic functions :math:`e^{i k x}` as basis functions 
 when solving PDEs with the 
 `spectral Galerkin method <https://github.com/spectralDNS/shenfun>`_ or
 the `spectral collocation method (see chap. 3) <https://people.maths.ox.ac.uk/trefethen/spectral.html>`_.
