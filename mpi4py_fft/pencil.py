@@ -43,13 +43,14 @@ class Subcomm(tuple):
     --------
     >>> import subprocess
     >>> fx = open('subcomm_script.py', 'w')
-    >>> h=fx.write('from mpi4py import MPI\n')
-    >>> h=fx.write('comm = MPI.COMM_WORLD\n')
-    >>> h=fx.write('from mpi4py_fft.pencil import Subcomm\n')
-    >>> h=fx.write('subcomms = Subcomm(comm, [0, 0, 1])\n')
-    >>> h=fx.write('if comm.Get_rank() == 0:\n')
-    >>> h=fx.write('    for subcomm in subcomms:\n')
-    >>> h=fx.write('        print(subcomm.Get_size())')
+    >>> h = fx.write('''
+    ... from mpi4py import MPI
+    ... comm = MPI.COMM_WORLD
+    ... from mpi4py_fft.pencil import Subcomm
+    ... subcomms = Subcomm(comm, [0, 0, 1])
+    ... if comm.Get_rank() == 0:
+    ...     for subcomm in subcomms:
+    ...         print(subcomm.Get_size())''')
     >>> fx.close()
     >>> print(subprocess.getoutput('mpirun -np 4 python subcomm_script.py'))
     2
@@ -116,12 +117,39 @@ class Transfer(object):
     axisB : int
         Output array aligned in this direction
 
-    Methods
-    -------
-    forward(array A, array B)
-        Global redistribution from pencil A to pencil B
-    backward(array B, array A)
-        Global redistribution from pencil B to pencil A
+    Examples
+    --------
+
+    Create two pencils for a 4-dimensional array of shape (8, 8, 8, 8) using
+    4 processors in total. The input pencil will be distributed in the first
+    two axes, whereas the output pencil will be distributed in axes 1 and 2.
+    Create a random array of shape according to the input pencil and transfer
+    its values to an array of the output shape.
+
+    >>> import subprocess
+    >>> fx = open('transfer_script.py', 'w')
+    >>> h = fx.write('''
+    ... import numpy as np
+    ... from mpi4py import MPI
+    ... from mpi4py_fft.pencil import Subcomm, Pencil
+    ... comm = MPI.COMM_WORLD
+    ... N = (8, 8, 8, 8)
+    ... subcomms = Subcomm(comm, [0, 0, 1, 0])
+    ... axis = 2
+    ... p0 = Pencil(subcomms, N, axis)
+    ... p1 = p0.pencil(0)
+    ... transfer = p0.transfer(p1, np.float)
+    ... a0 = np.zeros(p0.subshape, dtype=np.float)
+    ... a1 = np.zeros(p1.subshape)
+    ... a0[:] = np.random.random(a0.shape)
+    ... transfer.forward(a0, a1)
+    ... s0 = comm.reduce(np.sum(a0**2))
+    ... s1 = comm.reduce(np.sum(a1**2))
+    ... if comm.Get_rank() == 0:
+    ...     assert np.allclose(s0, s1)''')
+    >>> fx.close()
+    >>> h=subprocess.getoutput('mpirun -np 4 python transfer_script.py')
+
     """
     def __init__(self,
                  comm, shape, dtype,
@@ -138,6 +166,15 @@ class Transfer(object):
         self._counts_displs = ([1] * size, [0] * size)  # XXX (None, None)
 
     def forward(self, arrayA, arrayB):
+        """Global redistribution from arrayA to arrayB
+
+        Parameters
+        ----------
+            arrayA : array
+                Array of shape subshapeA, containing data to be redistributed
+            arrayB : array
+                Array of shape subshapeB, for receiving data
+        """
         assert self.subshapeA == arrayA.shape
         assert self.subshapeB == arrayB.shape
         assert self.dtype == arrayA.dtype
@@ -146,6 +183,16 @@ class Transfer(object):
                             [arrayB, self._counts_displs, self._subtypesB])
 
     def backward(self, arrayB, arrayA):
+        """Global redistribution from arrayB to arrayA
+
+        Parameters
+        ----------
+            arrayB : array
+                Array of shape subshapeB, containing data to be redistributed
+            arrayA : array
+                Array of shape subshapeA, for receiving data
+
+        """
         assert self.subshapeA == arrayA.shape
         assert self.subshapeB == arrayB.shape
         assert self.dtype == arrayA.dtype
@@ -173,13 +220,58 @@ class Pencil(object):
     axis : int, optional
         Pencil is aligned in this direction
 
-    Methods
-    -------
-    transfer(pencil, dtype)
-        Return an instance of the :class:`.Transfer` class for global
-        redistribution from this pencil instance to the given pencil instance
-    pencil(axis)
-        Return an instance of the :class:`.Pencil` class aligned along axis
+    Examples
+    --------
+
+    Create two pencils for a 4-dimensional array of shape (8, 8, 8, 8) using
+    4 processors in total. The input pencil will be distributed in the first
+    two axes, whereas the output pencil will be distributed in axes 1 and 2.
+    Note that the Subcomm instance below may distribute any axis where an entry
+    0 is found, whereas an entry of 1 means that this axis should not be
+    distributed.
+
+    >>> import subprocess
+    >>> fx = open('pencil_script.py', 'w')
+    >>> h = fx.write('''
+    ... import numpy as np
+    ... from mpi4py import MPI
+    ... from mpi4py_fft.pencil import Subcomm, Pencil
+    ... comm = MPI.COMM_WORLD
+    ... N = (8, 8, 8, 8)
+    ... subcomms = Subcomm(comm, [0, 0, 1, 0])
+    ... axis = 2
+    ... p0 = Pencil(subcomms, N, axis)
+    ... p1 = p0.pencil(0)
+    ... shape0 = comm.gather(p0.subshape)
+    ... shape1 = comm.gather(p1.subshape)
+    ... if comm.Get_rank() == 0:
+    ...     print('Subshapes all 4 processors pencil p0:')
+    ...     print(np.array(shape0))
+    ...     print('Subshapes all 4 processors pencil p1:')
+    ...     print(np.array(shape1))''')
+    >>> fx.close()
+    >>> print(subprocess.getoutput('mpirun -np 4 python pencil_script.py'))
+    Subshapes all 4 processors pencil p0:
+    [[4 4 8 8]
+     [4 4 8 8]
+     [4 4 8 8]
+     [4 4 8 8]]
+    Subshapes all 4 processors pencil p1:
+    [[8 4 4 8]
+     [8 4 4 8]
+     [8 4 4 8]
+     [8 4 4 8]]
+
+    Two index sets of the global data of shape (8, 8, 8, 8) are distributed.
+    This means that the current distribution is using two groups of processors,
+    with 2 processors in each group (4 in total). One group shares axis 0 and
+    the other axis 1 on the input arrays. On the output, one group shares axis
+    1, whereas the other shares axis 2.
+    Note that the call ``p1 = p0.pencil(0)`` creates a new pencil (p1) that is
+    non-distributed in axes 0. It is, in other words, aligned in axis 0. Hence
+    the first 8 in the lists with [8 4 4 8] above. The alignment is
+    configurable, and ``p1 = p0.pencil(1)`` would lead to an output pencil
+    aligned in axis 1.
 
     """
     def __init__(self, subcomm, shape, axis=-1):
@@ -215,7 +307,13 @@ class Pencil(object):
         self.substart = tuple(substart)
 
     def pencil(self, axis):
-        """Return a Pencil aligned with axis"""
+        """Return a Pencil aligned with axis
+
+        Parameters
+        ----------
+            axis : int
+                The axis along which the pencil is aligned
+        """
         assert -len(self.shape) <= axis < len(self.shape)
         if axis < 0:
             axis += len(self.shape)
@@ -229,6 +327,13 @@ class Pencil(object):
 
         The returned :class:`.Transfer` class is used for global redistribution
         from this pencil's instance to the pencil instance provided.
+
+        Parameters
+        ----------
+            pencil : :class:`.Pencil`
+                The receiving pencil of a forward transform
+            dtype : dtype
+                The type of the sending pencil
         """
         penA, penB = self, pencil
         assert penA.shape == penB.shape

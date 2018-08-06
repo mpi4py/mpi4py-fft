@@ -133,7 +133,7 @@ def test_wisdom():
     fftw.forget_wisdom()
 
 def test_timelimit():
-    limit = 0.001
+    limit = 0.01
     input_array = fftw.aligned((128, 128), dtype='d')
     t0 = time()
     fftw.rfftn(input_array, flags=fftw.FFTW_PATIENT)
@@ -144,7 +144,7 @@ def test_timelimit():
     fftw.rfftn(input_array, flags=fftw.FFTW_PATIENT)
     t2 = time()-t0
     assert t1 > t2
-    assert abs(t2-limit) < 0.5*limit
+    assert abs(t2-limit) < limit, print(abs(t2-limit), limit)
     fftw.cleanup()
 
 if __name__ == '__main__':

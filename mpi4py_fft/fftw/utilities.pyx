@@ -66,7 +66,8 @@ cpdef aligned(shape, n=32, dtype=np.dtype('d'), fill=None):
 
     Returns
     -------
-    byte-aligned array
+    array
+        byte-aligned array
 
     """
     dtype = np.dtype(dtype)
@@ -93,7 +94,8 @@ cpdef aligned_like(z, fill=None):
 
     Returns
     -------
-    byte-aligned array
+    array
+        byte-aligned array
 
     """
     n = get_alignment(z)

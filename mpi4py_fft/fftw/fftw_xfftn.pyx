@@ -289,7 +289,7 @@ cdef class FFT:
         with nogil:
             apply_plan(<fftw_plan>self._plan, _in, _out)
         if normalize:
-            self._output_array *= self._M
+            output_array *= self._M
 
-        return self._output_array
+        return output_array
 

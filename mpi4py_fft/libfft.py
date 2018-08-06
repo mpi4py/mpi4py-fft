@@ -245,8 +245,33 @@ class FFT(FFTBase):
 
     Methods
     -------
-    forward(input_array, output_array, options)
-    backward(input_array, output_array, options)
+    forward(input_array=None, output_array=None, **options)
+        Generic serial forward transform
+
+        Parameters
+        ----------
+        input_array : array, optional
+        output_array : array, optional
+        options : dict
+            parameters to serial transforms
+
+        Returns
+        -------
+        output_array : array
+
+    backward(input_array=None, output_array=None, **options)
+        Generic serial backward transform
+
+        Parameters
+        ----------
+        input_array : array, optional
+        output_array : array, optional
+        options : dict
+            parameters to serial transforms
+
+        Returns
+        -------
+        output_array : array
 
     """
     def __init__(self, shape, axes=None, dtype=float, padding=False,
@@ -313,12 +338,33 @@ class FFTNumPy(FFTBase): #pragma: no cover
     kw : dict
         Parameters passed to serial transform object
 
-    Methods
-    -------
-    forward(input_array, output_array, options)
-        The forward transform
-    backward(input_array, output_array, options)
-        The backward transform
+    forward(input_array=None, output_array=None, **options)
+        Generic serial forward transform
+
+        Parameters
+        ----------
+        input_array : array, optional
+        output_array : array, optional
+        options : dict
+            parameters to serial transforms
+
+        Returns
+        -------
+        output_array : array
+
+    backward(input_array=None, output_array=None, **options)
+        Generic serial backward transform
+
+        Parameters
+        ----------
+        input_array : array, optional
+        output_array : array, optional
+        options : dict
+            parameters to serial transforms
+
+        Returns
+        -------
+        output_array : array
 
     """
 
