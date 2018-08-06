@@ -28,5 +28,3 @@ In mpi4py-fft there is also included a Python interface to the
 `FFTW <http://www.fftw.org>`_ library. This interface can be used without MPI, 
 much like `pyfftw <https://hgomersall.github.io/pyFFTW/>`_, and even for 
 real-to-real transforms, like discrete cosine or sine transforms.
-
-Further documentation is available at `readthedocs <https://mpi4py-fft.readthedocs.io/en/latest/>`_.
