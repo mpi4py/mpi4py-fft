@@ -123,9 +123,8 @@ class Transfer(object):
     Create two pencils for a 4-dimensional array of shape (8, 8, 8, 8) using
     4 processors in total. The input pencil will be distributed in the first
     two axes, whereas the output pencil will be distributed in axes 1 and 2.
-    Note that the Subcomm instance below may distribute any axis where an entry
-    0 is found, whereas an entry of 1 means that this axis should not be
-    distributed.
+    Create a random array of shape according to the input pencil and transfer
+    its values to an array of the output shape.
 
     >>> import subprocess
     >>> fx = open('transfer_script.py', 'w')
@@ -268,11 +267,11 @@ class Pencil(object):
     with 2 processors in each group (4 in total). One group shares axis 0 and
     the other axis 1 on the input arrays. On the output, one group shares axis
     1, whereas the other shares axis 2.
-    Note that the call 'p1 = p0.pencil(0)' creates a new pencil (p1) that is
+    Note that the call ``p1 = p0.pencil(0)`` creates a new pencil (p1) that is
     non-distributed in axes 0. It is, in other words, aligned in axis 0. Hence
     the first 8 in the lists with [8 4 4 8] above. The alignment is
-    configurable, and 'p1 = pencil(1)' would lead to an output pencil aligned
-    in axis 1.
+    configurable, and ``p1 = p0.pencil(1)`` would lead to an output pencil
+    aligned in axis 1.
 
     """
     def __init__(self, subcomm, shape, axis=-1):

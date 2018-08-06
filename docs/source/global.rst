@@ -1,3 +1,5 @@
+.. _global:
+
 Global Redistributions
 ======================
 
@@ -107,19 +109,34 @@ Executing the global redistribution is then simply a matter of::
 
 Now it is important to realise that the global array does not change. The local 
 ``a1`` arrays  will now contain the same data as ``a0``, only aligned differently. 
-An image can be used to illustrate:
+Some images, :numref:`2dpencila` and :numref:`2dpencilb`, can be used to 
+illustrate:
 
-.. _2dpencil:
+.. _2dpencila:
 
-.. image:: 2Dpencil.png
-    :width: 500px
-    :height: 300px
+.. figure:: 2Dpencil.png
+    :width: 250px
+    :height: 200px
 
-Mathematically, we will denote the entries of a two-dimensional array 
+    Original 4 pencils (p0) of shape (2, 8) aligned in  y-direction. Color 
+    represents rank.
+
+.. _2dpencilb:
+
+.. figure:: 2Dpencil2.png
+    :width: 250px
+    :height: 200px
+
+    4 pencils (p1) of shape (8, 2) aligned in x-direction after receiving
+    data from p0. Data is the same as in :numref:`2dpencila`, only aligned 
+    differently.
+
+Mathematically, we will denote the entries of a two-dimensional global array 
 as :math:`u_{j_0, j_1}`, where :math:`j_0\in \textbf{j}_0=[0, 1, \ldots, N_0-1]`
 and :math:`j_1\in \textbf{j}_1=[0, 1, \ldots, N_1-1]`. The shape of the array is
 then :math:`(N_0, N_1)`. A global array
-:math:`u_{j_0, j_1}` distributed in the first axis by processor group :math:`P`, 
+:math:`u_{j_0, j_1}` distributed in the first axis (as shown in 
+:numref:`2dpencila`) by processor group :math:`P`, 
 containing :math:`|P|` processors, is denoted as
 
 .. math::
@@ -127,7 +144,7 @@ containing :math:`|P|` processors, is denoted as
     u_{j_0/P, j_1}
 
 The global redistribution, from alignment in axis 1 to alignment in axis 0, 
-as :ref:`illustrated <2dpencil>` above, is denoted as
+as from :numref:`2dpencila` to :numref:`2dpencilb` above, is denoted as
 
 .. math::
 
@@ -156,11 +173,12 @@ Multidimensional arrays
 -----------------------
 
 The procedure discussed above remains the same for any type of array, of any
-dimension. With mpi4py-fft you can distribute any array of arbitrary dimensionality
+dimension. With mpi4py-fft we can distribute any array of arbitrary dimensionality
 using an arbitrary number of processor groups. How to distribute is completely 
 configurable through the classes in the :mod:`.pencil` module.
 
-We denote a :math:`d`-dimensional array as :math:`u_{j_0, j_1, \ldots, j_{d-1}}`.
+We denote a global :math:`d`-dimensional array as :math:`u_{j_0, j_1, \ldots, j_{d-1}}`,
+where :math:`j_m\in\textbf{j}_m` for :math:`m=[0, 1, \ldots, d-1]`.
 A :math:`d`-dimensional array distributed with only one processor group in the 
 first axis is denoted as :math:`u_{j_0/P, j_1, \ldots, j_{d-1}}`. If using more
 than one processor group, the groups are indexed, like :math:`P_0, P_1` etc.
@@ -182,7 +200,10 @@ are then created as::
     transfer12 = p1.transfer(p2, np.float)
     transfer23 = p2.transfer(p3, np.float)
 
-and we may perform three different global redistributions as::
+Note that we can create transfer objects between any two pencils, not just
+neighbouring axes.
+
+We may now perform three different global redistributions as::
 
     a0 = np.zeros(p0.subshape)
     a1 = np.zeros(p1.subshape)
@@ -211,7 +232,8 @@ the three following global redistributions:
 Now, it is not necessary to use three processor groups just because we have a 
 four-dimensional array. We could just as well have been using 2 or 1. The advantage 
 of using more groups is that you can then use more processors in total. Assuming
-:math:`N = N_0 = N_1 = N_2 = N_3`, you can use :math:`N^p`, where :math:`p` is
+:math:`N = N_0 = N_1 = N_2 = N_3`, you can use a maximum of :math:`N^p` processors, 
+where :math:`p` is
 the number of processor groups. So for an array of shape :math:`(8,8,8,8)`
 it is possible to use 8, 64 and 512 number of processors for 1, 2 and 3 
 processor groups, respectively. On the other hand, if you can get away with it,
