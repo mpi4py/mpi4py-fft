@@ -25,6 +25,6 @@ can distribute just one index (a slab decomposition), two index sets (pencil
 decomposition) or even more for higher-dimensional arrays.
 
 In mpi4py-fft there is also included a Python interface to the 
-`FFTW <http://www.fftw.org>` library. This interface can be used without MPI, 
+`FFTW <http://www.fftw.org>`_ library. This interface can be used without MPI, 
 much like `pyfftw <https://hgomersall.github.io/pyFFTW/>`_, and even for 
 real-to-real transforms, like discrete cosine or sine transforms.
