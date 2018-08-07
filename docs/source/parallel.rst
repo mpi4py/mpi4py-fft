@@ -227,14 +227,18 @@ more functions, like
 .. math::
     :label: ft_convolve
 
-    \widehat{ab}_k = \int_{0}^{2\pi} a b e^{-i k x} dx, \quad \forall k \in [0, 1, \ldots, N-1]
+    \widehat{ab}_k = \int_{0}^{2\pi} a b e^{-i k x} dx, \quad \forall k \in [-N/2, \ldots, N/2-1]
 
 computed with DFT as
 
 .. math::
     :label: dft_convolve
 
-    \widehat{ab}_k = \frac{1}{N}\sum_{j=0}^{N-1}a_j b_j e^{-2\pi i j k / N}, \quad \forall \, k=0, 1, \ldots, N-1, \\
+    \widehat{ab}_k = \frac{1}{N}\sum_{j=0}^{N-1}a_j b_j e^{-2\pi i j k / N}, \quad \forall \, k\in [-N/2, \ldots, N/2-1].
+
+.. note::
+    We are here assuming an even number :math:`N` and use wavenumbers centered 
+    around zero.
  
 If :math:`a` and :math:`b` are two Fourier series with their own
 coefficients:
@@ -242,8 +246,8 @@ coefficients:
 .. math::
     :label: ab_sums
 
-    a &= \sum_{p=0}^{N-1} \hat{a}_p e^{i p x}, \\
-    b &= \sum_{q=0}^{N-1} \hat{b}_q e^{i q x},
+    a &= \sum_{p=-N/2}^{N/2-1} \hat{a}_p e^{i p x}, \\
+    b &= \sum_{q=-N/2}^{N/2-1} \hat{b}_q e^{i q x},
 
 then we can insert for the two sums from :eq:`ab_sums` in :eq:`ft_convolve` and 
 get
@@ -251,34 +255,36 @@ get
 .. math::
     :label: ab_convolve
 
-    \widehat{ab}_k &= \int_{0}^{2\pi} \left( \sum_{p=0}^{N-1} \hat{a}_p e^{i p x} \sum_{q=0}^{N-1} \hat{b}_q e^{i q x} \right)  e^{-i k x} dx, \quad \forall \, k \in [0, 1, \ldots, N-1] \\
-    \widehat{ab}_k &= \sum_{p=0}^{N-1} \sum_{q=0}^{N-1} \hat{a}_p  \hat{b}_q \int_{0}^{2\pi} e^{-i (p+q-k) x} dx, \quad \forall \, k \in [0, 1, \ldots, N-1] 
+    \widehat{ab}_k &= \int_{0}^{2\pi} \left( \sum_{p=-N/2}^{N/2-1} \hat{a}_p e^{i p x} \sum_{q=-N/2}^{N/2-1} \hat{b}_q e^{i q x} \right)  e^{-i k x} dx, \quad \forall \, k \in [-N/2, \ldots, N/2-1] \\
+    \widehat{ab}_k &= \sum_{p=-N/2}^{N/2-1} \sum_{q=-N/2}^{N/2-1} \hat{a}_p  \hat{b}_q \int_{0}^{2\pi} e^{-i (p+q-k) x} dx, \quad \forall \, k \in [-N/2, \ldots, N/2-1] 
 
 The final integral is unity for :math:`p+q=k` and zero otherwise. Consequently, we get
 
 .. math::
     :label: ab_convolve2
 
-    \widehat{ab}_k = \sum_{p=0}^{N-1}\sum_{q=0}^{N-1} \hat{a}_p  \hat{b}_{q} \delta_{p+q, k} , \quad \forall \, k \in [0, 1, \ldots, N-1] 
+    \widehat{ab}_k = \sum_{p=-N/2}^{N/2-1}\sum_{q=-N/2}^{N/2-1} \hat{a}_p  \hat{b}_{q} \delta_{p+q, k} , \quad \forall \, k \in [-N/2, \ldots, N/2-1] 
 
-The convolution sum :eq:`ab_convolve2` is very expensive to compute. Luckily 
-there is a faster approach than the direct summation.
+Unfortunately, the convolution sum :eq:`ab_convolve2` is very expensive to 
+compute, and the direct application of :eq:`dft_convolve` leads to 
+aliasing errors. Luckily there is a fast approach that eliminates aliasing as 
+well.
 
-The fast approach makes use of the FFT and zero-padded coefficient vectors. The
-idea is to zero-pad :math:`\hat{a}` and :math:`\hat{b}` in spectral space such 
-that we get the extended sums
+The fast, alias-free, approach makes use of the FFT and zero-padded coefficient 
+vectors. The idea is to zero-pad :math:`\hat{a}` and :math:`\hat{b}` in spectral 
+space such that we get the extended sums
 
 .. math::
 
-    A_j &= \sum_{p=0}^{M-1} \hat{\hat{a}}_p e^{2 \pi i p j/M}, \\
-    B_j &= \sum_{q=0}^{M-1} \hat{\hat{b}}_q e^{2 \pi i q j/M},
+    A_j &= \sum_{p=-M/2}^{M/2-1} \hat{\hat{a}}_p e^{2 \pi i p j/M}, \\
+    B_j &= \sum_{q=-M/2}^{M/2-1} \hat{\hat{b}}_q e^{2 \pi i q j/M},
 
 where :math:`M>N` and where the coefficients have been zero-padded such that
 
 .. math::
 
-    \hat{\hat{a}}_p = \begin{cases} \hat{a}_p, &\forall p \in [0, 1, \ldots, N-1] \\
-                                    0, &\forall p \ge N \end{cases}
+    \hat{\hat{a}}_p = \begin{cases} \hat{a}_p, &\forall |p| \le N/2 \\
+                                    0, &\forall |p| \gt N/2 \end{cases}
 
 Now compute the nonlinear term in the larger physical space and compute the 
 convolution as
@@ -286,10 +292,10 @@ convolution as
 .. math::
     :label: ab_convolve3
 
-    \widehat{ab}_k = \frac{1}{M} \sum_{j=0}^{M-1} A_j B_j e^{- 2 \pi i k j/M}, \quad \forall \, k \in [0, 1, \ldots, M-1]
+    \widehat{ab}_k = \frac{1}{M} \sum_{j=0}^{M-1} A_j B_j e^{- 2 \pi i k j/M}, \quad \forall \, k \in [-M/2, \ldots, M/2-1]
 
 Finally, truncate the vector :math:`\widehat{ab}_k` to the original range 
-:math:`k\in[0, 1, \ldots, N-1]`, simply by eliminating all the wavenumbers 
+:math:`k\in[-N/2, \ldots, N/2-1]`, simply by eliminating all the wavenumbers 
 higher than :math:`N`.
 
 With mpi4py-fft we can compute this convolution using the ``padding`` keyword
@@ -319,3 +325,9 @@ of the :class:`.PFFT` class::
     # Do forward transform with truncation
     ab_hat = fft.forward(a*b)
 
+.. note::
+
+    The padded instance of the :class:`.PFFT` class is often used in addition 
+    to a regular non-padded class. The padded version is then used to handle
+    non-linearities, whereas the non-padded takes care of the rest, see `demo 
+    <https://bitbucket.org/mpi4py/mpi4py-fft/src/master/examples/spectral_dns_solver.py>`_.
