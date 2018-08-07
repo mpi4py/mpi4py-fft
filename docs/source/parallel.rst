@@ -217,4 +217,105 @@ and the input and output arrays will be of shape::
 
 We see that the input array is aligned in axis 1, because this is the direction
 transformed first.
+
+Convolution
+...........
+
+Working with Fourier one sometimes need to transform the product of two or 
+more functions, like
+
+.. math::
+    :label: ft_convolve
+
+    \widehat{ab}_k = \int_{0}^{2\pi} a b e^{-i k x} dx, \quad \forall k \in [0, 1, \ldots, N-1]
+
+computed with DFT as
+
+.. math::
+    :label: dft_convolve
+
+    \widehat{ab}_k = \frac{1}{N}\sum_{j=0}^{N-1}a_j b_j e^{-2\pi i j k / N}, \quad \forall \, k=0, 1, \ldots, N-1, \\
  
+If :math:`a` and :math:`b` are two Fourier series with their own
+coefficients:
+
+.. math::
+    :label: ab_sums
+
+    a &= \sum_{p=0}^{N-1} \hat{a}_p e^{i p x}, \\
+    b &= \sum_{q=0}^{N-1} \hat{b}_q e^{i q x},
+
+then we can insert for the two sums from :eq:`ab_sums` in :eq:`ft_convolve` and 
+get
+
+.. math::
+    :label: ab_convolve
+
+    \widehat{ab}_k &= \int_{0}^{2\pi} \left( \sum_{p=0}^{N-1} \hat{a}_p e^{i p x} \sum_{q=0}^{N-1} \hat{b}_q e^{i q x} \right)  e^{-i k x} dx, \quad \forall \, k \in [0, 1, \ldots, N-1] \\
+    \widehat{ab}_k &= \sum_{p=0}^{N-1} \sum_{q=0}^{N-1} \hat{a}_p  \hat{b}_q \int_{0}^{2\pi} e^{-i (p+q-k) x} dx, \quad \forall \, k \in [0, 1, \ldots, N-1] 
+
+The final integral is unity for :math:`p+q=k` and zero otherwise. Consequently, we get
+
+.. math::
+    :label: ab_convolve2
+
+    \widehat{ab}_k = \sum_{p=0}^{N-1}\sum_{q=0}^{N-1} \hat{a}_p  \hat{b}_{q} \delta_{p+q, k} , \quad \forall \, k \in [0, 1, \ldots, N-1] 
+
+The convolution sum :eq:`ab_convolve2` is very expensive to compute. Luckily 
+there is a faster approach than the direct summation.
+
+The fast approach makes use of the FFT and zero-padded coefficient vectors. The
+idea is to zero-pad :math:`\hat{a}` and :math:`\hat{b}` in spectral space such 
+that we get the extended sums
+
+.. math::
+
+    A_j &= \sum_{p=0}^{M-1} \hat{\hat{a}}_p e^{2 \pi i p j/M}, \\
+    B_j &= \sum_{q=0}^{M-1} \hat{\hat{b}}_q e^{2 \pi i q j/M},
+
+where :math:`M>N` and where the coefficients have been zero-padded such that
+
+.. math::
+
+    \hat{\hat{a}}_p = \begin{cases} \hat{a}_p, &\forall p \in [0, 1, \ldots, N-1] \\
+                                    0, &\forall p \ge N \end{cases}
+
+Now compute the nonlinear term in the larger physical space and compute the 
+convolution as
+
+.. math::
+    :label: ab_convolve3
+
+    \widehat{ab}_k = \frac{1}{M} \sum_{j=0}^{M-1} A_j B_j e^{- 2 \pi i k j/M}, \quad \forall \, k \in [0, 1, \ldots, M-1]
+
+Finally, truncate the vector :math:`\widehat{ab}_k` to the original range 
+:math:`k\in[0, 1, \ldots, N-1]`, simply by eliminating all the wavenumbers 
+higher than :math:`N`.
+
+With mpi4py-fft we can compute this convolution using the ``padding`` keyword
+of the :class:`.PFFT` class::
+
+    import numpy as np
+    from mpi4py_fft import PFFT, Function
+    from mpi4py import MPI
+
+    comm = MPI.COMM_WORLD
+    N = (128, 128)   # Shape in spectal space
+    fft = PFFT(comm, N, padding=[1.5, 1.5], dtype=np.complex)
+
+    # Create arrays in normal spectral space
+    a_hat = Function(fft, True)
+    b_hat = Function(fft, True)
+    a_hat[:] = np.random.random(a_hat.shape) + np.random.random(a_hat.shape)*1j
+    b_hat[:] = np.random.random(a_hat.shape) + np.random.random(a_hat.shape)*1j
+    
+    # Transform to real space with padding
+    a = Function(fft, False)
+    b = Function(fft, False)
+    assert a.shape == (192//comm.Get_size(), 192)
+    a = fft.backward(a_hat, a)
+    b = fft.backward(b_hat, b)
+
+    # Do forward transform with truncation
+    ab_hat = fft.forward(a*b)
+

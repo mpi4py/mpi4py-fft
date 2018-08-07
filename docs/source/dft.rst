@@ -10,13 +10,20 @@ Discrete Fourier transforms (DFT), respectively, as
 .. math::
     :label: dft
 
-    \hat{u}_k &= \frac{1}{N}\sum_{j=0}^{N-1}u_j e^{-2\pi i j k / N}, \quad \forall \, k=0, 1, \ldots, N-1, \\
-    u_j &= \sum_{k=0}^{N-1}\hat{u}_k e^{2\pi i j k / N}, \quad \forall \, j=0, 1, \ldots, N-1,
+    \hat{u}_k &= \frac{1}{N}\sum_{j=0}^{N-1}u_j e^{-2\pi i j k / N}, \quad \forall \, k\in \textbf{k}=0, 1, \ldots, N-1, \\
+    u_j &= \sum_{k=0}^{N-1}\hat{u}_k e^{2\pi i j k / N}, \quad \forall \, j\in\textbf{j}=0, 1, \ldots, N-1,
 
 where :math:`i=\sqrt{-1}`. Discrete Fourier transforms are computed efficiently
 using algorithms termed Fast Fourier Transforms, known in short as FFTs. 
 
-An more compact notation is commonly used for the DFTs, where the 1D 
+.. note::
+
+    The index set for wavenumbers :math:`\textbf{k}` is usually not chosen as
+    :math:`[0, 1, \ldots, N-1]`, but :math:`\textbf{k}=[-N/2, -N/2-1, \ldots, N/2-1]` 
+    for even :math:`N` and :math:`\textbf{k}=[-(N-1)/2, -(N-1)/2+1, \ldots, (N-1)/2]` 
+    for odd :math:`N`. See `numpy.fft.fftfreq <https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.fft.fftfreq.html#numpy.fft.fftfreq>`_.
+
+A more compact notation is commonly used for the DFTs, where the 1D 
 forward and backward transforms are written as
 
 .. math::
