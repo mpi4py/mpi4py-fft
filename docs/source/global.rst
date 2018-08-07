@@ -29,7 +29,7 @@ designed for sending and receiving data.
 
 We are generally interested in algorithms, like the FFT, that work on the 
 global array, along one axis at the time. To be able to execute such algorithms, 
-we need to make sure that the local arrays has access to all of its
+we need to make sure that the local arrays have access to all of its
 data along this axis. For the figure above, the slab distribution gives each
 processor data that is fully available along two axes, whereas the pencil
 distribution only has data fully available along one axis. Rearranging data,

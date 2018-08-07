@@ -4,7 +4,7 @@ Introduction
 As already mentioned mpi4py-fft is a Python module primarily for working with Fast 
 Fourier Transforms (FFTs) of (large) multidimensional arrays. There is really
 no limit as to how large the arrays can be, just as long as there is sufficient
-computing powers available. Also, there are no limits as to how transforms are 
+computing powers available. Also, there are no limits as to how transforms can be 
 configured. Just about any combination of transforms from the FFTW library is 
 supported. Furthermore, mpi4py-fft can also be used simply to perform global 
 redistributions (distribute and communicate) of large arrays with MPI, without 
@@ -20,7 +20,7 @@ the main modules:
 
 The :class:`.mpifft.PFFT` class is the major entry point for most users. It is a 
 highly configurable class, which under the hood distributes large dataarrays and
-performs any type of transform, along any axis of a multidimensional array.
+performs any type of transform, along any axes of a multidimensional array.
 
 The :mod:`.pencil` module is responsible for global redistributions through MPI. 
 However, this module is rarely used on its own, unless one simply needs to do
