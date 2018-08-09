@@ -1,0 +1,7 @@
+numpy
+scipy
+fftw
+pyfftw
+mpi4py
+six
+
