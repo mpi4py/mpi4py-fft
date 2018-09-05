@@ -27,7 +27,7 @@ requirements:
     - fftw
     - pyfftw
     - six
-    - scipy
+    - scipy >=1.1.0
 
 test:
   requires:
