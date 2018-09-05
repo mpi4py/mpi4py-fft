@@ -90,7 +90,7 @@ def test_fftw():
                                 dct = fftw.dctn(input_array, None, axes, type, threads, fflags, output_array=oa)
                                 B = dct(A).copy()
                                 idct = fftw.idctn(input_array, None, axes, type, threads, iflags, output_array=oa)
-                                A2 = idct(B, implicit=False, normalize=True)
+                                A2 = idct(B, implicit=True, normalize=True)
                                 assert allclose(A, A2), np.linalg.norm(A-A2)
                                 if typecode is not 'g' and not type is 4:
                                     B2 = scipy.fftpack.dctn(A, axes=axes, type=type)
@@ -99,7 +99,7 @@ def test_fftw():
                                 dst = fftw.dstn(input_array, None, axes, type, threads, fflags, output_array=oa)
                                 B = dst(A).copy()
                                 idst = fftw.idstn(input_array, None, axes, type, threads, iflags, output_array=oa)
-                                A2 = idst(B, implicit=False, normalize=True)
+                                A2 = idst(B, implicit=True, normalize=True)
                                 assert allclose(A, A2), np.linalg.norm(A-A2)
                                 if typecode is not 'g' and not type is 4:
                                     B2 = scipy.fftpack.dstn(A, axes=axes, type=type)
