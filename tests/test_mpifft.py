@@ -5,6 +5,7 @@ from mpi4py_fft.mpifft import PFFT
 from mpi4py_fft.pencil import Subcomm
 from mpi4py_fft import fftw
 from collections import defaultdict
+import functools
 import pyfftw
 
 abstol = dict(f=0.1, d=2e-10, g=1e-10)
@@ -57,7 +58,7 @@ def test_mpifft():
                                 allaxes = [None, ((0,), (1, 2)),
                                            ((0,), (-2, -1))]
                             elif dim > 3:
-                                allaxes = [None, ((0,), (1,), (2,), (3)),
+                                allaxes = [None, ((0,), (1,), (2,), (3,)),
                                            ((0,), (1, 2, 3)),
                                            ((0,), (1,), (2, 3))]
                                 if use_pyfftw:
@@ -70,15 +71,22 @@ def test_mpifft():
                                                                   fftw.irfftn,
                                                                   fftw.fftn,
                                                                   fftw.ifftn)
+                                dctn = functools.partial(fftw.dctn, type=3)
+                                idctn = functools.partial(fftw.idctn, type=3)
 
                                 if typecode in 'FDG':
                                     transforms = defaultdict(lambda : (fftn, ifftn))
                                 else:
-                                    transforms = defaultdict(lambda : (fftn, ifftn),
-                                                             {(3,): (rfftn, irfftn),
-                                                              (2, 3): (rfftn, irfftn),
-                                                              (1, 2, 3): (rfftn, irfftn),
-                                                              (0, 1, 2, 3): (rfftn, irfftn)})
+                                    if use_pyfftw:
+                                        transforms = {(3,): (rfftn, irfftn),
+                                                      (2, 3): (rfftn, irfftn),
+                                                      (1, 2, 3): (rfftn, irfftn),
+                                                      (0, 1, 2, 3): (rfftn, irfftn)}
+                                    else:
+                                        transforms = {(3,): (dctn, idctn),
+                                                      (2, 3): (dctn, idctn),
+                                                      (1, 2, 3): (dctn, idctn),
+                                                      (0, 1, 2, 3): (dctn, idctn)}
 
                             for axes in allaxes:
                                 _slab = slab
@@ -101,7 +109,7 @@ def test_mpifft():
                                         _comm = comm.Create_cart(_dims)
                                         _dims = None
                                     _comm = Subcomm(_comm, _dims)
-                                #print(typecode, shape, axes)
+                                #print(typecode, shape, axes, collapse)
                                 fft = PFFT(_comm, shape, axes=axes, dtype=typecode,
                                            padding=padding, slab=_slab, collapse=collapse,
                                            use_pyfftw=use_pyfftw, transforms=transforms)

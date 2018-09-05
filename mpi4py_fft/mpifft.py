@@ -44,6 +44,7 @@ class Transform(object):
         """Return output pencil of Transform"""
         return self._pencil[1]
 
+    #@profile
     def __call__(self, input_array=None, output_array=None, **kw):
         """Compute transform
 
@@ -60,6 +61,14 @@ class Transform(object):
         as planned with serial transform object _xfftn.
 
         """
+        #arrayB = input_array
+        #for i in range(len(self._transfer)):
+        #    self._xfftn[i](arrayB, None, **kw)
+        #    arrayA = self._xfftn[i].output_array
+        #    arrayB = self._xfftn[i+1].input_array
+        #    self._transfer[i](arrayA, arrayB)
+        #return self._xfftn[-1](arrayB, output_array, **kw)
+
         if input_array is not None:
             self.input_array[...] = input_array
 
@@ -111,15 +120,12 @@ class PFFT(object):
         Dictionary of axes to serial transforms (forward and backward) along
         those axes. For example::
 
-            {(0,): (fftn, ifftn), (1,): (rfftn, irfftn), (0, 1): (rfftn, irfftn)}
+            {(0, 1): (dctn, idctn), (2, 3): (dstn, idstn)}
 
-        would work for any 2D real-to-complex Fourier transform, where the last
-        axis is transformed over first. In that case the transform over axis 1
-        is real-to-complex, whereas the transform over axis 0 is
-        complex-to-complex. The default transforms are (rfftn, irfftn) for real
-        input arrays and (fftn, ifftn) for complex input arrays.
-        Real-to-real transforms can be configured using this dictionary and
-        real-to-real transforms from the :mod:`.fftw.xfftn` module. See Examples.
+        If missing the default is to use rfftn/irfftn for real input arrays and
+        fftn/ifftn for complex input arrays. Real-to-real transforms can be
+        configured using this dictionary and real-to-real transforms from the
+        :mod:`.fftw.xfftn` module. See Examples.
 
     Methods
     -------
@@ -159,7 +165,7 @@ class PFFT(object):
     >>> from mpi4py import MPI
     >>> from mpi4py_fft.mpifft import PFFT, Function
     >>> N = np.array([12, 14, 15], dtype=int)
-    >>> fft = PFFT(MPI.COMM_WORLD, N, axes=(0,1,2))
+    >>> fft = PFFT(MPI.COMM_WORLD, N, axes=(0, 1, 2))
     >>> u = Function(fft, False)
     >>> u[:] = np.random.random(u.shape).astype(u.dtype)
     >>> u_hat = fft.forward(u)
@@ -167,14 +173,14 @@ class PFFT(object):
     >>> uj = fft.backward(u_hat, uj)
     >>> assert np.allclose(uj, u)
 
-    Now configure with real-to-real discrete cosine transform
+    Now configure with real-to-real discrete cosine transform type 3
 
     >>> from mpi4py_fft.fftw import rfftn, irfftn, dctn, idctn
     >>> import functools
     >>> dct = functools.partial(dctn, type=3)
     >>> idct = functools.partial(idctn, type=3)
-    >>> transforms = {(0,): (rfftn, irfftn), (1, 2): (dct, idct)}
-    >>> r2c = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1,2)), transforms=transforms)
+    >>> transforms = {(1, 2): (dct, idct)}
+    >>> r2c = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2)), transforms=transforms)
     >>> u = Function(r2c, False)
     >>> u[:] = np.random.random(u.shape).astype(u.dtype)
     >>> u_hat = r2c.forward(u)

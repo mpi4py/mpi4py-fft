@@ -26,15 +26,16 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
     )
     opts.update(options)
 
-    if transforms is None:
+    transforms = {} if transforms is None else transforms
+    if tuple(axes) in transforms:
+        plan_fwd, plan_bck = transforms[tuple(axes)]
+    else:
         if np.issubdtype(dtype, np.floating):
             plan_fwd = pyfftw.builders.rfftn
             plan_bck = pyfftw.builders.irfftn
         else:
             plan_fwd = pyfftw.builders.fftn
             plan_bck = pyfftw.builders.ifftn
-    else:
-        plan_fwd, plan_bck = transforms[tuple(axes)]
 
     s = tuple(np.take(shape, axes))
 
@@ -76,15 +77,16 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, transforms, options):
              fftw.flag_dict[opts['overwrite_input']])
     threads = opts['threads']
 
-    if transforms is None:
+    transforms = {} if transforms is None else transforms
+    if tuple(axes) in transforms:
+        plan_fwd, plan_bck = transforms[tuple(axes)]
+    else:
         if np.issubdtype(dtype, np.floating):
             plan_fwd = fftw.rfftn
             plan_bck = fftw.irfftn
         else:
             plan_fwd = fftw.fftn
             plan_bck = fftw.ifftn
-    else:
-        plan_fwd, plan_bck = transforms[tuple(axes)]
 
     s = tuple(np.take(shape, axes))
 
@@ -185,18 +187,19 @@ class FFTBase(object):
                 N = trunc_array.shape[axis]
                 s = [slice(None)]*trunc_array.ndim
                 s[axis] = slice(0, N)
-                trunc_array[:] = padded_array[s]
+                trunc_array[:] = padded_array[tuple(s)]
                 if N0 % 2 == 0:
                     s[axis] = N-1
+                    s = tuple(s)
                     trunc_array[s] = trunc_array[s].real
                     trunc_array[s] *= 2
             else:
                 N = trunc_array.shape[axis]
                 su = [slice(None)]*trunc_array.ndim
                 su[axis] = slice(0, N//2+1)
-                trunc_array[su] = padded_array[su]
+                trunc_array[tuple(su)] = padded_array[tuple(su)]
                 su[axis] = slice(-(N//2), None)
-                trunc_array[su] += padded_array[su]
+                trunc_array[tuple(su)] += padded_array[tuple(su)]
 
     def _padding_backward(self, trunc_array, padded_array):
         axis = self.axes[-1]
@@ -205,24 +208,25 @@ class FFTBase(object):
             N0 = self.forward.output_array.shape[axis]
             if self.real_transform:
                 s = [slice(0, n) for n in trunc_array.shape]
-                padded_array[s] = trunc_array[:]
+                padded_array[tuple(s)] = trunc_array[:]
                 N = trunc_array.shape[axis]
                 if N0 % 2 == 0: # Symmetric Fourier interpolator
                     s[axis] = N-1
+                    s = tuple(s)
                     padded_array[s] = padded_array[s].real
                     padded_array[s] *= 0.5
             else:
                 N = trunc_array.shape[axis]
                 su = [slice(None)]*trunc_array.ndim
                 su[axis] = slice(0, N//2+1)
-                padded_array[su] = trunc_array[su]
+                padded_array[tuple(su)] = trunc_array[tuple(su)]
                 su[axis] = slice(-(N//2), None)
-                padded_array[su] = trunc_array[su]
+                padded_array[tuple(su)] = trunc_array[tuple(su)]
                 if N0 % 2 == 0:  # Use symmetric Fourier interpolator
                     su[axis] = N//2
-                    padded_array[su] *= 0.5
+                    padded_array[tuple(su)] *= 0.5
                     su[axis] = -(N//2)
-                    padded_array[su] *= 0.5
+                    padded_array[tuple(su)] *= 0.5
 
 
 class FFT(FFTBase):

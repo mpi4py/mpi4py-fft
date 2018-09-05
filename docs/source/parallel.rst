@@ -296,7 +296,7 @@ convolution as
 
 Finally, truncate the vector :math:`\widehat{ab}_k` to the original range 
 :math:`k\in[-N/2, \ldots, N/2-1]`, simply by eliminating all the wavenumbers 
-higher than :math:`N`.
+higher than :math:`|N/2|`.
 
 With mpi4py-fft we can compute this convolution using the ``padding`` keyword
 of the :class:`.PFFT` class::
