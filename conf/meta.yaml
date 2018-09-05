@@ -15,7 +15,7 @@ requirements:
     - python
     - cython
     - mpi4py
-    - numpy
+    - numpy >=1.15.1
     - six
     - pip
     - fftw
@@ -23,7 +23,7 @@ requirements:
   run:
     - python
     - mpi4py
-    - numpy
+    - numpy >=1.15.1
     - fftw
     - pyfftw
     - six
