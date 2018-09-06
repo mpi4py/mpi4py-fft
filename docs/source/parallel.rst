@@ -153,6 +153,30 @@ with real-to-complex transforms like this::
     uj = r2c.backward(u_hat, uj)
     assert np.allclose(uj, u)
 
+As a more complex example consider a 5-dimensional array where for some reason
+you need to perform discrete cosine transforms in axes 1 and 2, discrete sine
+transforms in axes 3 and 4, and a regular Fourier transform in the first axis.
+Here it makes sense to collapse the (1, 2) and (3, 4) axes, which leaves only
+the first axis uncollapsed. Hence we can then only use one processor group and
+a slab decomposition, whereas without collapsing we could have used four groups. 
+A parallel transform object can be created and tested as::
+
+    N = (5, 6, 7, 8, 9)
+    dctn = functools.partial(fftw.dctn, type=3)
+    idctn = functools.partial(fftw.idctn, type=3)
+    dstn = functools.partial(fftw.dstn, type=3)
+    idstn = functools.partial(fftw.idstn, type=3)
+    fft = PFFT(MPI.COMM_WORLD, N, ((0,), (1, 2), (3, 4)), slab=True,
+               transforms={(1, 2): (dctn, idctn), (3, 4): (dstn, idstn)})
+
+    A = Function(fft, False)
+    A[:] = np.random.random(A.shape)
+    C = fftw.aligned_like(A)
+    B = fft.forward(A)
+    C = fft.backward(B, C)
+    assert np.allclose(A, C)
+
+
 Pencil decomposition
 ....................
 

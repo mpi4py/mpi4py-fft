@@ -3,7 +3,7 @@ import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT
 from mpi4py_fft.pencil import Subcomm
-from mpi4py_fft import fftw
+from mpi4py_fft import fftw, Function
 from collections import defaultdict
 import functools
 import pyfftw
@@ -25,6 +25,22 @@ def random_true_or_false(comm):
         r = np.random.randint(2)
     r = comm.bcast(r)
     return r
+
+def test_r2r():
+    N = (5, 6, 7, 8, 9)
+    dctn = functools.partial(fftw.dctn, type=3)
+    idctn = functools.partial(fftw.idctn, type=3)
+    dstn = functools.partial(fftw.dstn, type=3)
+    idstn = functools.partial(fftw.idstn, type=3)
+    fft = PFFT(MPI.COMM_WORLD, N, ((0,), (1, 2), (3, 4)), slab=True,
+               transforms={(1, 2): (dctn, idctn), (3, 4): (dstn, idstn)})
+
+    A = Function(fft, False)
+    A[:] = np.random.random(A.shape)
+    C = fftw.aligned_like(A)
+    B = fft.forward(A)
+    C = fft.backward(B, C)
+    assert np.allclose(A, C)
 
 def test_mpifft():
     from itertools import product
@@ -212,5 +228,6 @@ def test_mpifft():
                             fft.destroy()
 
 if __name__ == '__main__':
-    test_mpifft()
+    #test_mpifft()
+    test_r2r()
 

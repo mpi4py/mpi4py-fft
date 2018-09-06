@@ -209,8 +209,6 @@ class PFFT(object):
             else:
                 assert isinstance(ax, (tuple, list))
                 ax = list(ax)
-                if i < len(axes)-1: # only last may be collapsed
-                    assert len(ax) == 1
                 for j, a in enumerate(ax):
                     assert isinstance(a, int)
                     if a < 0:
