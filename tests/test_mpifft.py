@@ -228,6 +228,6 @@ def test_mpifft():
                             fft.destroy()
 
 if __name__ == '__main__':
-    #test_mpifft()
+    test_mpifft()
     test_r2r()
 
