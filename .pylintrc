@@ -7,7 +7,13 @@ disable = locally-disabled,
     redefined-builtin,
     unused-import,
     too-many-arguments,
-    line-too-long
+    line-too-long,
+    no-member,
+    not-callable,
+    len-as-condition,
+    consider-using-enumerate,
+    wildcard-import,
+    import-error
 extension-pkg-whitelist = mpi4py,pyfftw,numpy
 generated-members=np.floating
 reports = no

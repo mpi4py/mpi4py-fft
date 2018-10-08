@@ -350,6 +350,11 @@ class PFFT(object):
                                                                    ip.subshape)]
         return s
 
+    def shape(self, spectral=False):
+        if spectral:
+            return self._output_shape
+        return self._input_shape
+
     def input_shape(self):
         """Return global shape of input array"""
         return self._input_shape
@@ -357,6 +362,9 @@ class PFFT(object):
     def output_shape(self):
         """Return global shape of output array"""
         return self._output_shape
+
+    def ndim(self):
+        return len(self._input_shape)
 
 
 class Function(np.ndarray):
@@ -410,4 +418,3 @@ class Function(np.ndarray):
 
     def __init__(self, pfft, forward_output=True, val=0, tensor=None):
         pass
-

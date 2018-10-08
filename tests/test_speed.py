@@ -26,7 +26,7 @@ A[:] = np.random.random(N).astype(np.dtype('D'))
 
 input_array = fftw.aligned(A.shape, n=32, dtype=A.dtype)
 output_array = fftw.aligned(A.shape, n=32, dtype=A.dtype)
-
+AC = A.copy()
 ptime = [[], []]
 ftime = [[], []]
 stime = [[], []]
@@ -43,7 +43,7 @@ for axis in ((1, 2), 0, 1, 2):
     ptime[0].append(time()-t0)
 
     # us
-    fft = fftw.fftn(input_array, None, axes, threads, flags, output_array)
+    fft = fftw.fftn(input_array, None, axes, threads, flags)
     t0 = time()
     for i in range(loops):
         C2 = fft(A, implicit=implicit)
@@ -63,13 +63,14 @@ for axis in ((1, 2), 0, 1, 2):
     # pyfftw
     ifft = pyfftw.builders.ifftn(output_array, axes=axes, threads=threads,
                                  overwrite_input=True)
+    CC = C.copy()
     t0 = time()
     for i in range(loops):
         B = ifft(C, normalise_idft=True)
     ptime[1].append(time()-t0)
 
     # us
-    ifft = fftw.ifftn(output_array, None, axes, threads, flags, input_array)
+    ifft = fftw.ifftn(output_array, None, axes, threads, flags)
     t0 = time()
     for i in range(loops):
         B2 = ifft(C, normalize_idft=True, implicit=implicit)

@@ -1,5 +1,5 @@
 cimport fftw_xfftn
-from utilities import *
+from .utilities import *
 import numpy as np
 cimport numpy as np
 from libc.stdint cimport intptr_t
@@ -229,7 +229,7 @@ cdef class FFT:
 
         """
         norm = normalize or (kw.get('normalize_idft', False) and
-                             self.kind==FFTW_BACKWARD) # For compatibility with pyfftw
+                             self.kind in (FFTW_BACKWARD, C2R)) # For compatibility with pyfftw
         if implicit:
             return self._apply_implicit(input_array, output_array, norm, **kw)
         return self._apply_explicit(input_array, output_array, norm, **kw)
