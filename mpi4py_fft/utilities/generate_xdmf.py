@@ -4,7 +4,7 @@ import six
 from numpy import dtype, array, invert
 try:
     import h5py
-except ImportError:
+except ImportError: #pragma: no cover
     import warnings
     warnings.warn('h5py not installed')
 
@@ -31,6 +31,8 @@ def get_grid(geometry, topology, attrs):
         """.format(geometry, topology, attrs)
 
 def get_geometry(kind=0, dim=2):
+    assert kind in (0, 1)
+    assert dim in (2, 3)
     if dim == 2:
         if kind == 0:
             return """<Geometry Type="ORIGIN_DXDY">
@@ -41,8 +43,8 @@ def get_geometry(kind=0, dim=2):
             {2} {3}
           </DataItem>
           </Geometry>"""
-        if kind == 1:
-            return """<Geometry Type="VXVY">
+
+        return """<Geometry Type="VXVY">
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{1}">
             {3}:/mesh/{4}
           </DataItem>
@@ -61,8 +63,8 @@ def get_geometry(kind=0, dim=2):
             {3} {4} {5}
           </DataItem>
           </Geometry>"""
-        if kind == 1:
-            return """<Geometry Type="VXVYVZ">
+
+        return """<Geometry Type="VXVYVZ">
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{3}">
             {4}:/mesh/{5}
           </DataItem>
@@ -73,7 +75,6 @@ def get_geometry(kind=0, dim=2):
             {4}:/mesh/{7}
           </DataItem>
           </Geometry>"""
-    return ""
 
 def get_topology(dims, kind=0):
     assert len(dims) in (2, 3)
@@ -85,6 +86,7 @@ def get_topology(dims, kind=0):
 
 def get_attribute(attr, h5filename, dims, prec):
     name = attr.split("/")[0]
+    assert len(dims) in (2, 3)
     if len(dims) == 2:
         return """<Attribute Name="{0}" Center="Node">
           <DataItem Format="HDF" NumberType="Float" Precision="{5}" Dimensions="{1} {2}">
@@ -92,13 +94,11 @@ def get_attribute(attr, h5filename, dims, prec):
           </DataItem>
           </Attribute>""".format(name, dims[0], dims[1], h5filename, attr, prec)
 
-    if len(dims) == 3:
-        return """<Attribute Name="{0}" Center="Node">
+    return """<Attribute Name="{0}" Center="Node">
           <DataItem Format="HDF" NumberType="Float" Precision="{6}" Dimensions="{1} {2} {3}">
             {4}:/{5}
           </DataItem>
           </Attribute>""".format(name, dims[0], dims[1], dims[2], h5filename, attr, prec)
-    return ""
 
 def generate_xdmf(h5filename, periodic=True):
     """Generate XDMF-files
@@ -164,11 +164,10 @@ def generate_xdmf(h5filename, periodic=True):
                 if not slices in xff:
                     xff[slices] = copy.copy(xdmffile)
                     NN[slices] = N = f[name].shape
+                    cc = ['x0', 'x1']
                     if 'slice' in slices:
                         ss = slices.split("_")
                         cc = [coor[i] for i, sx in enumerate(ss) if 'slice' in sx]
-                    else:
-                        cc = ['x0', 'x1']
                     if 'domain' in keys:
                         geo = get_geometry(kind=0, dim=2)
                         geometry[slices] = geo.format(f['domain/{}'.format(cc[0])][0],
@@ -209,7 +208,7 @@ def generate_xdmf(h5filename, periodic=True):
                 d = dsets[tstep]
                 N = f[d[0]].shape
                 if 'domain' in keys:
-                    geo = get_geometry(kind=0, dim=2)
+                    geo = get_geometry(kind=0, dim=3)
                     geometry = geo.format(f['domain/x0'][0],
                                           f['domain/x1'][0],
                                           f['domain/x2'][0],

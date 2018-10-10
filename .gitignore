@@ -5,6 +5,7 @@
 .eggs/
 build/
 docs/
+htmlcov/
 *.c
 *.h
 *.dat

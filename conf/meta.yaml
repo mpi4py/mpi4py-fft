@@ -30,6 +30,7 @@ requirements:
     - six
     - nomkl
     - scipy
+    - h5py-parallel
 
 test:
   requires:
@@ -41,4 +42,3 @@ test:
 
   imports:
     - mpi4py_fft
-

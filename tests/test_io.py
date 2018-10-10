@@ -1,21 +1,12 @@
 from mpi4py import MPI
 import numpy as np
-import pytest
 from mpi4py_fft import PFFT, HDF5Writer, HDF5Reader, Function, generate_xdmf
 
 N = (12, 13, 14, 15)
 comm = MPI.COMM_WORLD
 
-skip = False
-try:
-    import h5py
-except ImportError:
-    skip = True
-
 ex = {True: 'c', False: 'r'}
 
-@pytest.mark.skipif(skip, reason='h5py not installed')
-@pytest.mark.parametrize('forward_output', (True, False))
 def test_regular_2D(forward_output):
     T = PFFT(comm, (N[0], N[1]))
     for i, domain in enumerate([((0, np.pi), (0, 2*np.pi)),
@@ -36,8 +27,6 @@ def test_regular_2D(forward_output):
         assert np.allclose(u0, u)
         reader.close()
 
-@pytest.mark.skipif(skip, reason='h5py not installed')
-@pytest.mark.parametrize('forward_output', (True, False))
 def test_regular_3D(forward_output):
     T = PFFT(comm, (N[0], N[1], N[2]))
     d0 = ((0, np.pi), (0, 2*np.pi), (0, 3*np.pi))
@@ -63,7 +52,8 @@ def test_regular_3D(forward_output):
         h1file.close()
         if not forward_output:
             generate_xdmf('uv'+filename)
-            generate_xdmf('v'+filename)
+            generate_xdmf('v'+filename, periodic=False)
+            generate_xdmf('v'+filename, periodic=(True, True, True))
 
         u0 = Function(T, forward_output=forward_output)
         reader = HDF5Reader('uv'+filename, T)
@@ -75,5 +65,14 @@ def test_regular_3D(forward_output):
 
 
 if __name__ == '__main__':
-    test_regular_3D(False)
-    #test_regular_2D(False)
+    skip = False
+    try:
+        import h5py
+    except ImportError:
+        skip = True
+
+    if not skip:
+        test_regular_3D(False)
+        test_regular_3D(True)
+        test_regular_2D(False)
+        test_regular_2D(True)

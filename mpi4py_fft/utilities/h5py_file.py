@@ -4,7 +4,7 @@ from mpi4py import MPI
 
 try:
     import h5py
-except ImportError:
+except ImportError: #pragma: no cover
     warnings.warn('h5py not installed')
 
 __all__ = ('HDF5Writer', 'HDF5Reader')
@@ -47,14 +47,14 @@ class HDF5Writer(object):
         for name in names:
             self.f.create_group(name)
 
-    def write_step(self, step, u, forward_output=False):
-        """Write field u to HDF5 format
+    def write_step(self, step, fields, forward_output=False):
+        """Write ``fields`` to HDF5 format
 
         Parameters
         ----------
             step : int
                 Index of field stored
-            u : list of arrays
+            fields : list of arrays
                 The fields to be stored
             forward_output : bool, optional
                 If False, then u is an array from real physical space,
@@ -67,13 +67,13 @@ class HDF5Writer(object):
             - name/{2,3,4}D/step
 
         """
-        if isinstance(u, np.ndarray):
-            u = [u]
-        for name, field in zip(self.names, u):
+        if isinstance(fields, np.ndarray):
+            fields = [fields]
+        for name, field in zip(self.names, fields):
             self._write_group(name, field, step, forward_output)
 
-    def write_slice_step(self, step, sl, u, forward_output=False):
-        """Write slice of field u to HDF5 format
+    def write_slice_step(self, step, sl, fields, forward_output=False):
+        """Write slice of ``fields`` to HDF5 format
 
         Parameters
         ----------
@@ -81,11 +81,11 @@ class HDF5Writer(object):
                 Index of field stored
             sl : list of slices
                 The slice to be stored
-            u : list of arrays
+            fields : list of arrays
                 The fields to be stored
             forward_output : bool, optional
-                If False, then u is an array from real physical space,
-                If True, then u is an array from spectral space.
+                If False, then fields are arrays from real physical space,
+                If True, then fields are arrays from spectral space.
 
         Note
         ----
@@ -99,8 +99,8 @@ class HDF5Writer(object):
             name/1D/8_slice_12/step
 
         """
-        if isinstance(u, np.ndarray):
-            u = [u]
+        if isinstance(fields, np.ndarray):
+            fields = [fields]
         ndims = sl.count(slice(None))
         sl = list(sl)
         sp = []
@@ -128,8 +128,8 @@ class HDF5Writer(object):
                     sl[i] -= s[i].start
                 else:
                     inside *= 0
-        assert len(self.names) == len(u)
-        for name, field in zip(self.names, u):
+        assert len(self.names) == len(fields)
+        for name, field in zip(self.names, fields):
             self._write_slice_group(name, slname, ndims, sp, field, sl, sf,
                                     inside, step, forward_output)
 
@@ -143,12 +143,12 @@ class HDF5Writer(object):
             self.f.create_group(group)
         self.f[group].create_dataset(str(step), shape=self.T.shape(forward_output), dtype=u.dtype)
         if self.T.ndim() == 5:
-            self.f["/".join((group, str(step)))][s[0], s[1], s[2], s[3], s[4]] = u
+            self.f["/".join((group, str(step)))][s[0], s[1], s[2], s[3], s[4]] = u #pragma: no cover
         elif self.T.ndim() == 4:
-            self.f["/".join((group, str(step)))][s[0], s[1], s[2], s[3]] = u
+            self.f["/".join((group, str(step)))][s[0], s[1], s[2], s[3]] = u #pragma: no cover
         elif self.T.ndim() == 3:
             self.f["/".join((group, str(step)))][s[0], s[1], s[2]] = u
-        elif self.T.ndim() == 2:
+        elif self.T.ndim() == 2: #pragma: no cover
             self.f["/".join((group, str(step)))][s[0], s[1]] = u
         else:
             raise NotImplementedError
@@ -164,7 +164,7 @@ class HDF5Writer(object):
         self.f[group].create_dataset(str(step), shape=np.take(N, sp), dtype=u.dtype)
         if inside == 1:
             if len(sf) == 3:
-                self.f["/".join((group, str(step)))][sf[0], sf[1], sf[2]] = u[sl]
+                self.f["/".join((group, str(step)))][sf[0], sf[1], sf[2]] = u[sl] #pragma: no cover
             elif len(sf) == 2:
                 self.f["/".join((group, str(step)))][sf[0], sf[1]] = u[sl]
             elif len(sf) == 1:
