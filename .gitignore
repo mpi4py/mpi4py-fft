@@ -11,6 +11,8 @@ docs/
 *.html
 *.xml
 *.txt
+*.h5
+*.xdmf
 fftwf_*.*
 fftwl_*.*
 __pycache__

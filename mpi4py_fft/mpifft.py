@@ -350,8 +350,8 @@ class PFFT(object):
                                                                    ip.subshape)]
         return s
 
-    def shape(self, spectral=False):
-        if spectral:
+    def shape(self, forward_output=False):
+        if forward_output:
             return self._output_shape
         return self._input_shape
 
