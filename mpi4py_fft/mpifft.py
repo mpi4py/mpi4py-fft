@@ -366,6 +366,11 @@ class PFFT(object):
     def ndim(self):
         return len(self._input_shape)
 
+    def dtype(self, forward_output=False):
+        if forward_output:
+            return self.forward.output_array.dtype
+        return self.forward.input_array.dtype
+
 
 class Function(np.ndarray):
     """Distributed Numpy array for instance of PFFT class

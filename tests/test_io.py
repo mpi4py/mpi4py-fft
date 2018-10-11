@@ -1,13 +1,14 @@
 from mpi4py import MPI
 import numpy as np
-from mpi4py_fft import PFFT, HDF5Writer, HDF5Reader, Function, generate_xdmf
+from mpi4py_fft import PFFT, HDF5Writer, HDF5Reader, Function, generate_xdmf, \
+    NCWriter, NCReader
 
 N = (12, 13, 14, 15)
 comm = MPI.COMM_WORLD
 
 ex = {True: 'c', False: 'r'}
 
-def test_regular_2D(forward_output):
+def test_h5py_2D(forward_output):
     T = PFFT(comm, (N[0], N[1]))
     for i, domain in enumerate([((0, np.pi), (0, 2*np.pi)),
                                 (np.arange(N[0], dtype=np.float)*2*np.pi/N[0],
@@ -27,7 +28,7 @@ def test_regular_2D(forward_output):
         assert np.allclose(u0, u)
         reader.close()
 
-def test_regular_3D(forward_output):
+def test_h5py_3D(forward_output):
     T = PFFT(comm, (N[0], N[1], N[2]))
     d0 = ((0, np.pi), (0, 2*np.pi), (0, 3*np.pi))
     d1 = (np.arange(N[0], dtype=np.float)*2*np.pi/N[0],
@@ -63,6 +64,55 @@ def test_regular_3D(forward_output):
         assert np.allclose(u0, v)
         reader.close()
 
+def test_netcdf_2D():
+    T = PFFT(comm, (N[0], N[1]))
+    for i, domain in enumerate([((0, np.pi), (0, 2*np.pi)),
+                                (np.arange(N[0], dtype=np.float)*2*np.pi/N[0],
+                                 np.arange(N[1], dtype=np.float)*2*np.pi/N[1])]):
+        filename = 'nctest_{}.nc'.format(ex[i == 0])
+        hfile = NCWriter(filename, 'u', T, domain=domain)
+        u = Function(T, forward_output=False, val=1)
+        hfile.write_step(0, u)
+        hfile.write_step(1, u)
+        hfile.close()
+
+        u0 = Function(T, forward_output=False)
+        reader = NCReader(filename, T)
+        reader.read(u0, 'u', 0)
+        assert np.allclose(u0, u)
+        reader.close()
+
+def test_netcdf_3D():
+    T = PFFT(comm, (N[0], N[1], N[2]))
+    d0 = ((0, np.pi), (0, 2*np.pi), (0, 3*np.pi))
+    d1 = (np.arange(N[0], dtype=np.float)*2*np.pi/N[0],
+          np.arange(N[1], dtype=np.float)*2*np.pi/N[1],
+          np.arange(N[2], dtype=np.float)*2*np.pi/N[2])
+    for i, domain in enumerate([d0, d1]):
+        filename = 'nctest3_{}.nc'.format(ex[i == 0])
+        h0file = NCWriter('uv'+filename, ['u', 'v'], T, domain)
+        h1file = NCWriter('v'+filename, ['u'], T, domain)
+        u = Function(T, forward_output=False)
+        v = Function(T, forward_output=False)
+        u[:] = np.random.random(u.shape)
+        v[:] = 2
+        for k in range(3):
+            h0file.write_step(k, [u, v])
+            h1file.write_step(k, v)
+            h0file.write_slice_step(k, [slice(None), 4, slice(None)], [u, v])
+            h0file.write_slice_step(k, [slice(None), 4, 4], [u, v])
+            h1file.write_slice_step(2*k, [slice(None), 4, slice(None)], v)
+            h1file.write_slice_step(3*k, [slice(None), 4, 4], v)
+        h0file.close()
+        h1file.close()
+
+        u0 = Function(T, forward_output=False)
+        reader = NCReader('uv'+filename, T)
+        reader.read(u0, 'u', 0)
+        assert np.allclose(u0, u)
+        reader.read(u0, 'v', 0)
+        assert np.allclose(u0, v)
+        reader.close()
 
 if __name__ == '__main__':
     skip = False
@@ -72,7 +122,9 @@ if __name__ == '__main__':
         skip = True
 
     if not skip:
-        test_regular_3D(False)
-        test_regular_3D(True)
-        test_regular_2D(False)
-        test_regular_2D(True)
+        test_h5py_3D(False)
+        test_h5py_3D(True)
+        test_h5py_2D(False)
+        test_h5py_2D(True)
+        test_netcdf_2D()
+        test_netcdf_3D()

@@ -11,7 +11,7 @@ __all__ = ('HDF5Writer', 'HDF5Reader')
 
 comm = MPI.COMM_WORLD
 
-class HDF5Writer(object):
+class HDF5Writer(h5py.File):
     """Class for writing data to HDF5 format
 
     Parameters
@@ -30,22 +30,22 @@ class HDF5Writer(object):
             grid points must be specified. One array per direction.
     """
     def __init__(self, h5name, names, T, domain=None):
-        self.f = h5py.File(h5name, "w", driver="mpio", comm=comm)
+        h5py.File.__init__(self, h5name, "w", driver="mpio", comm=comm)
         self.T = T
         self.names = names
         domain = domain if domain is not None else ((0, 2*np.pi),)*3
         if isinstance(domain[0], np.ndarray):
-            self.f.create_group("mesh")
+            self.create_group("mesh")
         else:
-            self.f.create_group("domain")
+            self.create_group("domain")
         for i in range(T.ndim()):
             d = domain[i]
             if isinstance(d, np.ndarray):
-                self.f["mesh"].create_dataset("x{}".format(i), data=d)
+                self["mesh"].create_dataset("x{}".format(i), data=d)
             else:
-                self.f["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
+                self["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
         for name in names:
-            self.f.create_group(name)
+            self.create_group(name)
 
     def write_step(self, step, fields, forward_output=False):
         """Write ``fields`` to HDF5 format
@@ -133,23 +133,20 @@ class HDF5Writer(object):
             self._write_slice_group(name, slname, ndims, sp, field, sl, sf,
                                     inside, step, forward_output)
 
-    def close(self):
-        self.f.close()
-
     def _write_group(self, name, u, step, forward_output):
         s = tuple(self.T.local_slice(forward_output))
         group = "/".join((name, "{}D".format(len(u.shape))))
-        if group not in self.f:
-            self.f.create_group(group)
-        self.f[group].create_dataset(str(step), shape=self.T.shape(forward_output), dtype=u.dtype)
+        if group not in self:
+            self.create_group(group)
+        self[group].create_dataset(str(step), shape=self.T.shape(forward_output), dtype=u.dtype)
         if self.T.ndim() == 5:
-            self.f["/".join((group, str(step)))][s[0], s[1], s[2], s[3], s[4]] = u #pragma: no cover
+            self["/".join((group, str(step)))][s[0], s[1], s[2], s[3], s[4]] = u #pragma: no cover
         elif self.T.ndim() == 4:
-            self.f["/".join((group, str(step)))][s[0], s[1], s[2], s[3]] = u #pragma: no cover
+            self["/".join((group, str(step)))][s[0], s[1], s[2], s[3]] = u #pragma: no cover
         elif self.T.ndim() == 3:
-            self.f["/".join((group, str(step)))][s[0], s[1], s[2]] = u
+            self["/".join((group, str(step)))][s[0], s[1], s[2]] = u
         elif self.T.ndim() == 2: #pragma: no cover
-            self.f["/".join((group, str(step)))][s[0], s[1]] = u
+            self["/".join((group, str(step)))][s[0], s[1]] = u
         else:
             raise NotImplementedError
 
@@ -158,19 +155,19 @@ class HDF5Writer(object):
         sl = tuple(sl)
         sf = tuple(sf)
         group = "/".join((name, "{}D".format(ndims), slname))
-        if group not in self.f:
-            self.f.create_group(group)
+        if group not in self:
+            self.create_group(group)
         N = self.T.shape(forward_output)
-        self.f[group].create_dataset(str(step), shape=np.take(N, sp), dtype=u.dtype)
+        self[group].create_dataset(str(step), shape=np.take(N, sp), dtype=u.dtype)
         if inside == 1:
             if len(sf) == 3:
-                self.f["/".join((group, str(step)))][sf[0], sf[1], sf[2]] = u[sl] #pragma: no cover
+                self["/".join((group, str(step)))][sf[0], sf[1], sf[2]] = u[sl] #pragma: no cover
             elif len(sf) == 2:
-                self.f["/".join((group, str(step)))][sf[0], sf[1]] = u[sl]
+                self["/".join((group, str(step)))][sf[0], sf[1]] = u[sl]
             elif len(sf) == 1:
-                self.f["/".join((group, str(step)))][sf[0]] = u[sl]
+                self["/".join((group, str(step)))][sf[0]] = u[sl]
 
-class HDF5Reader(object):
+class HDF5Reader(h5py.File):
     """Class for reading data from HDF5 format
 
     Parameters
@@ -187,7 +184,7 @@ class HDF5Reader(object):
             grid points must be specified. One array per direction.
     """
     def __init__(self, h5name, T):
-        self.f = h5py.File(h5name, driver="mpio", comm=comm)
+        h5py.File.__init__(self, h5name, driver="mpio", comm=comm)
         self.T = T
 
     def read(self, u, dset, forward_output=False):
@@ -203,7 +200,4 @@ class HDF5Reader(object):
 
         """
         s = self.T.local_slice(forward_output)
-        u[:] = self.f[dset][tuple(s)]
-
-    def close(self):
-        self.f.close()
+        u[:] = self[dset][tuple(s)]

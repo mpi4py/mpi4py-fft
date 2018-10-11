@@ -13,6 +13,7 @@ htmlcov/
 *.xml
 *.txt
 *.h5
+*.nc
 *.xdmf
 fftwf_*.*
 fftwl_*.*
