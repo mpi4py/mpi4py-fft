@@ -80,9 +80,9 @@ def get_topology(dims, kind=0):
     assert len(dims) in (2, 3)
     co = 'Co' if kind == 0 else ''
     if len(dims) == 2:
-        return """<Topology Dimensions="{0} {1}" Type="2D{2}RectMesh"/>""".format(*dims, co)
+        return """<Topology Dimensions="{0} {1}" Type="2D{2}RectMesh"/>""".format(dims[0], dims[1], co)
     if len(dims) == 3:
-        return """<Topology Dimensions="{0} {1} {2}" Type="3D{3}RectMesh"/>""".format(*dims, co)
+        return """<Topology Dimensions="{0} {1} {2}" Type="3D{3}RectMesh"/>""".format(dims[0], dims[1], dims[2], co)
 
 def get_attribute(attr, h5filename, dims, prec):
     name = attr.split("/")[0]
