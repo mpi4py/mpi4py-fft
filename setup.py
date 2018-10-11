@@ -4,6 +4,7 @@ import os, sys
 import shutil
 from setuptools import setup
 from setuptools.extension import Extension
+#from distutils.core import setup, Extension
 from numpy import get_include
 
 cwd = os.path.abspath(os.path.dirname(__file__))
@@ -43,13 +44,14 @@ for p in ('fftw_', 'fftwf_', 'fftwl_'):
                          library_dirs=[os.path.join(sys.prefix, 'lib')]))
 
 setup(name="mpi4py-fft",
-      version="1.0-beta",
+      version="1.0.0",
       description="mpi4py-fft -- FFT with MPI",
       long_description="",
       author="Lisandro Dalcin and Mikael Mortensen",
       url='https://bitbucket.org/mpi4py/mpi4py-fft',
       packages=["mpi4py_fft",
-                "mpi4py_fft.fftw"],
+                "mpi4py_fft.fftw",
+                "mpi4py_fft.utilities"],
       package_dir={"mpi4py_fft": "mpi4py_fft"},
       ext_modules=ext,
       setup_requires=["setuptools>=18.0", "cython>=0.25"]

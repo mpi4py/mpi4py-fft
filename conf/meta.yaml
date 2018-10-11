@@ -20,6 +20,7 @@ requirements:
     - six
     - pip
     - fftw
+    - setuptools
 
   run:
     - python

@@ -9,9 +9,10 @@ dependencies:
   - cython
   - fftw
   - numpy
+  - nomkl
   - scipy
   - pyfftw
   - mpi4py
   - six
   - pip
-
+  - setuptools
