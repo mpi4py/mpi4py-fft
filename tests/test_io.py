@@ -99,10 +99,10 @@ def test_netcdf_3D():
         for k in range(3):
             h0file.write_step(k, [u, v])
             h1file.write_step(k, v)
-            h0file.write_slice_step(k, [slice(None), 4, slice(None)], [u, v])
-            h0file.write_slice_step(k, [slice(None), 4, 4], [u, v])
-            h1file.write_slice_step(2*k, [slice(None), 4, slice(None)], v)
-            h1file.write_slice_step(3*k, [slice(None), 4, 4], v)
+            h0file.write_slice_step(k, [slice(None), slice(None), 4], [u, v])
+            h0file.write_slice_step(k, [4, 4, slice(None)], [u, v])
+            h1file.write_slice_step(2*k, [slice(None), slice(None), 4], v)
+            h1file.write_slice_step(3*k, [4, 4, slice(None)], v)
         h0file.close()
         h1file.close()
 

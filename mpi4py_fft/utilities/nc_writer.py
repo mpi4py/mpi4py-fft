@@ -129,24 +129,18 @@ class NCWriter(object):
         s = self.T.local_slice(False)
 
         # Check if slice is on this processor and make sl local
-        inside = 1
         sf = []
         for i, j in enumerate(sl):
             if isinstance(j, slice):
                 sf.append(s[i])
             else:
                 if j >= s[i].start and j < s[i].stop:
-                    inside *= 1
                     sl[i] -= s[i].start
-                else:
-                    inside *= 0
         assert len(self.names) == len(fields)
         for name, field in zip(self.names, fields):
-            self._write_slice_group(name, slname, ndims, sp, field, sl, sf,
-                                    inside, step)
+            self._write_slice_group(name, slname, ndims, sp, field, sl, sf, step)
 
-    def _write_slice_group(self, name, slname, ndims, sp, u, sl, sf, inside,
-                           step):
+    def _write_slice_group(self, name, slname, ndims, sp, u, sl, sf, step):
         sl = tuple(sl)
         sf = tuple(sf)
         group = "_".join((name, "{}D".format(ndims), slname))
@@ -164,13 +158,12 @@ class NCWriter(object):
             self.handles[group] = self.f.createVariable(group, self._dtype, sdims)
             self.handles[group].set_collective(True)
 
-        if inside == 1:
-            if len(sf) == 3:
-                self.handles[group][it, sf[0], sf[1], sf[2]] = u[sl] #pragma: no cover
-            elif len(sf) == 2:
-                self.handles[group][it, sf[0], sf[1]] = u[sl]
-            elif len(sf) == 1:
-                self.handles[group][it, sf[0]] = u[sl]
+        if len(sf) == 3:
+            self.handles[group][it, sf[0], sf[1], sf[2]] = u[sl] #pragma: no cover
+        elif len(sf) == 2:
+            self.handles[group][it, sf[0], sf[1]] = u[sl]
+        elif len(sf) == 1:
+            self.handles[group][it, sf[0]] = u[sl]
 
         self.f.sync()
 
