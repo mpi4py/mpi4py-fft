@@ -1,7 +1,8 @@
 # pylint: disable=line-too-long
 import copy
 import six
-from numpy import dtype, array, invert
+import pprint
+from numpy import dtype, array, invert, take
 try:
     import h5py
 except ImportError: #pragma: no cover
@@ -109,16 +110,16 @@ def generate_xdmf(h5filename, periodic=True):
             Name of hdf5-file that we want to decorate with xdmf
         periodic : bool or dim-sequence of bools, optional
             If true along axis i, assume data is periodic.
-            Only affects the calculation of the domain size
-
+            Only affects the calculation of the domain size and only if the
+            domain is given as 2-tuple of origin+dx.
     """
     f = h5py.File(h5filename)
     keys = []
     f.visit(keys.append)
     assert 'mesh' in keys or 'domain' in keys
 
-    # Find unique groups
-    datasets = {2:{}, 3:{}}  # 2D and 3D datasets
+    # Find unique groups of 2D and 3D datasets
+    datasets = {2:{}, 3:{}}
     for key in keys:
         if isinstance(f[key], h5py.Dataset):
             if not ('mesh' in key or 'domain' in key):
@@ -131,102 +132,105 @@ def generate_xdmf(h5filename, periodic=True):
                     else:
                         ds[tstep] = [key]
 
-    if periodic is True:
-        periodic = (0,)*3
-    elif periodic is False:
-        periodic = (1,)*3
-    else:
-        assert isinstance(periodic, (tuple, list))
-        periodic = tuple(array(invert(periodic), int))
-
-    coor = {0:'x0', 1:'x1', 2:'x2'}
+    coor = ['x0', 'x1', 'x2', 'x3', 'x4']
     for ndim, dsets in six.iteritems(datasets):
         timesteps = list(dsets.keys())
         if not timesteps:
             continue
+        if periodic is True:
+            periodic = (0,)*5
+        elif periodic is False:
+            periodic = (1,)*5
+        else:
+            assert isinstance(periodic, (tuple, list))
+            periodic = tuple(array(invert(periodic), int))
 
         timesteps.sort(key=int)
         tt = ""
         for i in timesteps:
             tt += "%s " %i
-
         datatype = f[dsets[timesteps[0]][0]].dtype
         assert datatype.char not in 'FDG', "Cannot use generate_xdmf to visualize complex data."
         prec = 4 if datatype is dtype('float32') else 8
-        if ndim == 2:
-            xff = {}
-            geometry = {}
-            topology = {}
-            grid = {}
-            NN = {}
-            for name in dsets[timesteps[0]]:
+        xff = {}
+        geometry = {}
+        topology = {}
+        attrs = {}
+        grid = {}
+        NN = {}
+        for name in dsets[timesteps[0]]:
+            if 'slice' in name:
                 slices = name.split("/")[2]
-                if not slices in xff:
-                    xff[slices] = copy.copy(xdmffile)
-                    NN[slices] = N = f[name].shape
-                    cc = ['x0', 'x1']
-                    if 'slice' in slices:
-                        ss = slices.split("_")
-                        cc = [coor[i] for i, sx in enumerate(ss) if 'slice' in sx]
-                    if 'domain' in keys:
-                        geo = get_geometry(kind=0, dim=2)
-                        geometry[slices] = geo.format(f['domain/{}'.format(cc[0])][0],
-                                                      f['domain/{}'.format(cc[1])][0],
-                                                      f['domain/{}'.format(cc[0])][1]/(N[0]-periodic[0]),
-                                                      f['domain/{}'.format(cc[1])][1]/(N[1]-periodic[1]))
-                        topology[slices] = get_topology(N, kind=0)
-                    elif 'mesh' in keys:
-                        geo = get_geometry(kind=1, dim=2)
-                        geometry[slices] = geo.format(prec, N[0], N[1], h5filename, cc[0], cc[1])
-                        topology[slices] = get_topology(N, kind=1)
-                    grid[slices] = ''
-
-            # if slice of 3D data, need to know xy, xz or yz plane
-            # Since there may be many different slices, we need to create
-            # one xdmf-file for each composition of slices
-            for tstep in timesteps:
-                d = dsets[tstep]
-                attrs = ''
-                for i, x in enumerate(d):
-                    slices = x.split("/")[2]
-                    if not 'slice' in slices:
-                        slices = dsets[timesteps[0]][0].split("/")[2]
-                    N = NN[slices]
-                    attrs += get_attribute(x, h5filename, N, prec)
-                grid[slices] += get_grid(geometry[slices], topology[slices], attrs)
-
-            for slices, ff in six.iteritems(xff):
-                fname = h5filename[:-3]+"_"+slices+".xdmf" if 'slice' in slices else h5filename[:-3]+".xdmf"
-                xfl = open(fname, "w")
-                h = ff.format(tt, len(timesteps), grid[slices].rstrip())
-                xfl.write(h)
-                xfl.close()
-
-        elif ndim == 3:
-            grid = ''
-            for tstep in timesteps:
-                d = dsets[tstep]
-                N = f[d[0]].shape
+            else:
+                slices = 'whole'
+            cc = copy.copy(coor)
+            if not slices in xff:
+                xff[slices] = copy.copy(xdmffile)
+                NN[slices] = N = f[name].shape
+                if 'slice' in slices:
+                    ss = slices.split("_")
+                    ii = []
+                    for i, sx in enumerate(ss):
+                        if 'slice' in sx:
+                            ii.append(i)
+                    cc = take(coor, ii)
+                else:
+                    ii = list(range(ndim))
                 if 'domain' in keys:
-                    geo = get_geometry(kind=0, dim=3)
-                    geometry = geo.format(f['domain/x0'][0],
-                                          f['domain/x1'][0],
-                                          f['domain/x2'][0],
-                                          f['domain/x0'][1]/(N[0]-periodic[0]),
-                                          f['domain/x1'][1]/(N[1]-periodic[1]),
-                                          f['domain/x2'][1]/(N[2]-periodic[2]))
+                    geo = get_geometry(kind=0, dim=ndim)
+                    if ndim == 2:
+                        assert len(ii) == 2
+                        i, j = ii
+                        geometry[slices] = geo.format(f['domain/{}'.format(coor[i])][0],
+                                                      f['domain/{}'.format(coor[j])][0],
+                                                      f['domain/{}'.format(coor[i])][1]/(N[0]-periodic[i]),
+                                                      f['domain/{}'.format(coor[j])][1]/(N[1]-periodic[j]))
+                    else:
+                        assert len(ii) == 3
+                        i, j, k = ii
+                        geometry[slices] = geo.format(f['domain/{}'.format(coor[i])][0],
+                                                      f['domain/{}'.format(coor[j])][0],
+                                                      f['domain/{}'.format(coor[k])][0],
+                                                      f['domain/{}'.format(coor[i])][1]/(N[0]-periodic[i]),
+                                                      f['domain/{}'.format(coor[j])][1]/(N[1]-periodic[j]),
+                                                      f['domain/{}'.format(coor[k])][1]/(N[2]-periodic[k]))
+                    topology[slices] = get_topology(N, kind=0)
                 elif 'mesh' in keys:
-                    geo = get_geometry(kind=1, dim=3)
-                    geometry[slices] = geo.format(prec, N[0], N[1], N[2], h5filename, 'x2', 'x1', 'x0')
-                topology = get_topology(N)
-                attrs = ""
-                for x in d:
-                    attrs += get_attribute(x, h5filename, N, prec)
-                grid += get_grid(geometry, topology, attrs)
-            xfl = open(h5filename[:-3]+".xdmf", "w")
-            ff = copy.copy(xdmffile)
-            ff = ff.format(tt, len(timesteps), grid.rstrip())
-            xfl.write(ff)
+                    geo = get_geometry(kind=1, dim=ndim)
+                    if ndim == 2:
+                        sig = (prec, N[0], N[1], h5filename, cc[0], cc[1])
+                    else:
+                        sig = (prec, N[0], N[1], N[2], h5filename, cc[2], cc[1], cc[0])
+                    geometry[slices] = geo.format(*sig)
+                    topology[slices] = get_topology(N, kind=1)
+                grid[slices] = ''
+
+        # if slice of data, need to know along which axes
+        # Since there may be many different slices, we need to create
+        # one xdmf-file for each composition of slices
+        pp = pprint.PrettyPrinter()
+        attrs = {}
+        for tstep in timesteps:
+            d = dsets[tstep]
+            slx = set()
+            for i, x in enumerate(d):
+                slices = x.split("/")[2]
+                if not 'slice' in slices:
+                    slices = 'whole'
+                N = NN[slices]
+                if slices not in attrs:
+                    attrs[slices] = ''
+                attrs[slices] += get_attribute(x, h5filename, N, prec)
+                slx.add(slices)
+            for slices in slx:
+                grid[slices] += get_grid(geometry[slices], topology[slices], attrs[slices])
+                attrs[slices] = ''
+
+        for slices, ff in six.iteritems(xff):
+            fname = h5filename[:-3]+"_"+slices+".xdmf" if 'slice' in slices else h5filename[:-3]+".xdmf"
+            xfl = open(fname, "w")
+            h = ff.format(tt, len(timesteps), grid[slices].rstrip())
+            xfl.write(h)
             xfl.close()
 
 if __name__ == "__main__":

@@ -4,8 +4,10 @@
 *.swp
 .eggs/
 build/
-docs/
 htmlcov/
+_build/
+_static/
+_templates/
 *.c
 *.h
 *.dat

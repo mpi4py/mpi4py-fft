@@ -1,4 +1,5 @@
 import warnings
+import six
 import numpy as np
 from mpi4py import MPI
 
@@ -20,8 +21,6 @@ class NCWriter(object):
     ----------
         ncname : str
             Name of netcdf file to be created
-        names : list of strings
-            Names of fields to be stored
         T : PFFT
             Instance of a :class:`.PFFT` class. Must be the same as the space
             used for storing with 'write_step' and 'write_slice_step'
@@ -31,12 +30,19 @@ class NCWriter(object):
             Use dim-sequence of arrays if using a non-uniform mesh where the
             grid points must be specified. One array per direction.
         clobber : bool, optional
+
+    Note
+    ----
+    Each class instance creates one unique NetCDF4-file, with one step-counter.
+    It is possible to store multiple fields in each file, but all snapshots of
+    the fields must be taken at the same time. If you want one field stored
+    every 10th timestep and another every 20th timestep, then use two different
+    class instances and as such two NetCDF4-files.
     """
-    def __init__(self, ncname, names, T, domain, clobber=True, **kw):
+    def __init__(self, ncname, T, domain, clobber=True, **kw):
         self.f = Dataset(ncname, mode="w", clobber=clobber, parallel=True, comm=comm, **kw)
         self.T = T
         self.N = N = T.shape(False)
-        self.names = names
         dtype = self.T.dtype(False)
         assert dtype.char in 'fdg'
         self._dtype = dtype
@@ -45,7 +51,6 @@ class NCWriter(object):
         self.dims = ['time']
         self.nc_t = self.f.createVariable('time', self._dtype, ('time'))
         self.nc_t.set_collective(True)
-        self.slice_step = dict()
 
         d = list(domain)
         if not isinstance(domain[0], np.ndarray):
@@ -61,109 +66,96 @@ class NCWriter(object):
             nc_xyz[:] = d[i]
 
         self.handles = dict()
-        for i, name in enumerate(names):
-            self.handles[name] = self.f.createVariable(name, self._dtype, self.dims)
-            self.handles[name].set_collective(True)
-
         self.f.sync()
 
     def close(self):
         self.f.close()
 
-    def write_step(self, step, fields):
-        """Write field u to netcdf format at a given index step
+    def write(self, step, fields):
+        """Write snapshot step of ``fields`` to NetCDF4 file
 
         Parameters
         ----------
-            step : int
-                Index of field stored
-            fields : list of arrays
-                The fields to be stored
+        step : int
+            Index of snapshot
+        fields : dict
+            The fields to be dumped to file. key, values pairs are variable
+            name and either arrays or 2-tuples, respectively.
+
+        FIXME: NetCDF4 hangs in parallel for slices if some of the
+        processors do not contain the slice.
+
         """
         it = self.nc_t.size
         self.nc_t[it] = step
-
-        if isinstance(fields, np.ndarray):
-            fields = [fields]
-        for name, field in zip(self.names, fields):
-            self._write_group(name, field, it)
+        for name, list_of_fields in six.iteritems(fields):
+            assert isinstance(list_of_fields, (tuple, list))
+            assert isinstance(name, str)
+            for field in list_of_fields:
+                if isinstance(field, np.ndarray):
+                    # Complete array
+                    self._write_group(name, field, it)
+                else:
+                    # A slice of another array
+                    assert len(field) == 2
+                    u, slices = field
+                    self._write_slice_group(name, u, it, slices)
 
     def _write_group(self, name, u, it):
         s = self.T.local_slice(False)
+        if name not in self.handles:
+            self.handles[name] = self.f.createVariable(name, self._dtype, self.dims)
+            self.handles[name].set_collective(True)
+
         if self.T.ndim() == 3:
             self.handles[name][it, s[0], s[1], s[2]] = u
         elif self.T.ndim() == 2:
             self.handles[name][it, s[0], s[1]] = u
         else:
             raise NotImplementedError
-
         self.f.sync()
 
-    def write_slice_step(self, step, sl, fields):
-        """Write slice of ``fields`` to NetCDF4 format
-
-        Parameters
-        ----------
-            step : int
-                Index of field stored
-            sl : list of slices
-                The slice to be stored
-            fields : list of arrays
-                The fields to be stored
-        """
-        if isinstance(fields, np.ndarray):
-            fields = [fields]
-        ndims = sl.count(slice(None))
-        sl = list(sl)
-        sp = []
-        for i, j in enumerate(sl):
-            if isinstance(j, slice):
-                sp.append(i)
+    def _write_slice_group(self, name, u, it, slices):
+        sl = list(slices)
         slname = ''
         for ss in sl:
             if isinstance(ss, slice):
                 slname += 'slice_'
             else:
                 slname += str(ss)+'_'
-        slname = slname[:-1]
         s = self.T.local_slice(False)
 
         # Check if slice is on this processor and make sl local
+        inside = 1
         sf = []
+        sp = []
         for i, j in enumerate(sl):
             if isinstance(j, slice):
                 sf.append(s[i])
+                sp.append(i)
             else:
                 if j >= s[i].start and j < s[i].stop:
+                    inside *= 1
                     sl[i] -= s[i].start
-        assert len(self.names) == len(fields)
-        for name, field in zip(self.names, fields):
-            self._write_slice_group(name, slname, ndims, sp, field, sl, sf, step)
+                else:
+                    inside *= 0
 
-    def _write_slice_group(self, name, slname, ndims, sp, u, sl, sf, step):
+        sdims = ['time'] + list(np.take(self.dims, np.array(sp)+1))
+        fname = "_".join((name, slname[:-1]))
+
+        if fname not in self.handles:
+            self.handles[fname] = self.f.createVariable(fname, self._dtype, sdims)
+            self.handles[fname].set_collective(True)
+            self.handles[fname].setncattr_string('slices', str(slices))
+
         sl = tuple(sl)
-        sf = tuple(sf)
-        group = "_".join((name, "{}D".format(ndims), slname))
-        t = "time_" + group
-        if group not in self.slice_step:
-            self.f.createDimension(t, None)
-            ns_t = self.f.createVariable(t, self._dtype, (t))
-            ns_t.set_collective(True)
-            self.slice_step[group] = ns_t
-        sdims = [t] + list(np.take(self.dims, np.array(sp)+1))
-        it = self.slice_step[group].size
-        self.slice_step[group][it] = step
-
-        if group not in self.handles:
-            self.handles[group] = self.f.createVariable(group, self._dtype, sdims)
-            self.handles[group].set_collective(True)
-
-        if len(sf) == 3:
-            self.handles[group][it, sf[0], sf[1], sf[2]] = u[sl] #pragma: no cover
-        elif len(sf) == 2:
-            self.handles[group][it, sf[0], sf[1]] = u[sl]
-        elif len(sf) == 1:
-            self.handles[group][it, sf[0]] = u[sl]
+        if inside:
+            if len(sf) == 3: #pragma: no cover
+                self.handles[fname][it, sf[0], sf[1], sf[2]] = u[sl]
+            elif len(sf) == 2:
+                self.handles[fname][it, sf[0], sf[1]] = u[sl]
+            elif len(sf) == 1:
+                self.handles[fname][it, sf[0]] = u[sl]
 
         self.f.sync()
 
@@ -177,11 +169,6 @@ class NCReader(object):
         T : PFFT
             Instance of a :class:`PFFT` class. Must be the same as the space
             used for storing with 'write_step' and 'write_slice_step'
-        domain : dim-sequence of 2-tuples or arrays of coordinates
-            Use dim-sequence of 2-tuples to give the size of the domain as
-            origin and length, e.g., (0, 2*pi).
-            Use dim-sequence of arrays if using a non-uniform mesh where the
-            grid points must be specified. One array per direction.
     """
     def __init__(self, ncname, T):
         self.f = Dataset(ncname, "r", parallel=True, comm=comm)
@@ -192,7 +179,8 @@ class NCReader(object):
 
         Parameters
         ----------
-        u : numpy array
+        u : array
+            The array to read into
         dset : str
             Name of array to be read
         step : int

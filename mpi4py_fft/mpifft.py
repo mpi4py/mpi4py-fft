@@ -355,16 +355,8 @@ class PFFT(object):
             return self._output_shape
         return self._input_shape
 
-    def input_shape(self):
-        """Return global shape of input array"""
-        return self._input_shape
-
-    def output_shape(self):
-        """Return global shape of output array"""
-        return self._output_shape
-
     def ndim(self):
-        return len(self._input_shape)
+        return len(self.forward.input_array.shape)
 
     def dtype(self, forward_output=False):
         if forward_output:

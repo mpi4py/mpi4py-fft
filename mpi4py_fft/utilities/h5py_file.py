@@ -1,4 +1,5 @@
 import warnings
+import six
 import numpy as np
 from mpi4py import MPI
 
@@ -18,22 +19,19 @@ class HDF5Writer(h5py.File):
     ----------
         h5name : str
             Name of hdf5 file to be created
-        name : list of strings
-            Names of fields to be stored
         T : PFFT
             Instance of a :class:`PFFT` class. Must be the same as the space
-            used for storing with 'write_step' and 'write_slice_step'
+            used for storing with 'write'
         domain : dim-sequence of 2-tuples or arrays of coordinates
             Use dim-sequence of 2-tuples to give the size of the domain as
             origin and length, e.g., (0, 2*pi).
             Use dim-sequence of arrays if using a non-uniform mesh where the
             grid points must be specified. One array per direction.
     """
-    def __init__(self, h5name, names, T, domain=None):
+    def __init__(self, h5name, T, domain=None):
         h5py.File.__init__(self, h5name, "w", driver="mpio", comm=comm)
         self.T = T
-        self.names = names
-        domain = domain if domain is not None else ((0, 2*np.pi),)*3
+        domain = domain if domain is not None else ((0, 2*np.pi),)*len(T)
         if isinstance(domain[0], np.ndarray):
             self.create_group("mesh")
         else:
@@ -44,69 +42,77 @@ class HDF5Writer(h5py.File):
                 self["mesh"].create_dataset("x{}".format(i), data=d)
             else:
                 self["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
-        for name in names:
-            self.create_group(name)
 
-    def write_step(self, step, fields, forward_output=False):
-        """Write ``fields`` to HDF5 format
+    def write(self, step, fields, forward_output=False):
+        """Write snapshot ``step`` of ``fields`` to HDF5 file
 
         Parameters
         ----------
-            step : int
-                Index of field stored
-            fields : list of arrays
-                The fields to be stored
-            forward_output : bool, optional
-                If False, then u is an array from real physical space,
-                If True, then u is an array from spectral space.
+        step : int
+            Index of snapshot
+        fields : dict
+            The fields to be dumped to file. (key, value) pairs are group name
+            and either arrays or 2-tuples, respectively.
+
+        Example
+        -------
+        >>> from mpi4py import MPI
+        >>> from mpi4py_fft import PFFT, HDF5Writer, Function
+        >>> comm = MPI.COMM_WORLD
+        >>> T = PFFT(comm, (15, 16, 17))
+        >>> u = Function(T, forward_output=False, val=1)
+        >>> v = Function(T, forward_output=False, val=2)
+        >>> f = HDF5Writer(comm, T)
+        >>> f.write(0, {'u': [u, (u, [slice(None), 4, slice(None)])]
+        ...             'v': [v, (v, [slice(None), 5, 5]])})
+        >>> f.write(1, {'u': [u, (u, [slice(None), 4, slice(None)])]
+        ...             'v': [v, (v, [slice(None), 5, 5]])})
+
+        This stores data within two main groups ``u`` and ``v``. The HDF5 file
+        will in the end contain groups::
+
+            /u/3D/{0, 1}
+            /u/2D/slice_4_slice/{0, 1}
+            /v/3D/{0, 1}
+            /v/1D/slice_5_5/{0, 1}
 
         Note
         ----
-        Fields with name 'name' will be stored under
-
-            - name/{2,3,4}D/step
+        The list of slices used in storing only parts of the arrays are views
+        of the *global* arrays.
 
         """
-        if isinstance(fields, np.ndarray):
-            fields = [fields]
-        for name, field in zip(self.names, fields):
-            self._write_group(name, field, step, forward_output)
+        for group, list_of_fields in six.iteritems(fields):
+            assert isinstance(list_of_fields, (tuple, list))
+            assert isinstance(group, str)
 
-    def write_slice_step(self, step, sl, fields, forward_output=False):
-        """Write slice of ``fields`` to HDF5 format
+            for field in list_of_fields:
+                if isinstance(field, np.ndarray):
+                    self._write_group(group, field, step, forward_output)
+                else:
+                    assert len(field) == 2
+                    u, sl = field
+                    self._write_slice_step(group, step, sl, u, forward_output)
+
+    def _write_slice_step(self, name, step, sl, field, forward_output=False):
+        """Write slice of ``field`` to HDF5 format
 
         Parameters
         ----------
+            group : str
+                Name of the main group in the HDF5 file
             step : int
-                Index of field stored
+                Index of field to be stored
             sl : list of slices
                 The slice to be stored
-            fields : list of arrays
-                The fields to be stored
+            field : array
+                The base field to be stored from
             forward_output : bool, optional
                 If False, then fields are arrays from real physical space,
                 If True, then fields are arrays from spectral space.
-
-        Note
-        ----
-        Slices of fields with name 'name' will be stored for, e.g.,
-        sl = [slice(None), 16, slice(None)], as
-
-            name/2D/slice_16_slice/step
-
-        whereas sl = [8, slice(None), 12] will be stored as
-
-            name/1D/8_slice_12/step
-
         """
-        if isinstance(fields, np.ndarray):
-            fields = [fields]
         ndims = sl.count(slice(None))
         sl = list(sl)
-        sp = []
-        for i, j in enumerate(sl):
-            if isinstance(j, slice):
-                sp.append(i)
         slname = ''
         for ss in sl:
             if isinstance(ss, slice):
@@ -119,19 +125,31 @@ class HDF5Writer(h5py.File):
         # Check if slice is on this processor and make sl local
         inside = 1
         sf = []
+        sp = []
         for i, j in enumerate(sl):
             if isinstance(j, slice):
                 sf.append(s[i])
+                sp.append(i)
             else:
                 if j >= s[i].start and j < s[i].stop:
                     inside *= 1
                     sl[i] -= s[i].start
                 else:
                     inside *= 0
-        assert len(self.names) == len(fields)
-        for name, field in zip(self.names, fields):
-            self._write_slice_group(name, slname, ndims, sp, field, sl, sf,
-                                    inside, step, forward_output)
+
+        sl = tuple(sl)
+        group = "/".join((name, "{}D".format(ndims), slname))
+        if group not in self:
+            self.create_group(group)
+        N = self.T.shape(forward_output)
+        self[group].create_dataset(str(step), shape=np.take(N, sp), dtype=field.dtype)
+        if inside == 1:
+            if len(sf) == 3:
+                self["/".join((group, str(step)))][sf[0], sf[1], sf[2]] = field[sl] #pragma: no cover
+            elif len(sf) == 2:
+                self["/".join((group, str(step)))][sf[0], sf[1]] = field[sl]
+            elif len(sf) == 1:
+                self["/".join((group, str(step)))][sf[0]] = field[sl]
 
     def _write_group(self, name, u, step, forward_output):
         s = tuple(self.T.local_slice(forward_output))
@@ -150,22 +168,6 @@ class HDF5Writer(h5py.File):
         else:
             raise NotImplementedError
 
-    def _write_slice_group(self, name, slname, ndims, sp, u, sl, sf, inside,
-                           step, forward_output):
-        sl = tuple(sl)
-        sf = tuple(sf)
-        group = "/".join((name, "{}D".format(ndims), slname))
-        if group not in self:
-            self.create_group(group)
-        N = self.T.shape(forward_output)
-        self[group].create_dataset(str(step), shape=np.take(N, sp), dtype=u.dtype)
-        if inside == 1:
-            if len(sf) == 3:
-                self["/".join((group, str(step)))][sf[0], sf[1], sf[2]] = u[sl] #pragma: no cover
-            elif len(sf) == 2:
-                self["/".join((group, str(step)))][sf[0], sf[1]] = u[sl]
-            elif len(sf) == 1:
-                self["/".join((group, str(step)))][sf[0]] = u[sl]
 
 class HDF5Reader(h5py.File):
     """Class for reading data from HDF5 format
@@ -177,11 +179,6 @@ class HDF5Reader(h5py.File):
         T : PFFT
             Instance of a :class:`PFFT` class. Must be the same as the space
             used for storing with 'write_step' and 'write_slice_step'
-        domain : dim-sequence of 2-tuples or arrays of coordinates
-            Use dim-sequence of 2-tuples to give the size of the domain as
-            origin and length, e.g., (0, 2*pi).
-            Use dim-sequence of arrays if using a non-uniform mesh where the
-            grid points must be specified. One array per direction.
     """
     def __init__(self, h5name, T):
         h5py.File.__init__(self, h5name, driver="mpio", comm=comm)
@@ -192,7 +189,8 @@ class HDF5Reader(h5py.File):
 
         Parameters
         ----------
-        u : numpy array
+        u : array
+            The array to read into
         dset : str
             Name of array to be read
         forward_output : bool, optional

@@ -7,6 +7,8 @@ Subpackages
 .. toctree::
 
     mpi4py_fft.fftw
+    mpi4py_fft.utilities
+
 
 Submodules
 ----------
@@ -33,7 +35,7 @@ mpi4py\_fft.pencil module
 
 .. automodule:: mpi4py_fft.pencil
     :members:
-    :undoc-members: 
+    :undoc-members:
     :show-inheritance:
 
 Module contents

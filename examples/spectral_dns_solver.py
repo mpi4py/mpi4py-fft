@@ -44,7 +44,7 @@ curl_pad = Function(FFT_pad, False, tensor=3)
 def get_local_mesh(FFT, L):
     """Returns local mesh."""
     X = np.ogrid[FFT.local_slice(False)]
-    N = FFT.input_shape()
+    N = FFT.shape()
     for i in range(len(N)):
         X[i] = (X[i]*L[i]/N[i])
     X = [np.broadcast_to(x, FFT.local_shape(False)) for x in X]
@@ -54,7 +54,7 @@ def get_local_wavenumbermesh(FFT, L):
     """Returns local wavenumber mesh."""
 
     s = FFT.local_slice()
-    N = FFT.input_shape()
+    N = FFT.shape()
 
     # Set wavenumbers in grid
     k = [np.fft.fftfreq(n, 1./n).astype(int) for n in N[:-1]]
