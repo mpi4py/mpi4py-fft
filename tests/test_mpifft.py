@@ -145,8 +145,8 @@ def test_mpifft():
                                         fft.backward.input_array.shape)
                                 assert (fft.backward.output_pencil.subshape ==
                                         fft.backward.output_array.shape)
-                                assert np.alltrue(np.array(fft.output_shape()) == np.array(fft.pencil[1].shape))
-                                assert np.alltrue(np.array(fft.input_shape()) == np.array(fft.pencil[0].shape))
+                                assert np.alltrue(np.array(fft._output_shape) == np.array(fft.pencil[1].shape))
+                                assert np.alltrue(np.array(fft._input_shape) == np.array(fft.pencil[0].shape))
                                 ax = -1 if axes is None else axes[-1] if isinstance(axes[-1], int) else axes[-1][-1]
                                 assert fft.forward.input_pencil.substart[ax] == 0
                                 assert fft.backward.output_pencil.substart[ax] == 0
@@ -230,4 +230,3 @@ def test_mpifft():
 if __name__ == '__main__':
     test_mpifft()
     test_r2r()
-

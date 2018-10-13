@@ -31,7 +31,7 @@ class HDF5Writer(h5py.File):
     def __init__(self, h5name, T, domain=None):
         h5py.File.__init__(self, h5name, "w", driver="mpio", comm=comm)
         self.T = T
-        domain = domain if domain is not None else ((0, 2*np.pi),)*len(T)
+        domain = domain if domain is not None else ((0, 2*np.pi),)*len(T.shape())
         if isinstance(domain[0], np.ndarray):
             self.create_group("mesh")
         else:
@@ -62,11 +62,11 @@ class HDF5Writer(h5py.File):
         >>> T = PFFT(comm, (15, 16, 17))
         >>> u = Function(T, forward_output=False, val=1)
         >>> v = Function(T, forward_output=False, val=2)
-        >>> f = HDF5Writer(comm, T)
-        >>> f.write(0, {'u': [u, (u, [slice(None), 4, slice(None)])]
-        ...             'v': [v, (v, [slice(None), 5, 5]])})
-        >>> f.write(1, {'u': [u, (u, [slice(None), 4, slice(None)])]
-        ...             'v': [v, (v, [slice(None), 5, 5]])})
+        >>> f = HDF5Writer('h5filename.h5', T)
+        >>> f.write(0, {'u': [u, (u, [slice(None), 4, slice(None)])],
+        ...             'v': [v, (v, [slice(None), 5, 5])]})
+        >>> f.write(1, {'u': [u, (u, [slice(None), 4, slice(None)])],
+        ...             'v': [v, (v, [slice(None), 5, 5])]})
 
         This stores data within two main groups ``u`` and ``v``. The HDF5 file
         will in the end contain groups::
