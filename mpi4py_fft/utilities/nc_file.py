@@ -30,6 +30,8 @@ class NCWriter(object):
             Use dim-sequence of arrays if using a non-uniform mesh where the
             grid points must be specified. One array per direction.
         clobber : bool, optional
+        kw : dict
+            Additional keywords
 
     Note
     ----
@@ -71,7 +73,7 @@ class NCWriter(object):
     def close(self):
         self.f.close()
 
-    def write(self, step, fields):
+    def write(self, step, fields, **kw):
         """Write snapshot step of ``fields`` to NetCDF4 file
 
         Parameters
@@ -81,6 +83,8 @@ class NCWriter(object):
         fields : dict
             The fields to be dumped to file. key, values pairs are variable
             name and either arrays or 2-tuples, respectively.
+        kw : dict
+            Additional keywords for overloading
 
         FIXME: NetCDF4 hangs in parallel for slices if some of the
         processors do not contain the slice.
@@ -169,12 +173,14 @@ class NCReader(object):
         T : PFFT
             Instance of a :class:`PFFT` class. Must be the same as the space
             used for storing with 'write_step' and 'write_slice_step'
+        kw : dict
+            Additional keywords
     """
-    def __init__(self, ncname, T):
+    def __init__(self, ncname, T, **kw):
         self.f = Dataset(ncname, "r", parallel=True, comm=comm)
         self.T = T
 
-    def read(self, u, dset, step):
+    def read(self, u, dset, step=0, **kw):
         """Read into array ``u``
 
         Parameters
@@ -183,8 +189,10 @@ class NCReader(object):
             The array to read into
         dset : str
             Name of array to be read
-        step : int
+        step : int, optional
             Index of field to be read
+        kw : dict
+            Additional keywords
         """
         s = self.T.local_slice(False)
         s = [step] + s

@@ -27,8 +27,10 @@ class HDF5Writer(h5py.File):
             origin and length, e.g., (0, 2*pi).
             Use dim-sequence of arrays if using a non-uniform mesh where the
             grid points must be specified. One array per direction.
+        kw : dict
+            Additional keywords
     """
-    def __init__(self, h5name, T, domain=None):
+    def __init__(self, h5name, T, domain=None, **kw):
         h5py.File.__init__(self, h5name, "w", driver="mpio", comm=comm)
         self.T = T
         domain = domain if domain is not None else ((0, 2*np.pi),)*len(T.shape())
@@ -43,7 +45,7 @@ class HDF5Writer(h5py.File):
             else:
                 self["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
 
-    def write(self, step, fields, forward_output=False):
+    def write(self, step, fields, forward_output=False, **kw):
         """Write snapshot ``step`` of ``fields`` to HDF5 file
 
         Parameters
@@ -53,6 +55,8 @@ class HDF5Writer(h5py.File):
         fields : dict
             The fields to be dumped to file. (key, value) pairs are group name
             and either arrays or 2-tuples, respectively.
+        kw : dict
+            Additional keywords
 
         Example
         -------
@@ -179,12 +183,14 @@ class HDF5Reader(h5py.File):
         T : PFFT
             Instance of a :class:`PFFT` class. Must be the same as the space
             used for storing with 'write_step' and 'write_slice_step'
+        kw : dict
+            Additional keywords
     """
-    def __init__(self, h5name, T):
+    def __init__(self, h5name, T, **kw):
         h5py.File.__init__(self, h5name, driver="mpio", comm=comm)
         self.T = T
 
-    def read(self, u, dset, forward_output=False):
+    def read(self, u, dset, forward_output=False, **kw):
         """Read into array ``u``
 
         Parameters
@@ -195,7 +201,8 @@ class HDF5Reader(h5py.File):
             Name of array to be read
         forward_output : bool, optional
             The array to be read is the output of a forward transform
-
+        kw : dict
+            Additional keywords
         """
         s = self.T.local_slice(forward_output)
         u[:] = self[dset][tuple(s)]
