@@ -77,7 +77,7 @@ def test_3D(backend, forward_output):
         fl = {'hdf5': '/u/3D/0', 'netcdf': 'u'}
         read.read(u0, fl[backend], forward_output=forward_output, step=0)
         assert np.allclose(u0, u)
-        fl['hdf5'] = '/v/3D/0'
+        fl = {'hdf5': '/v/3D/0', 'netcdf': 'v'}
         read.read(u0, fl[backend], forward_output=forward_output, step=0)
         assert np.allclose(u0, v)
         read.close()
