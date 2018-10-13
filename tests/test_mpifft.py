@@ -134,7 +134,8 @@ def test_mpifft():
                                 #    grid = [c.size for c in fft.subcomm]
                                 #    print('grid:{} shape:{} typecode:{} use_pyfftw:{} axes:{}'
                                 #          .format(grid, shape, typecode, use_pyfftw, axes))
-
+                                assert fft.dtype(True) == fft.forward.output_array.dtype
+                                assert fft.dtype(False) == fft.forward.input_array.dtype
                                 assert len(fft.axes) == len(fft.xfftn)
                                 assert len(fft.axes) == len(fft.transfer) + 1
                                 assert (fft.forward.input_pencil.subshape ==

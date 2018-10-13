@@ -7,7 +7,7 @@ from mpi4py import MPI
 
 try:
     from netCDF4 import Dataset
-except ImportError:
+except ImportError: #pragma: no cover
     warnings.warn('netcdf not installed')
 
 __all__ = ('NCWriter', 'NCReader')
