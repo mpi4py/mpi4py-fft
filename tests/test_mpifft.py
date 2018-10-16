@@ -1,12 +1,12 @@
 from __future__ import print_function
+from collections import defaultdict
+import functools
 import numpy as np
+import pyfftw
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT
 from mpi4py_fft.pencil import Subcomm
 from mpi4py_fft import fftw, Function
-from collections import defaultdict
-import functools
-import pyfftw
 
 abstol = dict(f=0.1, d=2e-10, g=1e-10)
 
@@ -46,7 +46,7 @@ def test_mpifft():
     from itertools import product
 
     comm = MPI.COMM_WORLD
-    dims  = (2, 3, 4,)
+    dims = (2, 3, 4,)
     sizes = (16, 17)
     types = 'fFdDgG'
 
@@ -57,7 +57,8 @@ def test_mpifft():
                 if dim < 3:
                     n = min(shape)
                     if typecode in 'fdg':
-                        n //= 2; n+=1
+                        n //= 2
+                        n += 1
                     if n < comm.size:
                         continue
                 for slab in (True, False):
@@ -77,33 +78,14 @@ def test_mpifft():
                                 allaxes = [None, ((0,), (1,), (2,), (3,)),
                                            ((0,), (1, 2, 3)),
                                            ((0,), (1,), (2, 3))]
-                                if use_pyfftw:
-                                    rfftn, irfftn, fftn, ifftn = (pyfftw.builders.rfftn,
-                                                                  pyfftw.builders.irfftn,
-                                                                  pyfftw.builders.fftn,
-                                                                  pyfftw.builders.ifftn)
-                                else:
-                                    rfftn, irfftn, fftn, ifftn = (fftw.rfftn,
-                                                                  fftw.irfftn,
-                                                                  fftw.fftn,
-                                                                  fftw.ifftn)
                                 dctn = functools.partial(fftw.dctn, type=3)
                                 idctn = functools.partial(fftw.idctn, type=3)
 
-                                if typecode in 'FDG':
-                                    transforms = defaultdict(lambda : (fftn, ifftn))
-                                else:
-                                    if use_pyfftw:
-                                        transforms = {(3,): (rfftn, irfftn),
-                                                      (2, 3): (rfftn, irfftn),
-                                                      (1, 2, 3): (rfftn, irfftn),
-                                                      (0, 1, 2, 3): (rfftn, irfftn)}
-                                    else:
-                                        transforms = {(3,): (dctn, idctn),
-                                                      (2, 3): (dctn, idctn),
-                                                      (1, 2, 3): (dctn, idctn),
-                                                      (0, 1, 2, 3): (dctn, idctn)}
-
+                                if not typecode in 'FDG' and not use_pyfftw:
+                                    transforms = {(3,): (dctn, idctn),
+                                                  (2, 3): (dctn, idctn),
+                                                  (1, 2, 3): (dctn, idctn),
+                                                  (0, 1, 2, 3): (dctn, idctn)}
                             for axes in allaxes:
                                 _slab = slab
                                 # Test also the slab is number interface
@@ -146,8 +128,8 @@ def test_mpifft():
                                         fft.backward.input_array.shape)
                                 assert (fft.backward.output_pencil.subshape ==
                                         fft.backward.output_array.shape)
-                                assert np.alltrue(np.array(fft._output_shape) == np.array(fft.pencil[1].shape))
-                                assert np.alltrue(np.array(fft._input_shape) == np.array(fft.pencil[0].shape))
+                                assert np.alltrue(np.array(fft.shape(True)) == np.array(fft.forward.output_pencil.shape))
+                                assert np.alltrue(np.array(fft.shape(False)) == np.array(fft.forward.input_pencil.shape))
                                 ax = -1 if axes is None else axes[-1] if isinstance(axes[-1], int) else axes[-1][-1]
                                 assert fft.forward.input_pencil.substart[ax] == 0
                                 assert fft.backward.output_pencil.substart[ax] == 0

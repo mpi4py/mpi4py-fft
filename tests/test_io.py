@@ -1,17 +1,17 @@
+import functools
 from mpi4py import MPI
 import numpy as np
-from mpi4py_fft import PFFT, HDF5Writer, HDF5Reader, Function, generate_xdmf, \
-    NCWriter, NCReader
+from mpi4py_fft import PFFT, HDF5File, NCFile, Function, generate_xdmf
 
-N = (12, 13, 14, 15)
+N = (22, 23, 24, 25)
 comm = MPI.COMM_WORLD
 
 ex = {True: 'c', False: 'r'}
 
-writer = {'hdf5': HDF5Writer,
-          'netcdf': NCWriter}
-reader = {'hdf5': HDF5Reader,
-          'netcdf': NCReader}
+writer = {'hdf5': functools.partial(HDF5File, mode='w'),
+          'netcdf': functools.partial(NCFile, mode='w')}
+reader = {'hdf5': functools.partial(HDF5File, mode='r'),
+          'netcdf': functools.partial(NCFile, mode='r')}
 ending = {'hdf5': '.h5', 'netcdf': '.nc'}
 
 def test_2D(backend, forward_output):
@@ -71,6 +71,7 @@ def test_3D(backend, forward_output):
             generate_xdmf('uv'+filename)
             generate_xdmf('v'+filename, periodic=False)
             generate_xdmf('v'+filename, periodic=(True, True, True))
+            generate_xdmf('v'+filename, order='visit')
 
         u0 = Function(T, forward_output=forward_output)
         read = reader[backend]('uv'+filename, T)
@@ -122,6 +123,7 @@ if __name__ == '__main__':
     skip = False
     try:
         import h5py
+        import netCDF4
     except ImportError:
         skip = True
 

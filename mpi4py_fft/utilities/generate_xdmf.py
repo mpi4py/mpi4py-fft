@@ -1,7 +1,6 @@
 # pylint: disable=line-too-long
 import copy
 import six
-import pprint
 from numpy import dtype, array, invert, take
 try:
     import h5py
@@ -101,7 +100,7 @@ def get_attribute(attr, h5filename, dims, prec):
           </DataItem>
           </Attribute>""".format(name, dims[0], dims[1], dims[2], h5filename, attr, prec)
 
-def generate_xdmf(h5filename, periodic=True):
+def generate_xdmf(h5filename, periodic=True, order='paraview'):
     """Generate XDMF-files
 
     Parameters
@@ -112,11 +111,17 @@ def generate_xdmf(h5filename, periodic=True):
             If true along axis i, assume data is periodic.
             Only affects the calculation of the domain size and only if the
             domain is given as 2-tuple of origin+dx.
+        order : str
+            'paraview' or 'visit'
+            For some reason Paraview and Visit requires the mesh stored in
+            opposite order in the XDMF-file for 2D slices. Make choice of
+            order here.
     """
     f = h5py.File(h5filename)
     keys = []
     f.visit(keys.append)
     assert 'mesh' in keys or 'domain' in keys
+    assert order.lower() in ('paraview', 'visit')
 
     # Find unique groups of 2D and 3D datasets
     datasets = {2:{}, 3:{}}
@@ -164,7 +169,7 @@ def generate_xdmf(h5filename, periodic=True):
             else:
                 slices = 'whole'
             cc = copy.copy(coor)
-            if not slices in xff:
+            if slices not in xff:
                 xff[slices] = copy.copy(xdmffile)
                 NN[slices] = N = f[name].shape
                 if 'slice' in slices:
@@ -181,10 +186,16 @@ def generate_xdmf(h5filename, periodic=True):
                     if ndim == 2:
                         assert len(ii) == 2
                         i, j = ii
-                        geometry[slices] = geo.format(f['domain/{}'.format(coor[i])][0],
-                                                      f['domain/{}'.format(coor[j])][0],
-                                                      f['domain/{}'.format(coor[i])][1]/(N[0]-periodic[i]),
-                                                      f['domain/{}'.format(coor[j])][1]/(N[1]-periodic[j]))
+                        if order.lower() == 'paraview':
+                            geometry[slices] = geo.format(f['domain/{}'.format(coor[i])][0],
+                                                          f['domain/{}'.format(coor[j])][0],
+                                                          f['domain/{}'.format(coor[i])][1]/(N[0]-periodic[i]),
+                                                          f['domain/{}'.format(coor[j])][1]/(N[1]-periodic[j]))
+                        else:
+                            geometry[slices] = geo.format(f['domain/{}'.format(coor[j])][0],
+                                                          f['domain/{}'.format(coor[i])][0],
+                                                          f['domain/{}'.format(coor[j])][1]/(N[0]-periodic[j]),
+                                                          f['domain/{}'.format(coor[i])][1]/(N[1]-periodic[i]))
                     else:
                         assert len(ii) == 3
                         i, j, k = ii
@@ -198,7 +209,10 @@ def generate_xdmf(h5filename, periodic=True):
                 elif 'mesh' in keys:
                     geo = get_geometry(kind=1, dim=ndim)
                     if ndim == 2:
-                        sig = (prec, N[0], N[1], h5filename, cc[0], cc[1])
+                        if order.lower() == 'paraview':
+                            sig = (prec, N[0], N[1], h5filename, cc[0], cc[1])
+                        else:
+                            sig = (prec, N[1], N[0], h5filename, cc[1], cc[0])
                     else:
                         sig = (prec, N[0], N[1], N[2], h5filename, cc[2], cc[1], cc[0])
                     geometry[slices] = geo.format(*sig)
@@ -208,7 +222,6 @@ def generate_xdmf(h5filename, periodic=True):
         # if slice of data, need to know along which axes
         # Since there may be many different slices, we need to create
         # one xdmf-file for each composition of slices
-        pp = pprint.PrettyPrinter()
         attrs = {}
         for tstep in timesteps:
             d = dsets[tstep]

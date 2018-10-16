@@ -1,8 +1,8 @@
+import functools
 import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT, Function
 from mpi4py_fft.fftw import rfftn, irfftn, fftn, ifftn, dctn, idctn
-import functools
 
 # Set global size of the computational box
 N = np.array([18, 18, 18], dtype=int)
@@ -10,13 +10,10 @@ N = np.array([18, 18, 18], dtype=int)
 dct = functools.partial(dctn, type=3)
 idct = functools.partial(idctn, type=3)
 
-#transforms = {(0,): (fftn, ifftn), (1,): (rfftn, irfftn), (2,): (dct, idct)}
-transforms = {(0,): (rfftn, irfftn), (1,): (dct, idct), (2,): (dct, idct), (1, 2): (dct, idct)}
-#transforms = {(0,): (fftn, ifftn), (1,): (fftn, ifftn), (2,): (rfftn, irfftn), (1, 2): (rfftn, irfftn)}
-#transforms = None
+transforms = {(1, 2): (dct, idct)}
 
 fft = PFFT(MPI.COMM_WORLD, N, axes=None, collapse=True, slab=True, transforms=transforms)
-pfft = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1,2)), slab=True, padding=[1.5, 1.0, 1.0], transforms=transforms)
+pfft = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2)), slab=True, padding=[1.5, 1.0, 1.0], transforms=transforms)
 
 assert fft.axes == pfft.axes
 
@@ -44,4 +41,3 @@ u3 = uc.copy()
 u3 = cfft.forward(u2, u3)
 
 assert np.allclose(uc, u3)
-

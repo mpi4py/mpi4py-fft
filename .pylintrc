@@ -6,6 +6,7 @@ disable = locally-disabled,
     missing-docstring,
     redefined-builtin,
     unused-import,
+    unused-argument,
     too-many-arguments,
     line-too-long,
     no-member,
@@ -13,7 +14,8 @@ disable = locally-disabled,
     len-as-condition,
     consider-using-enumerate,
     wildcard-import,
-    import-error
+    import-error,
+    arguments-differ
 extension-pkg-whitelist = mpi4py,pyfftw,numpy
 generated-members=np.floating
 reports = no
