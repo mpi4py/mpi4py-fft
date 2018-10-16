@@ -15,8 +15,6 @@ class FileBase(object):
                   of each dimension, e.g., (0, 2*pi).
                 - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
                   array per dimension.
-        kw : dict
-            Additional keywords
     """
     def __init__(self, T, domain=None, **kw):
         self.f = None
@@ -35,8 +33,6 @@ class FileBase(object):
             and either arrays or 2-tuples, respectively. The arrays are complete
             arrays to be stored, whereas 2-tuples are arrays with associated
             *global* slices.
-        kw : dict
-            Additional keywords
         """
         for group, list_of_fields in six.iteritems(fields):
             assert isinstance(list_of_fields, (tuple, list))
@@ -59,18 +55,16 @@ class FileBase(object):
             The array to read into
         name : str
             Name of array to be read
-        kw : dict, optional
-            Additional keywords
         """
         raise NotImplementedError
 
     def close(self):
         self.f.close()
 
-    def _write_slice_step(self, *args, **kwargs):
+    def _write_slice_step(self, name, step, slices, field, **kwargs):
         raise NotImplementedError
 
-    def _write_group(self, *args, **kwargs):
+    def _write_group(self, name, u, step, **kwargs):
         raise NotImplementedError
 
     @staticmethod

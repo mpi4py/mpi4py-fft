@@ -31,8 +31,6 @@ class HDF5File(FileBase):
                   array per dimension.
         mode : str
             ``r`` or ``w`` for read or write
-        kw : dict
-            Additional keywords
     """
     def __init__(self, h5name, T, domain=None, mode='w', **kw):
         FileBase.__init__(self, T, domain=domain, **kw)
@@ -49,7 +47,7 @@ class HDF5File(FileBase):
                 else:
                     self.f["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
 
-    def write(self, step, fields, forward_output=False, **kw):
+    def write(self, step, fields, **kw):
         """Write snapshot ``step`` of ``fields`` to HDF5 file
 
         Parameters
@@ -62,10 +60,8 @@ class HDF5File(FileBase):
             arrays to be stored, whereas 2-tuples are arrays with associated
             *global* slices.
         forward_output : bool, optional
-            Whether fields to be stored are shaped as the output of a forward
-            transform or not
-        kw : dict, optional
-            Additional keywords
+            Whether fields to be stored are shaped as the output of a
+            forward transform or not
 
         Example
         -------
@@ -95,9 +91,10 @@ class HDF5File(FileBase):
         of the *global* arrays.
 
         """
+        forward_output = kw.get('forward_output', False)
         FileBase.write(self, step, fields, forward_output=forward_output)
 
-    def read(self, u, name, step=0, forward_output=False, **kw):
+    def read(self, u, name, **kw):
         """Read into array ``u``
 
         Parameters
@@ -106,41 +103,25 @@ class HDF5File(FileBase):
             The array to read into
         name : str
             Name of array to be read
-        step : int, optional
-            Index of field to be read
         forward_output : bool, optional
             Whether the array to be read is the output of a forward transform
             or not
-        kw : dict, optional
-            Additional keywords
+        step : int, optional
+            Index of field to be read
         """
+        forward_output = kw.get('forward_output', False)
+        step = kw.get('step', 0)
         s = self.T.local_slice(forward_output)
         ndim = len(self.T.shape())
         dset = "/".join((name, "{}D".format(ndim), str(step)))
         u[:] = self.f[dset][tuple(s)]
 
-    def _write_slice_step(self, name, step, slices, field, forward_output=False):
-        """Write slice of ``field`` to HDF5 format
-
-        Parameters
-        ----------
-            group : str
-                Name of the main group in the HDF5 file
-            step : int
-                Index of field to be stored
-            slices : list of slices
-                The slice to be stored
-            field : array
-                The base field to be stored from
-            forward_output : bool, optional
-                If False, then fields are arrays from real physical space,
-                If True, then fields are arrays from spectral space.
-        """
+    def _write_slice_step(self, name, step, slices, field, **kw):
+        forward_output = kw.get('forward_output', False)
         slices = list(slices)
         ndims = slices.count(slice(None))
         slname = self._get_slice_name(slices)
         s = self.T.local_slice(forward_output)
-
         slices, inside = self._get_local_slices(slices, s)
         sp = np.nonzero([isinstance(x, slice) for x in slices])[0]
         sf = np.take(s, sp)
@@ -158,7 +139,8 @@ class HDF5File(FileBase):
             elif len(sf) == 1:
                 self.f["/".join((group, str(step)))][sf[0]] = field[sl]
 
-    def _write_group(self, name, u, step, forward_output):
+    def _write_group(self, name, u, step, **kw):
+        forward_output = kw.get('forward_output', False)
         s = tuple(self.T.local_slice(forward_output))
         group = "/".join((name, "{}D".format(len(u.shape))))
         if group not in self.f:

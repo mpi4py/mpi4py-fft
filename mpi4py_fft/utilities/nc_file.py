@@ -34,9 +34,6 @@ class NCFile(FileBase):
         clobber : bool, optional
         mode : str
             ``r`` or ``w`` for read or write
-        kw : dict
-            Additional keywords
-
     Note
     ----
     Each class instance creates one unique NetCDF4-file, with one step-counter.
@@ -87,8 +84,6 @@ class NCFile(FileBase):
             and either arrays or 2-tuples, respectively. The arrays are complete
             arrays to be stored, whereas 2-tuples are arrays with associated
             *global* slices.
-        kw : dict, optional
-            Additional keywords
 
         FIXME: NetCDF4 hangs in parallel for slices if some of the
         processors do not contain the slice.
@@ -98,7 +93,7 @@ class NCFile(FileBase):
         self.nc_t[it] = step
         FileBase.write(self, it, fields)
 
-    def read(self, u, name, step=0, **kw):
+    def read(self, u, name, **kw):
         """Read into array ``u``
 
         Parameters
@@ -109,27 +104,13 @@ class NCFile(FileBase):
             Name of array to be read
         step : int, optional
             Index of field to be read
-        kw : dict, optional
-            Additional keywords
         """
+        step = kw.get('step', 0)
         s = self.T.local_slice(False)
         s = [step] + s
         u[:] = self.f[name][tuple(s)]
 
-    def _write_group(self, name, u, it, **kw):
-        s = self.T.local_slice(False)
-        if name not in self.handles:
-            self.handles[name] = self.f.createVariable(name, self._dtype, self.dims)
-            self.handles[name].set_collective(True)
-        if self.T.ndim() == 3:
-            self.handles[name][it, s[0], s[1], s[2]] = u
-        elif self.T.ndim() == 2:
-            self.handles[name][it, s[0], s[1]] = u
-        else:
-            raise NotImplementedError
-        self.f.sync()
-
-    def _write_slice_step(self, name, it, slices, u, **kw):
+    def _write_slice_step(self, name, step, slices, field, **kw):
         slices = list(slices)
         slname = self._get_slice_name(slices)
         s = self.T.local_slice(False)
@@ -148,10 +129,22 @@ class NCFile(FileBase):
         sl = tuple(slices)
         if inside:
             if len(sf) == 3: #pragma: no cover
-                self.handles[fname][it, sf[0], sf[1], sf[2]] = u[sl]
+                self.handles[fname][step, sf[0], sf[1], sf[2]] = field[sl]
             elif len(sf) == 2:
-                self.handles[fname][it, sf[0], sf[1]] = u[sl]
+                self.handles[fname][step, sf[0], sf[1]] = field[sl]
             elif len(sf) == 1:
-                self.handles[fname][it, sf[0]] = u[sl]
+                self.handles[fname][step, sf[0]] = field[sl]
 
+        self.f.sync()
+    def _write_group(self, name, u, step, **kw):
+        s = self.T.local_slice(False)
+        if name not in self.handles:
+            self.handles[name] = self.f.createVariable(name, self._dtype, self.dims)
+            self.handles[name].set_collective(True)
+        if self.T.ndim() == 3:
+            self.handles[name][step, s[0], s[1], s[2]] = u
+        elif self.T.ndim() == 2:
+            self.handles[name][step, s[0], s[1]] = u
+        else:
+            raise NotImplementedError
         self.f.sync()

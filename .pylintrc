@@ -14,7 +14,7 @@ disable = locally-disabled,
     consider-using-enumerate,
     wildcard-import,
     import-error,
-    arguments-differ
+    #arguments-differ
 extension-pkg-whitelist = mpi4py,pyfftw,numpy
 generated-members=np.floating
 reports = no
