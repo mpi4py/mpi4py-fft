@@ -103,8 +103,8 @@ This will lead to an hdf5-file with groups::
        ├─ x1
        └─ x2
 
-Note that a mesh is stored along all the data. This mesh can be given in two
-different ways when creating the datafiles:
+Note that a mesh is stored along with all the data. This mesh can be given in
+two different ways when creating the datafiles:
 
     1) A sequence of 2-tuples, where each 2-tuple contains the (origin, length)
        of the domain along its dimension. For example, a uniform mesh that
@@ -145,9 +145,9 @@ we would get a datafile that with ``ncdump -h variousfields.nc`` would look like
 Postprocessing
 --------------
 
-Dataarrays stored to HDF5 files can be visualized using both 'Paraview <https://www.paraview.org>'_
-and 'Visit <https://www.visitusers.org>'_, whereas NetCDF4 files can at the time of writing only be
-opened with 'Visit <https://www.visitusers.org>'_.
+Dataarrays stored to HDF5 files can be visualized using both `Paraview <https://www.paraview.org>`_
+and `Visit <https://www.visitusers.org>`_, whereas NetCDF4 files can at the time of writing only be
+opened with `Visit <https://www.visitusers.org>`_.
 
 To view the HDF5-files we first need to generate some light-weight *xdmf*-files that can
 be understood by both Paraview or Visit. To generate such files, simply throw the
@@ -163,7 +163,7 @@ or 3D data::
     variousfields_slice_slice_4.xdmf
     variousfields_slice_6_slice.xdmf
 
-These files can be opened directly in Paraview. However, not that for Visit, one has to
+These files can be opened directly in Paraview. However, note that for Visit, one has to
 generate the files using::
 
     generate_xdmf('variousfields.h5', order='visit')
