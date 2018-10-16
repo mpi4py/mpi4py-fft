@@ -28,6 +28,14 @@ mpi4py_fft.utilities.nc_file module
     :undoc-members:
     :show-inheritance:
 
+mpi4py_fft.utilities.file_base module
+-------------------------------------
+
+.. automodule:: mpi4py_fft.utilities.file_base
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 Module contents
 ---------------
 

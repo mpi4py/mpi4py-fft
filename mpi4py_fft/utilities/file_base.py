@@ -1,4 +1,3 @@
-import warnings
 import six
 import numpy as np
 
@@ -8,7 +7,7 @@ class FileBase(object):
     Parameters
     ----------
         T : PFFT
-            Instance of a :class:`PFFT` class.
+            Instance of a :class:`.PFFT` class.
         domain : sequence, optional
             The spatial domain. Sequence of either
 
@@ -51,30 +50,31 @@ class FileBase(object):
                     u, sl = field
                     self._write_slice_step(group, step, sl, u, **kw)
 
-    def read(self, u, dset, **kw):
+    def read(self, u, name, **kw):
         """Read into array ``u``
 
         Parameters
         ----------
         u : array
             The array to read into
-        dset : str
+        name : str
             Name of array to be read
-        kw : dict
+        kw : dict, optional
             Additional keywords
         """
-        pass
+        raise NotImplementedError
 
     def close(self):
         self.f.close()
 
     def _write_slice_step(self, *args, **kwargs):
-        pass
+        raise NotImplementedError
 
     def _write_group(self, *args, **kwargs):
-        pass
+        raise NotImplementedError
 
-    def _get_slice_name(self, slices):
+    @staticmethod
+    def _get_slice_name(slices):
         sl = list(slices)
         slname = ''
         for ss in sl:
@@ -84,7 +84,8 @@ class FileBase(object):
                 slname += str(ss)+'_'
         return slname[:-1]
 
-    def _get_local_slices(self, slices, s):
+    @staticmethod
+    def _get_local_slices(slices, s):
         # Check if data is on this processor and make slices local
         inside = 1
         si = np.nonzero([isinstance(x, int) for x in slices])[0]

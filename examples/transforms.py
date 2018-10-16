@@ -2,7 +2,7 @@ import functools
 import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT, Function
-from mpi4py_fft.fftw import rfftn, irfftn, fftn, ifftn, dctn, idctn
+from mpi4py_fft.fftw import dctn, idctn
 
 # Set global size of the computational box
 N = np.array([18, 18, 18], dtype=int)

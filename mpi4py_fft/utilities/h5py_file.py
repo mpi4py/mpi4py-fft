@@ -1,5 +1,4 @@
 import warnings
-import six
 import numpy as np
 from mpi4py import MPI
 from .file_base import FileBase
@@ -31,7 +30,7 @@ class HDF5File(FileBase):
                 - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
                   array per dimension.
         mode : str
-            'r' or 'w' for read or write
+            ``r`` or ``w`` for read or write
         kw : dict
             Additional keywords
     """
@@ -50,7 +49,7 @@ class HDF5File(FileBase):
                 else:
                     self.f["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
 
-    def write(self, step, fields, forward_output=False):
+    def write(self, step, fields, forward_output=False, **kw):
         """Write snapshot ``step`` of ``fields`` to HDF5 file
 
         Parameters
@@ -65,18 +64,18 @@ class HDF5File(FileBase):
         forward_output : bool, optional
             Whether fields to be stored are shaped as the output of a forward
             transform or not
-        kw : dict
+        kw : dict, optional
             Additional keywords
 
         Example
         -------
         >>> from mpi4py import MPI
-        >>> from mpi4py_fft import PFFT, HDF5Writer, Function
+        >>> from mpi4py_fft import PFFT, HDF5File, Function
         >>> comm = MPI.COMM_WORLD
         >>> T = PFFT(comm, (15, 16, 17))
         >>> u = Function(T, forward_output=False, val=1)
         >>> v = Function(T, forward_output=False, val=2)
-        >>> f = HDF5Writer('h5filename.h5', T)
+        >>> f = HDF5File('h5filename.h5', T)
         >>> f.write(0, {'u': [u, (u, [slice(None), 4, slice(None)])],
         ...             'v': [v, (v, [slice(None), 5, 5])]})
         >>> f.write(1, {'u': [u, (u, [slice(None), 4, slice(None)])],
@@ -98,20 +97,26 @@ class HDF5File(FileBase):
         """
         FileBase.write(self, step, fields, forward_output=forward_output)
 
-    def read(self, u, dset, forward_output=False, **kw):
+    def read(self, u, name, step=0, forward_output=False, **kw):
         """Read into array ``u``
 
         Parameters
         ----------
         u : array
             The array to read into
-        dset : str
+        name : str
             Name of array to be read
+        step : int, optional
+            Index of field to be read
         forward_output : bool, optional
             Whether the array to be read is the output of a forward transform
             or not
+        kw : dict, optional
+            Additional keywords
         """
         s = self.T.local_slice(forward_output)
+        ndim = len(self.T.shape())
+        dset = "/".join((name, "{}D".format(ndim), str(step)))
         u[:] = self.f[dset][tuple(s)]
 
     def _write_slice_step(self, name, step, slices, field, forward_output=False):

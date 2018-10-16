@@ -8,8 +8,6 @@ htmlcov/
 _build/
 _static/
 _templates/
-*.c
-*.h
 *.dat
 *.html
 *.xml

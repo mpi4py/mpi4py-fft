@@ -16,6 +16,7 @@ Welcome to mpi4py-fft's documentation!
    global
    dft
    parallel
+   io
 
 Indices and tables
 ==================

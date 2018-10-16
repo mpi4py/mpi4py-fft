@@ -112,7 +112,7 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
             Only affects the calculation of the domain size and only if the
             domain is given as 2-tuple of origin+dx.
         order : str
-            'paraview' or 'visit'
+            ``paraview`` or ``visit``
             For some reason Paraview and Visit requires the mesh stored in
             opposite order in the XDMF-file for 2D slices. Make choice of
             order here.

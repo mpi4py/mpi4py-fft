@@ -3,7 +3,7 @@ from mpi4py import MPI
 import numpy as np
 from mpi4py_fft import PFFT, HDF5File, NCFile, Function, generate_xdmf
 
-N = (22, 23, 24, 25)
+N = (12, 13, 14, 15)
 comm = MPI.COMM_WORLD
 
 ex = {True: 'c', False: 'r'}
@@ -18,7 +18,7 @@ def test_2D(backend, forward_output):
     if backend == 'netcdf':
         assert forward_output is False
     T = PFFT(comm, (N[0], N[1]))
-    for i, domain in enumerate([((0, np.pi), (0, 2*np.pi)),
+    for i, domain in enumerate([None, ((0, np.pi), (0, 2*np.pi)),
                                 (np.arange(N[0], dtype=np.float)*2*np.pi/N[0],
                                  np.arange(N[1], dtype=np.float)*2*np.pi/N[1])]):
         filename = "".join(('test2D_{}{}'.format(ex[i == 0], ex[forward_output]),
@@ -33,8 +33,7 @@ def test_2D(backend, forward_output):
 
         u0 = Function(T, forward_output=forward_output)
         read = reader[backend](filename, T)
-        fl = {'hdf5': '/u/2D/0', 'netcdf': 'u'}
-        read.read(u0, fl[backend], step=0, forward_output=forward_output)
+        read.read(u0, 'u', step=0, forward_output=forward_output)
         assert np.allclose(u0, u)
         read.close()
 
@@ -46,7 +45,7 @@ def test_3D(backend, forward_output):
     d1 = (np.arange(N[0], dtype=np.float)*2*np.pi/N[0],
           np.arange(N[1], dtype=np.float)*2*np.pi/N[1],
           np.arange(N[2], dtype=np.float)*2*np.pi/N[2])
-    for i, domain in enumerate([d0, d1]):
+    for i, domain in enumerate([None, d0, d1]):
         filename = ''.join(('test_{}{}'.format(ex[i == 0], ex[forward_output]),
                             ending[backend]))
         h0file = writer[backend]('uv'+filename, T, domain)
@@ -57,13 +56,14 @@ def test_3D(backend, forward_output):
         v[:] = 2
         for k in range(3):
             h0file.write(k, {'u': [u,
-                                   (u, [slice(None), 4, slice(None)]),
-                                   (u, [slice(None), slice(None), 5])],
-                             'v': [v, (v, [slice(None), slice(None), 5])]},
+                                   (u, [slice(None), slice(None), 4]),
+                                   (u, [5, 5, slice(None)])],
+                             'v': [v,
+                                   (v, [slice(None), 6, slice(None)])]},
                          forward_output=forward_output)
             h1file.write(k, {'v': [v,
-                                   (v, [slice(None), slice(None), 2]),
-                                   (v, [4, 4, slice(None)])]},
+                                   (v, [slice(None), 6, slice(None)]),
+                                   (v, [6, 6, slice(None)])]},
                          forward_output=forward_output)
         h0file.close()
         h1file.close()
@@ -75,11 +75,9 @@ def test_3D(backend, forward_output):
 
         u0 = Function(T, forward_output=forward_output)
         read = reader[backend]('uv'+filename, T)
-        fl = {'hdf5': '/u/3D/0', 'netcdf': 'u'}
-        read.read(u0, fl[backend], forward_output=forward_output, step=0)
+        read.read(u0, 'u', forward_output=forward_output, step=0)
         assert np.allclose(u0, u)
-        fl = {'hdf5': '/v/3D/0', 'netcdf': 'v'}
-        read.read(u0, fl[backend], forward_output=forward_output, step=0)
+        read.read(u0, 'v', forward_output=forward_output, step=0)
         assert np.allclose(u0, v)
         read.close()
 
@@ -93,7 +91,7 @@ def test_4D(backend, forward_output):
           np.arange(N[2], dtype=np.float)*2*np.pi/N[2],
           np.arange(N[3], dtype=np.float)*2*np.pi/N[3]
           )
-    for i, domain in enumerate([d0, d1]):
+    for i, domain in enumerate([None, d0, d1]):
         filename = "".join(('h5test4_{}{}'.format(ex[i == 0], ex[forward_output]),
                             ending[backend]))
         h0file = writer[backend]('uv'+filename, T, domain)
@@ -111,15 +109,14 @@ def test_4D(backend, forward_output):
 
         u0 = Function(T, forward_output=forward_output)
         read = reader[backend]('uv'+filename, T)
-        fl = {'hdf5': '/u/4D/0', 'netcdf': 'u'}
-        read.read(u0, fl[backend], forward_output=forward_output, step=0)
+        read.read(u0, 'u', forward_output=forward_output, step=0)
         assert np.allclose(u0, u)
-        fl = {'hdf5': '/v/4D/0', 'netcdf': 'v'}
-        read.read(u0, fl[backend], forward_output=forward_output, step=0)
+        read.read(u0, 'v', forward_output=forward_output, step=0)
         assert np.allclose(u0, v)
         read.close()
 
 if __name__ == '__main__':
+    #pylint: disable=unused-import
     skip = False
     try:
         import h5py

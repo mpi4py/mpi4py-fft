@@ -1,5 +1,4 @@
 import warnings
-import six
 import numpy as np
 from mpi4py import MPI
 from .file_base import FileBase
@@ -32,8 +31,9 @@ class NCFile(FileBase):
                   of each dimension, e.g., (0, 2*pi).
                 - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
                   array per dimension.
-
         clobber : bool, optional
+        mode : str
+            ``r`` or ``w`` for read or write
         kw : dict
             Additional keywords
 
@@ -59,10 +59,10 @@ class NCFile(FileBase):
             self.nc_t = self.f.createVariable('time', self._dtype, ('time'))
             self.nc_t.set_collective(True)
 
-            d = list(domain)
-            if not isinstance(domain[0], np.ndarray):
-                assert len(domain[0]) == 2
-                for i in range(len(domain)):
+            d = list(self.domain)
+            if not isinstance(self.domain[0], np.ndarray):
+                assert len(self.domain[0]) == 2
+                for i in range(len(self.domain)):
                     d[i] = np.arange(N[i], dtype=np.float)*2*np.pi/N[i]
 
             for i in range(len(d)):
@@ -87,8 +87,8 @@ class NCFile(FileBase):
             and either arrays or 2-tuples, respectively. The arrays are complete
             arrays to be stored, whereas 2-tuples are arrays with associated
             *global* slices.
-        kw : dict
-            Additional keywords for overloading
+        kw : dict, optional
+            Additional keywords
 
         FIXME: NetCDF4 hangs in parallel for slices if some of the
         processors do not contain the slice.
@@ -98,23 +98,23 @@ class NCFile(FileBase):
         self.nc_t[it] = step
         FileBase.write(self, it, fields)
 
-    def read(self, u, dset, step=0, **kw):
+    def read(self, u, name, step=0, **kw):
         """Read into array ``u``
 
         Parameters
         ----------
         u : array
             The array to read into
-        dset : str
+        name : str
             Name of array to be read
         step : int, optional
             Index of field to be read
-        kw : dict
+        kw : dict, optional
             Additional keywords
         """
         s = self.T.local_slice(False)
         s = [step] + s
-        u[:] = self.f[dset][tuple(s)]
+        u[:] = self.f[name][tuple(s)]
 
     def _write_group(self, name, u, it, **kw):
         s = self.T.local_slice(False)
@@ -143,7 +143,7 @@ class NCFile(FileBase):
         if fname not in self.handles:
             self.handles[fname] = self.f.createVariable(fname, self._dtype, sdims)
             self.handles[fname].set_collective(True)
-            self.handles[fname].setncattr_string('slices', str(slices))
+            #self.handles[fname].setncattr_string('slices', str(slices))
 
         sl = tuple(slices)
         if inside:

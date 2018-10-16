@@ -1,5 +1,4 @@
 from __future__ import print_function
-from collections import defaultdict
 import functools
 import numpy as np
 import pyfftw
@@ -81,11 +80,17 @@ def test_mpifft():
                                 dctn = functools.partial(fftw.dctn, type=3)
                                 idctn = functools.partial(fftw.idctn, type=3)
 
-                                if not typecode in 'FDG' and not use_pyfftw:
-                                    transforms = {(3,): (dctn, idctn),
-                                                  (2, 3): (dctn, idctn),
-                                                  (1, 2, 3): (dctn, idctn),
-                                                  (0, 1, 2, 3): (dctn, idctn)}
+                                if not typecode in 'FDG':
+                                    if use_pyfftw:
+                                        transforms = {(3,): (pyfftw.builders.rfftn, pyfftw.builders.irfftn),
+                                                      (2, 3): (pyfftw.builders.rfftn, pyfftw.builders.irfftn),
+                                                      (1, 2, 3): (pyfftw.builders.rfftn, pyfftw.builders.irfftn),
+                                                      (0, 1, 2, 3): (pyfftw.builders.rfftn, pyfftw.builders.irfftn)}
+                                    else:
+                                        transforms = {(3,): (dctn, idctn),
+                                                      (2, 3): (dctn, idctn),
+                                                      (1, 2, 3): (dctn, idctn),
+                                                      (0, 1, 2, 3): (dctn, idctn)}
                             for axes in allaxes:
                                 _slab = slab
                                 # Test also the slab is number interface
