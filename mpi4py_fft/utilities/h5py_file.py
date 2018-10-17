@@ -18,19 +18,19 @@ class HDF5File(FileBase):
     Parameters
     ----------
         h5name : str
-            Name of hdf5 file to be created
+            Name of hdf5 file to be created.
         T : PFFT
             Instance of a :class:`PFFT` class. Must be the same as the space
-            used for storing with :class:`HDF5Writer.write`
-        domain : Sequence
+            used for storing with :class:`HDF5Writer.write`.
+        domain : Sequence, optional
             The spatial domain. Sequence of either
 
                 - 2-tuples, where each 2-tuple contains the (origin, length)
                   of each dimension, e.g., (0, 2*pi).
                 - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
                   array per dimension.
-        mode : str
-            ``r`` or ``w`` for read or write
+        mode : str, optional
+            ``r`` or ``w`` for read or write. Default is ``w``.
     """
     def __init__(self, h5name, T, domain=None, mode='w', **kw):
         FileBase.__init__(self, T, domain=domain, **kw)
@@ -53,7 +53,7 @@ class HDF5File(FileBase):
         Parameters
         ----------
         step : int
-            Index of snapshot
+            Index of snapshot.
         fields : dict
             The fields to be dumped to file. (key, value) pairs are group name
             and either arrays or 2-tuples, respectively. The arrays are complete
@@ -61,7 +61,7 @@ class HDF5File(FileBase):
             *global* slices.
         forward_output : bool, optional
             Whether fields to be stored are shaped as the output of a
-            forward transform or not
+            forward transform or not. Default is False.
 
         Example
         -------
@@ -100,14 +100,14 @@ class HDF5File(FileBase):
         Parameters
         ----------
         u : array
-            The array to read into
+            The array to read into.
         name : str
-            Name of array to be read
+            Name of array to be read.
         forward_output : bool, optional
             Whether the array to be read is the output of a forward transform
-            or not
+            or not. Default is False.
         step : int, optional
-            Index of field to be read
+            Index of field to be read. Default is 0.
         """
         forward_output = kw.get('forward_output', False)
         step = kw.get('step', 0)

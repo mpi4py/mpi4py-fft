@@ -4,6 +4,7 @@ from mpi4py import MPI
 from .file_base import FileBase
 
 # https://github.com/Unidata/netcdf4-python/blob/master/examples/mpi_example.py
+# Note. Not using groups because Visit does not understand it
 
 try:
     from netCDF4 import Dataset
@@ -84,10 +85,6 @@ class NCFile(FileBase):
             and either arrays or 2-tuples, respectively. The arrays are complete
             arrays to be stored, whereas 2-tuples are arrays with associated
             *global* slices.
-
-        FIXME: NetCDF4 hangs in parallel for slices if some of the
-        processors do not contain the slice.
-
         """
         it = self.nc_t.size
         self.nc_t[it] = step
@@ -124,9 +121,10 @@ class NCFile(FileBase):
         if fname not in self.handles:
             self.handles[fname] = self.f.createVariable(fname, self._dtype, sdims)
             self.handles[fname].set_collective(True)
-            #self.handles[fname].setncattr_string('slices', str(slices))
 
         sl = tuple(slices)
+        self.handles[fname][step] = 0 # collectively create dataset
+        self.handles[fname].set_collective(False)
         if inside:
             if len(sf) == 3: #pragma: no cover
                 self.handles[fname][step, sf[0], sf[1], sf[2]] = field[sl]
@@ -134,8 +132,9 @@ class NCFile(FileBase):
                 self.handles[fname][step, sf[0], sf[1]] = field[sl]
             elif len(sf) == 1:
                 self.handles[fname][step, sf[0]] = field[sl]
-
+        self.handles[fname].set_collective(True)
         self.f.sync()
+
     def _write_group(self, name, u, step, **kw):
         s = self.T.local_slice(False)
         if name not in self.handles:

@@ -130,8 +130,7 @@ if __name__ == '__main__':
             if bnd == 'hdf5':
                 forw_output.append(True)
             for kind in forw_output:
-                if not (bnd == 'netcdf' and comm.Get_size() > 1):
-                    test_3D(bnd, kind)
+                test_3D(bnd, kind)
                 test_2D(bnd, kind)
                 if bnd == 'hdf5':
                     test_4D(bnd, kind)

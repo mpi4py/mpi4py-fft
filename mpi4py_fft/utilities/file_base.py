@@ -27,7 +27,7 @@ class FileBase(object):
         Parameters
         ----------
         step : int
-            Index of snapshot
+            Index of snapshot.
         fields : dict
             The fields to be dumped to file. (key, value) pairs are group name
             and either arrays or 2-tuples, respectively. The arrays are complete
@@ -52,9 +52,9 @@ class FileBase(object):
         Parameters
         ----------
         u : array
-            The array to read into
+            The array to read into.
         name : str
-            Name of array to be read
+            Name of array to be read.
         """
         raise NotImplementedError
 
