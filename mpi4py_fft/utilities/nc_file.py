@@ -122,16 +122,12 @@ class NCFile(FileBase):
             self.handles[fname] = self.f.createVariable(fname, self._dtype, sdims)
             self.handles[fname].set_collective(True)
 
-        sl = tuple(slices)
         self.handles[fname][step] = 0 # collectively create dataset
         self.handles[fname].set_collective(False)
+        sf = tuple([step] + list(sf))
+        sl = tuple(slices)
         if inside:
-            if len(sf) == 3: #pragma: no cover
-                self.handles[fname][step, sf[0], sf[1], sf[2]] = field[sl]
-            elif len(sf) == 2:
-                self.handles[fname][step, sf[0], sf[1]] = field[sl]
-            elif len(sf) == 1:
-                self.handles[fname][step, sf[0]] = field[sl]
+            self.handles[fname][sf] = field[sl]
         self.handles[fname].set_collective(True)
         self.f.sync()
 
@@ -140,10 +136,6 @@ class NCFile(FileBase):
         if name not in self.handles:
             self.handles[name] = self.f.createVariable(name, self._dtype, self.dims)
             self.handles[name].set_collective(True)
-        if self.T.ndim() == 3:
-            self.handles[name][step, s[0], s[1], s[2]] = u
-        elif self.T.ndim() == 2:
-            self.handles[name][step, s[0], s[1]] = u
-        else:
-            raise NotImplementedError
+        s = tuple([step] + s)
+        self.handles[name][s] = u
         self.f.sync()

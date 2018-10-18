@@ -317,30 +317,30 @@ class PFFT(object):
         for trans in self.transfer:
             trans.destroy()
 
-    def local_shape(self, spectral=True):
+    def local_shape(self, forward_output=True):
         """The local (to each processor) shape of data
 
         Parameters
         ----------
-        spectral : bool, optional
+        forward_output : bool, optional
             Return shape of output array (spectral space) if True, else return
             shape of input array (physical space)
         """
-        if not spectral:
+        if forward_output is not True:
             return self.forward.input_pencil.subshape
         return self.backward.input_pencil.subshape
 
-    def local_slice(self, spectral=True):
+    def local_slice(self, forward_output=True):
         """The local view into the global data
 
         Parameters
         ----------
-        spectral : bool, optional
+        forward_output : bool, optional
             Return local slices of output array (spectral space) if True, else
             return local slices of input array (physical space)
 
         """
-        if spectral is not True:
+        if forward_output is not True:
             ip = self.forward.input_pencil
             s = [slice(start, start+shape) for start, shape in zip(ip.substart,
                                                                    ip.subshape)]
@@ -351,6 +351,15 @@ class PFFT(object):
         return s
 
     def shape(self, forward_output=False):
+        """Return shape of tensor for space
+
+        Parameters
+        ----------
+            forward_output : bool, optional
+                If True then return shape of spectral space, i.e., the input to
+                a backward transfer. If False then return shape of physical
+                space, i.e., the input to a forward transfer.
+        """
         if forward_output:
             return self._output_shape
         return self._input_shape

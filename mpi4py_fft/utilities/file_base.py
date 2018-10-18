@@ -82,7 +82,7 @@ class FileBase(object):
     def _get_local_slices(slices, s):
         # Check if data is on this processor and make slices local
         inside = 1
-        si = np.nonzero([isinstance(x, int) for x in slices])[0]
+        si = np.nonzero([isinstance(x, int) and not z == slice(None) for x, z in zip(slices, s)])[0]
         for i in si:
             if slices[i] >= s[i].start and slices[i] < s[i].stop:
                 slices[i] -= s[i].start

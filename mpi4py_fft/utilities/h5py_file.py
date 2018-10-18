@@ -38,6 +38,7 @@ class HDF5File(FileBase):
         if mode == 'w':
             if isinstance(self.domain[0], np.ndarray):
                 self.f.create_group("mesh")
+                self.f["mesh"].create_dataset("s", data=np.array([0.0]))
             else:
                 self.f.create_group("domain")
             for i in range(T.ndim()):
@@ -46,6 +47,8 @@ class HDF5File(FileBase):
                     self.f["mesh"].create_dataset("x{}".format(i), data=d)
                 else:
                     self.f["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
+            self.f.attrs.create("ndim", T.ndim())
+            self.f.attrs.create("shape", T.shape(False))
 
     def write(self, step, fields, **kw):
         """Write snapshot ``step`` of ``fields`` to HDF5 file
@@ -124,7 +127,7 @@ class HDF5File(FileBase):
         s = self.T.local_slice(forward_output)
         slices, inside = self._get_local_slices(slices, s)
         sp = np.nonzero([isinstance(x, slice) for x in slices])[0]
-        sf = np.take(s, sp)
+        sf = tuple(np.take(s, sp))
         sl = tuple(slices)
         group = "/".join((name, "{}D".format(ndims), slname))
         if group not in self.f:
@@ -132,27 +135,13 @@ class HDF5File(FileBase):
         N = self.T.shape(forward_output)
         self.f[group].create_dataset(str(step), shape=np.take(N, sp), dtype=field.dtype)
         if inside == 1:
-            if len(sf) == 3:
-                self.f["/".join((group, str(step)))][sf[0], sf[1], sf[2]] = field[sl] #pragma: no cover
-            elif len(sf) == 2:
-                self.f["/".join((group, str(step)))][sf[0], sf[1]] = field[sl]
-            elif len(sf) == 1:
-                self.f["/".join((group, str(step)))][sf[0]] = field[sl]
+            self.f["/".join((group, str(step)))][sf] = field[sl]
 
     def _write_group(self, name, u, step, **kw):
         forward_output = kw.get('forward_output', False)
         s = tuple(self.T.local_slice(forward_output))
-        group = "/".join((name, "{}D".format(len(u.shape))))
+        group = "/".join((name, "{}D".format(self.T.ndim())))
         if group not in self.f:
             self.f.create_group(group)
         self.f[group].create_dataset(str(step), shape=self.T.shape(forward_output), dtype=u.dtype)
-        if self.T.ndim() == 5:
-            self.f["/".join((group, str(step)))][s[0], s[1], s[2], s[3], s[4]] = u #pragma: no cover
-        elif self.T.ndim() == 4:
-            self.f["/".join((group, str(step)))][s[0], s[1], s[2], s[3]] = u #pragma: no cover
-        elif self.T.ndim() == 3:
-            self.f["/".join((group, str(step)))][s[0], s[1], s[2]] = u
-        elif self.T.ndim() == 2: #pragma: no cover
-            self.f["/".join((group, str(step)))][s[0], s[1]] = u
-        else:
-            raise NotImplementedError
+        self.f["/".join((group, str(step)))][s] = u
