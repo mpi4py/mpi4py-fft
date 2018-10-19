@@ -17,7 +17,7 @@ xdmffile = """<?xml version="1.0" encoding="utf-8"?>
   <Domain>
     <Grid Name="Structured Grid" GridType="Collection" CollectionType="Temporal">
       <Time TimeType="List"><DataItem Format="XML" Dimensions="{1}"> {0} </DataItem></Time>
-       {2}
+      {2}
     </Grid>
   </Domain>
 </Xdmf>
@@ -25,11 +25,11 @@ xdmffile = """<?xml version="1.0" encoding="utf-8"?>
 
 def get_grid(geometry, topology, attrs):
     return """<Grid GridType="Uniform">
-          {0}
-          {1}
-          {2}
-        </Grid>
-        """.format(geometry, topology, attrs)
+        {0}
+        {1}
+        {2}
+      </Grid>
+      """.format(geometry, topology, attrs)
 
 def get_geometry(kind=0, dim=2):
     assert kind in (0, 1)
@@ -43,7 +43,7 @@ def get_geometry(kind=0, dim=2):
           <DataItem Format="XML" NumberType="Float" Dimensions="2">
             {2} {3}
           </DataItem>
-          </Geometry>"""
+        </Geometry>"""
 
         return """<Geometry Type="VXVY">
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{1}">
@@ -52,7 +52,7 @@ def get_geometry(kind=0, dim=2):
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{2}">
             {3}:/mesh/{5}
           </DataItem>
-          </Geometry>"""
+        </Geometry>"""
 
     if dim == 3:
         if kind == 0:
@@ -63,7 +63,7 @@ def get_geometry(kind=0, dim=2):
           <DataItem Format="XML" NumberType="Float" Dimensions="3">
             {3} {4} {5}
           </DataItem>
-          </Geometry>"""
+        </Geometry>"""
 
         return """<Geometry Type="VXVYVZ">
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{3}">
@@ -75,7 +75,7 @@ def get_geometry(kind=0, dim=2):
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{1}">
             {4}:/mesh/{7}
           </DataItem>
-          </Geometry>"""
+        </Geometry>"""
 
 def get_topology(dims, kind=0):
     assert len(dims) in (2, 3)
@@ -93,13 +93,15 @@ def get_attribute(attr, h5filename, dims, prec):
           <DataItem Format="HDF" NumberType="Float" Precision="{5}" Dimensions="{1} {2}">
             {3}:/{4}
           </DataItem>
-          </Attribute>""".format(name, dims[0], dims[1], h5filename, attr, prec)
+        </Attribute>
+        """.format(name, dims[0], dims[1], h5filename, attr, prec)
 
     return """<Attribute Name="{0}" Center="Node">
           <DataItem Format="HDF" NumberType="Float" Precision="{6}" Dimensions="{1} {2} {3}">
             {4}:/{5}
           </DataItem>
-          </Attribute>""".format(name, dims[0], dims[1], dims[2], h5filename, attr, prec)
+        </Attribute>
+        """.format(name, dims[0], dims[1], dims[2], h5filename, attr, prec)
 
 def generate_xdmf(h5filename, periodic=True, order='paraview'):
     """Generate XDMF-files
@@ -196,15 +198,17 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
                         assert len(ii) == 2
                         i, j = ii
                         if order.lower() == 'paraview':
-                            geometry[slices] = geo.format(f['domain/{}'.format(coor[i])][0],
-                                                          f['domain/{}'.format(coor[j])][0],
-                                                          f['domain/{}'.format(coor[i])][1]/(N[0]-per[i]),
-                                                          f['domain/{}'.format(coor[j])][1]/(N[1]-per[j]))
+                            data = [f['domain/{}'.format(coor[i])][0],
+                                    f['domain/{}'.format(coor[j])][0],
+                                    f['domain/{}'.format(coor[i])][1]/(N[0]-per[i]),
+                                    f['domain/{}'.format(coor[j])][1]/(N[1]-per[j])]
+                            geometry[slices] = geo.format(*data)
                         else:
-                            geometry[slices] = geo.format(f['domain/{}'.format(coor[j])][0],
-                                                          f['domain/{}'.format(coor[i])][0],
-                                                          f['domain/{}'.format(coor[j])][1]/(N[0]-per[j]),
-                                                          f['domain/{}'.format(coor[i])][1]/(N[1]-per[i]))
+                            data = [f['domain/{}'.format(coor[j])][0],
+                                    f['domain/{}'.format(coor[i])][0],
+                                    f['domain/{}'.format(coor[j])][1]/(N[0]-per[j]),
+                                    f['domain/{}'.format(coor[i])][1]/(N[1]-per[i])]
+                            geometry[slices] = geo.format(*data)
                     else:
                         if ndim == 2:
                             ii.insert(kk, kk)
@@ -237,7 +241,7 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
                         else:
                             sig = (prec, N[1], N[0], h5filename, cc[1], cc[0])
                     else:
-                        if ndim == 2: # 2D slice in 3D domain. Replace one DataItem with a constant to get 2D in 3D.
+                        if ndim == 2: # 2D slice in 3D domain
                             pos = f["mesh/x{}".format(kk)][sl]
                             z = re.findall(r'<DataItem(.*?)</DataItem>', geo, re.DOTALL)
                             geo = geo.replace(z[2-kk], ' Format="XML" NumberType="Float" Precision="{0}" Dimensions="{%d}">\n           {%d}\n          '%(1+kk, 7-kk))
@@ -265,11 +269,14 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
                 attrs[slices] += get_attribute(x, h5filename, N, prec)
                 slx.add(slices)
             for slices in slx:
-                grid[slices] += get_grid(geometry[slices], topology[slices], attrs[slices])
+                grid[slices] += get_grid(geometry[slices], topology[slices],
+                                         attrs[slices].rstrip())
                 attrs[slices] = ''
-
         for slices, ff in six.iteritems(xff):
-            fname = h5filename[:-3]+"_"+slices+".xdmf" if 'slice' in slices else h5filename[:-3]+".xdmf"
+            if 'slice' in slices:
+                fname = h5filename[:-3]+"_"+slices+".xdmf"
+            else:
+                fname = h5filename[:-3]+".xdmf"
             xfl = open(fname, "w")
             h = ff.format(tt, len(timesteps), grid[slices].rstrip())
             xfl.write(h)

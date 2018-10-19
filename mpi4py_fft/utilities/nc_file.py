@@ -34,7 +34,7 @@ class NCFile(FileBase):
                   array per dimension.
         clobber : bool, optional
         mode : str
-            ``r`` or ``w`` for read or write
+            ``r`` or ``w`` for read or write. Default is 'r'.
     Note
     ----
     Each class instance creates one unique NetCDF4-file, with one step-counter.
@@ -43,10 +43,10 @@ class NCFile(FileBase):
     every 10th timestep and another every 20th timestep, then use two different
     class instances and as such two NetCDF4-files.
     """
-    def __init__(self, ncname, T, domain=None, clobber=True, mode='w', **kw):
-        FileBase.__init__(self, T, domain=domain)
+    def __init__(self, ncname, T, domain=None, clobber=True, mode='r', **kw):
+        FileBase.__init__(self, T, domain=domain, **kw)
         self.f = Dataset(ncname, mode=mode, clobber=clobber, parallel=True, comm=comm, **kw)
-        self.N = N = T.shape(False)
+        self.N = N = T.shape(False)[-T.ndim():]
         dtype = self.T.dtype(False)
         assert dtype.char in 'fdg'
         self._dtype = dtype
@@ -60,16 +60,19 @@ class NCFile(FileBase):
             d = list(self.domain)
             if not isinstance(self.domain[0], np.ndarray):
                 assert len(self.domain[0]) == 2
-                for i in range(len(self.domain)):
+                for i in range(T.ndim()):
                     d[i] = np.arange(N[i], dtype=np.float)*2*np.pi/N[i]
-
-            for i in range(len(d)):
+            else:
+                for i in range(T.ndim()):
+                    d[i] = np.squeeze(d[i])
+            self.domain = d
+            for i in range(T.ndim()):
                 xyz = {0:'x', 1:'y', 2:'z'}[i]
                 self.f.createDimension(xyz, N[i])
                 self.dims.append(xyz)
                 nc_xyz = self.f.createVariable(xyz, self._dtype, (xyz))
                 nc_xyz[:] = d[i]
-
+            self.f.setncatts({"ndim": T.ndim(), "shape": T.shape(False)})
             self.handles = dict()
             self.f.sync()
 
@@ -96,11 +99,11 @@ class NCFile(FileBase):
         Parameters
         ----------
         u : array
-            The array to read into
+            The array to read into.
         name : str
-            Name of array to be read
+            Name of array to be read.
         step : int, optional
-            Index of field to be read
+            Index of field to be read. Default is 0.
         """
         step = kw.get('step', 0)
         s = self.T.local_slice(False)
@@ -117,7 +120,6 @@ class NCFile(FileBase):
         sf = np.take(s, sp)
         sdims = ['time'] + list(np.take(self.dims, np.array(sp)+1))
         fname = "_".join((name, slname))
-
         if fname not in self.handles:
             self.handles[fname] = self.f.createVariable(fname, self._dtype, sdims)
             self.handles[fname].set_collective(True)

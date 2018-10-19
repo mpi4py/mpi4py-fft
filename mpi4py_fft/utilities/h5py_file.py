@@ -30,21 +30,20 @@ class HDF5File(FileBase):
                 - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
                   array per dimension.
         mode : str, optional
-            ``r`` or ``w`` for read or write. Default is ``w``.
+            ``r`` or ``w`` for read or write. Default is ``r``.
     """
-    def __init__(self, h5name, T, domain=None, mode='w', **kw):
+    def __init__(self, h5name, T, domain=None, mode='r', **kw):
         FileBase.__init__(self, T, domain=domain, **kw)
         self.f = h5py.File(h5name, mode, driver="mpio", comm=comm)
         if mode == 'w':
             if isinstance(self.domain[0], np.ndarray):
                 self.f.create_group("mesh")
-                self.f["mesh"].create_dataset("s", data=np.array([0.0]))
             else:
                 self.f.create_group("domain")
             for i in range(T.ndim()):
                 d = self.domain[i]
                 if isinstance(d, np.ndarray):
-                    self.f["mesh"].create_dataset("x{}".format(i), data=d)
+                    self.f["mesh"].create_dataset("x{}".format(i), data=np.squeeze(d))
                 else:
                     self.f["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
             self.f.attrs.create("ndim", T.ndim())
@@ -115,7 +114,7 @@ class HDF5File(FileBase):
         forward_output = kw.get('forward_output', False)
         step = kw.get('step', 0)
         s = self.T.local_slice(forward_output)
-        ndim = len(self.T.shape())
+        ndim = self.T.ndim()
         dset = "/".join((name, "{}D".format(ndim), str(step)))
         u[:] = self.f[dset][tuple(s)]
 
