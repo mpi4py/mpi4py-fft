@@ -30,6 +30,7 @@ def test_2D(backend, forward_output):
         hfile.close()
         if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
             generate_xdmf(filename)
+            generate_xdmf(filename, order='visit')
 
         u0 = Function(T, forward_output=forward_output)
         read = reader[backend](filename, T)
