@@ -67,7 +67,7 @@ class NCFile(FileBase):
                     d[i] = np.squeeze(d[i])
             self.domain = d
             for i in range(T.ndim()):
-                xyz = {0:'x', 1:'y', 2:'z'}[i]
+                xyz = 'xyzrst'[i]
                 self.f.createDimension(xyz, N[i])
                 self.dims.append(xyz)
                 nc_xyz = self.f.createVariable(xyz, self._dtype, (xyz))
@@ -75,6 +75,9 @@ class NCFile(FileBase):
             self.f.setncatts({"ndim": T.ndim(), "shape": T.shape(False)})
             self.handles = dict()
             self.f.sync()
+
+    def backend(self):
+        return 'netcdf4'
 
     def write(self, step, fields, **kw):
         """Write snapshot step of ``fields`` to NetCDF4 file

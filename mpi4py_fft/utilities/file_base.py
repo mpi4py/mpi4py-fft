@@ -61,6 +61,9 @@ class FileBase(object):
     def close(self):
         self.f.close()
 
+    def backend(self):
+        raise NotImplementedError
+
     def _write_slice_step(self, name, step, slices, field, **kwargs):
         raise NotImplementedError
 

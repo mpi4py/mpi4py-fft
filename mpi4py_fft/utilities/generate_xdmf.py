@@ -281,6 +281,7 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
             h = ff.format(tt, len(timesteps), grid[slices].rstrip())
             xfl.write(h)
             xfl.close()
+    f.close()
 
 if __name__ == "__main__":
     import sys

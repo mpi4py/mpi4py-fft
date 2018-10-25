@@ -49,6 +49,9 @@ class HDF5File(FileBase):
             self.f.attrs.create("ndim", T.ndim())
             self.f.attrs.create("shape", T.shape(False))
 
+    def backend(self):
+        return 'hdf5'
+
     def write(self, step, fields, **kw):
         """Write snapshot ``step`` of ``fields`` to HDF5 file
 
