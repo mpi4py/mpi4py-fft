@@ -49,7 +49,8 @@ class HDF5File(FileBase):
             self.f.attrs.create("ndim", T.ndim())
             self.f.attrs.create("shape", T.shape(False))
 
-    def backend(self):
+    @staticmethod
+    def backend():
         return 'hdf5'
 
     def write(self, step, fields, **kw):

@@ -76,7 +76,8 @@ class NCFile(FileBase):
             self.handles = dict()
             self.f.sync()
 
-    def backend(self):
+    @staticmethod
+    def backend():
         return 'netcdf4'
 
     def write(self, step, fields, **kw):

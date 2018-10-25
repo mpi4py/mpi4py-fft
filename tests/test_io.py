@@ -9,13 +9,13 @@ comm = MPI.COMM_WORLD
 ex = {True: 'c', False: 'r'}
 
 writer = {'hdf5': functools.partial(HDF5File, mode='w'),
-          'netcdf': functools.partial(NCFile, mode='w')}
+          'netcdf4': functools.partial(NCFile, mode='w')}
 reader = {'hdf5': functools.partial(HDF5File, mode='r'),
-          'netcdf': functools.partial(NCFile, mode='r')}
-ending = {'hdf5': '.h5', 'netcdf': '.nc'}
+          'netcdf4': functools.partial(NCFile, mode='r')}
+ending = {'hdf5': '.h5', 'netcdf4': '.nc'}
 
 def test_2D(backend, forward_output):
-    if backend == 'netcdf':
+    if backend == 'netcdf4':
         assert forward_output is False
     T = PFFT(comm, (N[0], N[1]))
     for i, domain in enumerate([None, ((0, np.pi), (0, 2*np.pi)),
@@ -24,6 +24,7 @@ def test_2D(backend, forward_output):
         filename = "".join(('test2D_{}{}'.format(ex[i == 0], ex[forward_output]),
                             ending[backend]))
         hfile = writer[backend](filename, T, domain=domain)
+        assert hfile.backend() == backend
         u = Function(T, forward_output=forward_output, val=1)
         hfile.write(0, {'u': [u]}, forward_output=forward_output)
         hfile.write(1, {'u': [u]}, forward_output=forward_output)
@@ -39,7 +40,7 @@ def test_2D(backend, forward_output):
         read.close()
 
 def test_3D(backend, forward_output):
-    if backend == 'netcdf':
+    if backend == 'netcdf4':
         assert forward_output is False
     T = PFFT(comm, (N[0], N[1], N[2]))
     d0 = ((0, np.pi), (0, 2*np.pi), (0, 3*np.pi))
@@ -83,7 +84,7 @@ def test_3D(backend, forward_output):
         read.close()
 
 def test_4D(backend, forward_output):
-    if backend == 'netcdf':
+    if backend == 'netcdf4':
         assert forward_output is False
     T = PFFT(comm, (N[0], N[1], N[2], N[3]))
     d0 = ((0, np.pi), (0, 2*np.pi), (0, 3*np.pi), (0, 4*np.pi))
@@ -126,7 +127,7 @@ if __name__ == '__main__':
         skip = True
 
     if not skip:
-        for bnd in ('hdf5', 'netcdf'):
+        for bnd in ('hdf5', 'netcdf4'):
             forw_output = [False]
             if bnd == 'hdf5':
                 forw_output.append(True)
