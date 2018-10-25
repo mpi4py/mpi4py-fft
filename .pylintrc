@@ -15,6 +15,6 @@ disable = locally-disabled,
     wildcard-import,
     import-error,
     #arguments-differ
-extension-pkg-whitelist = mpi4py,pyfftw,numpy
+extension-pkg-whitelist = mpi4py,pyfftw,numpy,netCDF4
 generated-members=np.floating
 reports = no

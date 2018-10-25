@@ -1,12 +1,6 @@
-import warnings
 import numpy as np
 from mpi4py import MPI
 from .file_base import FileBase
-
-try:
-    import h5py
-except ImportError: #pragma: no cover
-    warnings.warn('h5py not installed')
 
 __all__ = ('HDF5File',)
 
@@ -34,6 +28,7 @@ class HDF5File(FileBase):
     """
     def __init__(self, h5name, T, domain=None, mode='r', **kw):
         FileBase.__init__(self, T, domain=domain, **kw)
+        import h5py
         self.f = h5py.File(h5name, mode, driver="mpio", comm=comm)
         if mode == 'w':
             if isinstance(self.domain[0], np.ndarray):

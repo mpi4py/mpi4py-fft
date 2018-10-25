@@ -1,15 +1,9 @@
-import warnings
 import numpy as np
 from mpi4py import MPI
 from .file_base import FileBase
 
 # https://github.com/Unidata/netcdf4-python/blob/master/examples/mpi_example.py
 # Note. Not using groups because Visit does not understand it
-
-try:
-    from netCDF4 import Dataset
-except ImportError: #pragma: no cover
-    warnings.warn('netCDF4 not installed')
 
 __all__ = ('NCFile',)
 
@@ -45,6 +39,7 @@ class NCFile(FileBase):
     """
     def __init__(self, ncname, T, domain=None, clobber=True, mode='r', **kw):
         FileBase.__init__(self, T, domain=domain, **kw)
+        from netCDF4 import Dataset
         self.f = Dataset(ncname, mode=mode, clobber=clobber, parallel=True, comm=comm, **kw)
         self.N = N = T.shape(False)[-T.ndim():]
         dtype = self.T.dtype(False)
