@@ -68,5 +68,8 @@ conda is used for installation.
 For IO you need to install either `h5py <https://www.h5py.org>`_ or
 `netCDF4 <http://unidata.github.io/netcdf4-python/>`_ with support for
 MPI. These libraries are, unfortunately, not compiled with MPI on
-conda-forge. The two libraries are available, though, for both OSX and linux
-from the `spectralDNS <https://anaconda.org/spectralDNS>`_ channel.
+conda-forge. The two libraries are available, though, for both OSX and
+linux (`h5py-parallel <https://anaconda.org/spectraldns/h5py-parallel>`_
+and `netcdf4-parallel <https://anaconda.org/spectraldns/netcdf4-parallel>`_)
+from the `spectralDNS <https://anaconda.org/spectralDNS>`_ channel
+on anaconda cloud.

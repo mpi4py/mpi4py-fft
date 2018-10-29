@@ -2,7 +2,7 @@
 
 import os, sys
 import shutil
-from setuptools import setup, find_packages
+from setuptools import setup
 from setuptools.extension import Extension
 from numpy import get_include
 
@@ -46,7 +46,7 @@ with open("README.rst", "r") as fh:
     long_description = fh.read()
 
 setup(name="mpi4py-fft",
-      version="1.0.1",
+      version="1.0.2",
       description="mpi4py-fft -- FFT with MPI",
       long_description=long_description,
       author="Lisandro Dalcin and Mikael Mortensen",
