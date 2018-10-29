@@ -1,5 +1,4 @@
 import numpy as np
-import pyfftw
 from . import fftw
 
 def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
@@ -16,7 +15,7 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
     options : dict
         arguments for planning serial transforms
     """
-    assert pyfftw
+    import pyfftw
     opts = dict(
         avoid_copy=True,
         overwrite_input=True,

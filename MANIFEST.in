@@ -1,0 +1,3 @@
+include *.py *.txt *.rst
+recursive-include mpi4py_fft *.py *.pyx *.pxd fftw_planxfftn.[c,h]
+recursive-exclude mpi4py_fft fftw[f,l]_xfftn.pyx fftw[f,l]_xfftn.pxd

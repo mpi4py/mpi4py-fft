@@ -2,9 +2,8 @@
 
 import os, sys
 import shutil
-from setuptools import setup
+from setuptools import setup, find_packages
 from setuptools.extension import Extension
-#from distutils.core import setup, Extension
 from numpy import get_include
 
 cwd = os.path.abspath(os.path.dirname(__file__))
@@ -28,7 +27,7 @@ for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn
 
 ext = [Extension("mpi4py_fft.fftw.utilities",
                  sources=[os.path.join(fftwdir, "utilities.pyx")],
-                          libraries=libs[p],
+                 libraries=libs[p],
                  include_dirs=[get_include(),
                                os.path.join(sys.prefix, 'include')],
                  library_dirs=[os.path.join(sys.prefix, 'lib')])]
@@ -43,16 +42,32 @@ for p in ('fftw_', 'fftwf_', 'fftwl_'):
                                        os.path.join(sys.prefix, 'include')],
                          library_dirs=[os.path.join(sys.prefix, 'lib')]))
 
+with open("README.rst", "r") as fh:
+    long_description = fh.read()
+
 setup(name="mpi4py-fft",
-      version="1.0.0",
+      version="1.0.1",
       description="mpi4py-fft -- FFT with MPI",
-      long_description="",
+      long_description=long_description,
       author="Lisandro Dalcin and Mikael Mortensen",
       url='https://bitbucket.org/mpi4py/mpi4py-fft',
       packages=["mpi4py_fft",
                 "mpi4py_fft.fftw",
                 "mpi4py_fft.utilities"],
       package_dir={"mpi4py_fft": "mpi4py_fft"},
+      classifiers=[
+          'Development Status :: 4 - Beta',
+          'Environment :: Console',
+          'Intended Audience :: Developers',
+          'Intended Audience :: Science/Research',
+          'Programming Language :: Python',
+          'Programming Language :: Python :: 2',
+          'Programming Language :: Python :: 3',
+          'License :: OSI Approved :: BSD License',
+          'Topic :: Scientific/Engineering :: Mathematics',
+          'Topic :: Software Development :: Libraries :: Python Modules',
+          ],
       ext_modules=ext,
+      install_requires=["mpi4py", "numpy", "six"],
       setup_requires=["setuptools>=18.0", "cython>=0.25"]
-)
+      )

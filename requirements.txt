@@ -1,7 +1,4 @@
 numpy
-scipy
-fftw
-pyfftw
+cython
 mpi4py
 six
-
