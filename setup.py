@@ -46,7 +46,7 @@ with open("README.rst", "r") as fh:
     long_description = fh.read()
 
 setup(name="mpi4py-fft",
-      version="1.0.2",
+      version="1.0.1",
       description="mpi4py-fft -- FFT with MPI",
       long_description=long_description,
       author="Lisandro Dalcin and Mikael Mortensen",
