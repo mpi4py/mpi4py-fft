@@ -62,14 +62,14 @@ and the C-library
 
 Note that *mpi4py* requires a working MPI installation, with the compiler
 wrapper *mpicc* on your search path. All of the above dependencies are
-available and will be downlaoded through the conda-forge channel if
+available and will be downloaded through the conda-forge channel if
 conda is used for installation.
 
 For IO you need to install either `h5py <https://www.h5py.org>`_ or
 `netCDF4 <http://unidata.github.io/netcdf4-python/>`_ with support for
 MPI. These libraries are, unfortunately, not compiled with MPI on
 conda-forge. The two libraries are available, though, for both OSX and
-linux (`h5py-parallel <https://anaconda.org/spectraldns/h5py-parallel>`_
-and `netcdf4-parallel <https://anaconda.org/spectraldns/netcdf4-parallel>`_)
-from the `spectralDNS <https://anaconda.org/spectralDNS>`_ channel
-on anaconda cloud.
+linux from the `spectralDNS <https://anaconda.org/spectralDNS>`_ channel
+on anaconda cloud::
+
+    conda install -c spectralDNS h5py-parallel netcdf4-parallel
