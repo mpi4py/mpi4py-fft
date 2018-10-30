@@ -12,7 +12,7 @@ except ImportError:
 from .utilities import FFTW_FORWARD, FFTW_MEASURE
 
 fftlib = {}
-for k, v in zip(('F', 'D', 'G'), (fftwf_xfftn, fftw_xfftn, fftwl_xfftn))
+for k, v in zip(('F', 'D', 'G'), (fftwf_xfftn, fftw_xfftn, fftwl_xfftn)):
     if v is not None:
         fftlib[k] = v
 
