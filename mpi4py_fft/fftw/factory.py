@@ -1,12 +1,20 @@
 import six
 import numpy as np
-from . import fftwf_xfftn, fftw_xfftn, fftwl_xfftn
+from . import fftw_xfftn
+try:
+    from . import fftwf_xfftn
+except ImportError:
+    fftwf_xfftn = None
+try:
+    from . import fftwl_xfftn
+except ImportError:
+    fftwl_xfftn = None
 from .utilities import FFTW_FORWARD, FFTW_MEASURE
 
-fftlib = {
-    'F': fftwf_xfftn,
-    'D': fftw_xfftn,
-    'G': fftwl_xfftn}
+fftlib = {}
+for k, v in zip(('F', 'D', 'G'), (fftwf_xfftn, fftw_xfftn, fftwl_xfftn))
+    if v is not None:
+        fftlib[k] = v
 
 def get_planned_FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD,
                     threads=1, flags=(FFTW_MEASURE,), normalize=1):
@@ -60,6 +68,7 @@ def get_planned_FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD,
 
     """
     dtype = input_array.dtype.char
+    assert dtype.upper() in fftlib
     _fft = fftlib[dtype.upper()]
     return _fft.FFT(input_array, output_array, axes, kind, threads, flags,
                     normalize)
@@ -74,8 +83,8 @@ def export_wisdom(filename):
 
     Note
     ----
-    Wisdom is stored for all three precisions, float, double and long double,
-    using, respectively, prefix ``F_``, ``D_`` and ``G_``. Wisdom is
+    Wisdom is stored for all precisions available: float, double and long
+    double, using, respectively, prefix ``F_``, ``D_`` and ``G_``. Wisdom is
     imported using :func:`.import_wisdom`.
 
     See also
@@ -98,8 +107,8 @@ def import_wisdom(filename):
 
     Note
     ----
-    Wisdom is imported for all three precisions, float, double and long double,
-    using, respectively, prefix ``F_``, ``D_`` and ``G_``. Wisdom is
+    Wisdom is imported for all available precisions: float, double and long
+    double, using, respectively, prefix ``F_``, ``D_`` and ``G_``. Wisdom is
     exported using :func:`.export_wisdom`.
 
     See also
@@ -130,4 +139,3 @@ def set_timelimit(limit):
 def cleanup():
     for lib in fftlib.values():
         lib.cleanup()
-
