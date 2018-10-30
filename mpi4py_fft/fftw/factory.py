@@ -1,21 +1,34 @@
 import six
 import numpy as np
 from mpi4py import MPI
-from . import fftw_xfftn
-try:
-    from . import fftwf_xfftn
-except ImportError:
-    fftwf_xfftn = None
-try:
-    from . import fftwl_xfftn
-except ImportError:
-    fftwl_xfftn = None
 from .utilities import FFTW_FORWARD, FFTW_MEASURE
 
+def get_fftw_lib(dtype):
+    dtype = np.dtype(dtype).char.upper()
+    if dtype == 'G':
+        try:
+            from . import fftwl_xfftn
+            return fftwl_xfftn
+        except ImportError:
+            return None
+    elif dtype == 'D':
+        try:
+            from . import fftw_xfftn
+            return fftw_xfftn
+        except ImportError:
+            return None
+    elif dtype == 'F':
+        try:
+            from . import fftwf_xfftn
+            return fftwf_xfftn
+        except ImportError:
+            return None
+
 fftlib = {}
-for k, v in zip(('F', 'D', 'G'), (fftwf_xfftn, fftw_xfftn, fftwl_xfftn)):
-    if v is not None:
-        fftlib[k] = v
+for t in 'fdg':
+    lib = get_fftw_lib(t)
+    if lib is not None:
+        fftlib[t.upper()] = lib
 
 comm = MPI.COMM_WORLD
 

@@ -35,7 +35,10 @@ def test_fftw():
 
     dims = (1, 2, 3)
     sizes = (7, 8, 10)
-    types = 'fdg'
+    types = ''
+    for t in 'fdg':
+        if fftw.get_fftw_lib(t):
+            types += t
     fflags = (fftw.FFTW_ESTIMATE, fftw.FFTW_DESTROY_INPUT)
     iflags = (fftw.FFTW_ESTIMATE, fftw.FFTW_DESTROY_INPUT)
 
