@@ -1,11 +1,16 @@
 from __future__ import print_function
 import functools
 import numpy as np
-import pyfftw
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT
 from mpi4py_fft.pencil import Subcomm
 from mpi4py_fft import fftw, Function
+
+has_pyfftw = True
+try:
+    import pyfftw
+except ImportError:
+    has_pyfftw = False
 
 abstol = dict(f=0.1, d=2e-10, g=1e-10)
 
@@ -64,6 +69,8 @@ def test_mpifft():
                     padding = False
                     for collapse in (True, False):
                         for use_pyfftw in (False, True):
+                            if has_pyfftw is False and use_pyfftw is True:
+                                continue
                             transforms = None
                             if dim < 3:
                                 allaxes = [None, (-1,), (-2,),
@@ -159,6 +166,8 @@ def test_mpifft():
 
                     padding = [1.5]*len(shape)
                     for use_pyfftw in (True, False):
+                        if has_pyfftw is False and use_pyfftw is True:
+                            continue
                         if dim < 3:
                             allaxes = [None, (-1,), (-2,),
                                        (-1, -2,), (-2, -1),

@@ -3,6 +3,12 @@ from time import time
 import numpy as np
 from mpi4py_fft.libfft import FFT
 
+has_pyfftw = True
+try:
+    import pyfftw
+except ImportError:
+    has_pyfftw = False
+
 abstol = dict(f=5e-5, d=1e-14, g=1e-15)
 
 def allclose(a, b):
@@ -17,6 +23,8 @@ def test_libfft():
     types = 'fdgFDG'
 
     for use_pyfftw in (False, True):
+        if has_pyfftw is False and use_pyfftw is True:
+            continue
         t0 = 0
         for typecode in types:
             for dim in dims:
@@ -49,6 +57,8 @@ def test_libfft():
     # difficult to initialize. We solve this problem by making one extra
     # transform
     for use_pyfftw in (True, False):
+        if has_pyfftw is False and use_pyfftw is True:
+            continue
         for padding in (1.5, 2.0):
             for typecode in types:
                 for dim in dims:

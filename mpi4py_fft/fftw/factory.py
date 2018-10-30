@@ -1,5 +1,6 @@
 import six
 import numpy as np
+from mpi4py import MPI
 from . import fftw_xfftn
 try:
     from . import fftwf_xfftn
@@ -15,6 +16,8 @@ fftlib = {}
 for k, v in zip(('F', 'D', 'G'), (fftwf_xfftn, fftw_xfftn, fftwl_xfftn)):
     if v is not None:
         fftlib[k] = v
+
+comm = MPI.COMM_WORLD
 
 def get_planned_FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD,
                     threads=1, flags=(FFTW_MEASURE,), normalize=1):
@@ -84,17 +87,20 @@ def export_wisdom(filename):
     Note
     ----
     Wisdom is stored for all precisions available: float, double and long
-    double, using, respectively, prefix ``F_``, ``D_`` and ``G_``. Wisdom is
-    imported using :func:`.import_wisdom`.
+    double, using, respectively, prefix ``Fn_``, ``Dn_`` and ``Gn_``, where
+    n is the rank of the processor.
+    Wisdom is imported using :func:`.import_wisdom`, which must be called
+    with the same MPI configuration as used with :func:`.export_wisdom`.
 
     See also
     --------
     :func:`.import_wisdom`
 
     """
+    rank = str(comm.Get_rank())
     e = []
     for key, lib in six.iteritems(fftlib):
-        e.append(lib.export_wisdom(bytearray(key+'_'+filename, 'utf-8')))
+        e.append(lib.export_wisdom(bytearray(key+rank+'_'+filename, 'utf-8')))
     assert np.all(np.array(e) == 1), "Not able to export wisdom {}".format(filename)
 
 def import_wisdom(filename):
@@ -108,17 +114,22 @@ def import_wisdom(filename):
     Note
     ----
     Wisdom is imported for all available precisions: float, double and long
-    double, using, respectively, prefix ``F_``, ``D_`` and ``G_``. Wisdom is
-    exported using :func:`.export_wisdom`.
+    double, using, respectively, prefix ``Fn_``, ``Dn_`` and ``Gn_``, where
+    n is the rank of the processor.
+    Wisdom is exported using :func:`.export_wisdom`.
+    Note that importing wisdom only works when using the same MPI configuration
+    as used with :func:`.export_wisdom`.
+
 
     See also
     --------
     :func:`.export_wisdom`
 
     """
+    rank = str(comm.Get_rank())
     e = []
     for key, lib in six.iteritems(fftlib):
-        e.append(lib.import_wisdom(bytearray(key+'_'+filename, 'utf-8')))
+        e.append(lib.import_wisdom(bytearray(key+rank+'_'+filename, 'utf-8')))
     assert np.all(np.array(e) == 1), "Not able to import wisdom {}".format(filename)
 
 def forget_wisdom():

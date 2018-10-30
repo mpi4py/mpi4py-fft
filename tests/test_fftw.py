@@ -1,10 +1,17 @@
 from __future__ import print_function
-import six
 from time import time
+import six
 import numpy as np
-import scipy
-import pyfftw
+from scipy.fftpack import dctn as scipy_dctn
+from scipy.fftpack import dstn as scipy_dstn
+import scipy.fftpack
 from mpi4py_fft import fftw
+
+has_pyfftw = True
+try:
+    import pyfftw
+except ImportError:
+    has_pyfftw = False
 
 abstol = dict(f=5e-4, d=1e-12, g=1e-14)
 
@@ -46,26 +53,27 @@ def test_fftw():
                             outshape = list(shape)
                             outshape[axes[-1]] = shape[axes[-1]]//2+1
                             output_array = fftw.aligned(outshape, dtype=typecode.upper())
-                            oa = output_array if typecode=='d' else None # Test for both types of signature
+                            oa = output_array if typecode == 'd' else None # Test for both types of signature
                             rfftn = fftw.rfftn(input_array, None, axes, threads, fflags, output_array=oa)
                             A = np.random.random(shape).astype(typecode)
                             input_array[:] = A
                             B = rfftn()
                             assert id(B) == id(rfftn.output_array)
-                            B2 = pyfftw.interfaces.numpy_fft.rfftn(input_array, axes=axes)
-                            assert allclose(B, B2), np.linalg.norm(B-B2)
-                            ia = input_array if typecode=='d' else None
+                            if has_pyfftw:
+                                B2 = pyfftw.interfaces.numpy_fft.rfftn(input_array, axes=axes)
+                                assert allclose(B, B2), np.linalg.norm(B-B2)
+                            ia = input_array if typecode == 'd' else None
                             sa = np.take(input_array.shape, axes) if shape[axes[-1]] % 2 == 1 else None
                             irfftn = fftw.irfftn(output_array, sa, axes, threads, iflags, output_array=ia)
-                            irfftn.input_array[...] = B2
+                            irfftn.input_array[...] = B
                             A2 = irfftn(normalize=True)
                             assert allclose(A, A2), np.linalg.norm(A-A2)
                             hfftn = fftw.hfftn(output_array, sa, axes, threads, fflags, output_array=ia)
-                            hfftn.input_array[...] = B2
+                            hfftn.input_array[...] = B
                             AC = hfftn().copy()
                             ihfftn = fftw.ihfftn(input_array, None, axes, threads, iflags, output_array=oa)
                             A2 = ihfftn(AC, implicit=False, normalize=True)
-                            assert allclose(A2, B2), print(np.linalg.norm(A2-B2))
+                            assert allclose(A2, B), print(np.linalg.norm(A2-B))
 
                             # c2c
                             input_array = fftw.aligned(shape, dtype=typecode.upper())
@@ -79,8 +87,9 @@ def test_fftw():
                             ifftn.input_array[...] = D
                             C2 = ifftn(normalize=True)
                             assert allclose(C, C2), np.linalg.norm(C-C2)
-                            D2 = pyfftw.interfaces.numpy_fft.fftn(C, axes=axes)
-                            assert allclose(D, D2), np.linalg.norm(D-D2)
+                            if has_pyfftw:
+                                D2 = pyfftw.interfaces.numpy_fft.fftn(C, axes=axes)
+                                assert allclose(D, D2), np.linalg.norm(D-D2)
 
                             # r2r
                             input_array = fftw.aligned(shape, dtype=typecode)
@@ -93,7 +102,7 @@ def test_fftw():
                                 A2 = idct(B, implicit=True, normalize=True)
                                 assert allclose(A, A2), np.linalg.norm(A-A2)
                                 if typecode is not 'g' and not type is 4:
-                                    B2 = scipy.fftpack.dctn(A, axes=axes, type=type)
+                                    B2 = scipy_dctn(A, axes=axes, type=type)
                                     assert allclose(B, B2), np.linalg.norm(B-B2)
 
                                 dst = fftw.dstn(input_array, None, axes, type, threads, fflags, output_array=oa)
@@ -102,7 +111,7 @@ def test_fftw():
                                 A2 = idst(B, implicit=True, normalize=True)
                                 assert allclose(A, A2), np.linalg.norm(A-A2)
                                 if typecode is not 'g' and not type is 4:
-                                    B2 = scipy.fftpack.dstn(A, axes=axes, type=type)
+                                    B2 = scipy_dstn(A, axes=axes, type=type)
                                     assert allclose(B, B2), np.linalg.norm(B-B2)
 
                             # Different r2r transforms along all axes. Just pick
@@ -128,8 +137,8 @@ def test_fftw():
 
 def test_wisdom():
     # Test a simple export/import call
-    fftw.export_wisdom('wisdom.dat')
-    fftw.import_wisdom('wisdom.dat')
+    fftw.export_wisdom('newwisdom.dat')
+    fftw.import_wisdom('newwisdom.dat')
     fftw.forget_wisdom()
 
 def test_timelimit():
@@ -151,4 +160,3 @@ if __name__ == '__main__':
     test_fftw()
     test_wisdom()
     test_timelimit()
-
