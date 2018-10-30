@@ -4,6 +4,20 @@ from mpi4py import MPI
 from .utilities import FFTW_FORWARD, FFTW_MEASURE
 
 def get_fftw_lib(dtype):
+    """Return compiled fftw module interfacing the FFTW library
+
+    Parameters
+    ----------
+    dtype : dtype
+        Data precision
+
+    Returns
+    -------
+    Module or ``None``
+        Module can be either :mod:`.fftwf_xfftn`, :mod:`.fftw_xfftn` or
+        :mod:`.fftwl_xfftn`, depending on precision.
+    """
+
     dtype = np.dtype(dtype).char.upper()
     if dtype == 'G':
         try:

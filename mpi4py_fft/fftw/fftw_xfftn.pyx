@@ -292,4 +292,3 @@ cdef class FFT:
             output_array *= self._M
 
         return output_array
-
