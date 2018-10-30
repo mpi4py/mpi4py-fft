@@ -52,8 +52,10 @@ def test_mpifft():
     comm = MPI.COMM_WORLD
     dims = (2, 3, 4,)
     sizes = (16, 17)
-    types = 'fFdDgG'
-
+    types = ''
+    for t in 'fdg':
+        if fftw.get_fftw_lib(t):
+            types += t+t.upper()
     for typecode in types:
         for dim in dims:
             for shape in product(*([sizes]*dim)):

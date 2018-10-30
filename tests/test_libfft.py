@@ -1,6 +1,7 @@
 from __future__ import print_function
 from time import time
 import numpy as np
+from mpi4py_fft import fftw
 from mpi4py_fft.libfft import FFT
 
 has_pyfftw = True
@@ -20,7 +21,10 @@ def test_libfft():
 
     dims  = (1, 2, 3)
     sizes = (7, 8, 9)
-    types = 'fdgFDG'
+    types = ''
+    for t in 'fdg':
+        if fftw.get_fftw_lib(t):
+            types += t+t.upper()
 
     for use_pyfftw in (False, True):
         if has_pyfftw is False and use_pyfftw is True:
