@@ -34,7 +34,7 @@ def get_fftw_libs():
                 libs[d].append(tlib)
             if sys.platform in ('unix', 'darwin'):
                 libs[d].append('m')
-    assert len(libs) > 0, "No FFTW libraries found!"
+    assert len(libs) > 0, "No FFTW libraries found in {}".format(library_dirs)
     return libs
 
 def generate_extensions(fftwlibs):
