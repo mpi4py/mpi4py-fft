@@ -19,7 +19,7 @@ def allclose(a, b):
 def test_libfft():
     from itertools import product
 
-    dims  = (1, 2, 3)
+    dims = (1, 2, 3)
     sizes = (7, 8, 9)
     types = ''
     for t in 'fdg':
@@ -56,7 +56,7 @@ def test_libfft():
                                 A = fft.backward(B, A)
                                 t0 += time()
                                 assert allclose(A, X)
-        print(use_pyfftw, t0)
+        print('use_pyfftw: ', use_pyfftw, t0)
     # Padding is different because the physical space is padded and as such
     # difficult to initialize. We solve this problem by making one extra
     # transform

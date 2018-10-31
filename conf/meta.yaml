@@ -1,6 +1,8 @@
+{% set data = load_setup_py_data() %}
+
 package:
   name: mpi4py_fft
-  version: "1.0.1"
+  version: {{ data.get('version') }}
 
 source:
   git_url: ../
@@ -17,7 +19,6 @@ requirements:
     - mpi4py
     - numpy
     - nomkl
-    - six
     - pip
     - fftw
     - setuptools
@@ -28,7 +29,6 @@ requirements:
     - numpy
     - fftw
     - pyfftw
-    - six
     - nomkl
     - scipy >=1.0.0
     - h5py-parallel

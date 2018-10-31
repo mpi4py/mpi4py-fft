@@ -1,14 +1,7 @@
 # pylint: disable=line-too-long
 import copy
 import re
-import six
 from numpy import dtype, array, invert, take
-try:
-    import h5py
-except ImportError: #pragma: no cover
-    import warnings
-    warnings.warn('h5py not installed')
-
 
 __all__ = ('generate_xdmf',)
 
@@ -120,6 +113,7 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
             opposite order in the XDMF-file for 2D slices. Make choice of
             order here.
     """
+    import h5py
     f = h5py.File(h5filename)
     keys = []
     f.visit(keys.append)
@@ -148,7 +142,7 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
         periodic = list(array(invert(periodic), int))
 
     coor = ['x0', 'x1', 'x2', 'x3', 'x4']
-    for ndim, dsets in six.iteritems(datasets):
+    for ndim, dsets in datasets.items():
         timesteps = list(dsets.keys())
         per = copy.copy(periodic)
         if not timesteps:
@@ -272,7 +266,7 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
                 grid[slices] += get_grid(geometry[slices], topology[slices],
                                          attrs[slices].rstrip())
                 attrs[slices] = ''
-        for slices, ff in six.iteritems(xff):
+        for slices, ff in xff.items():
             if 'slice' in slices:
                 fname = h5filename[:-3]+"_"+slices+".xdmf"
             else:

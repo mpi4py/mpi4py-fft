@@ -1,4 +1,3 @@
-import six
 import numpy as np
 
 class FileBase(object):
@@ -34,7 +33,7 @@ class FileBase(object):
             arrays to be stored, whereas 2-tuples are arrays with associated
             *global* slices.
         """
-        for group, list_of_fields in six.iteritems(fields):
+        for group, list_of_fields in fields.items():
             assert isinstance(list_of_fields, (tuple, list))
             assert isinstance(group, str)
 

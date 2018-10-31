@@ -1,6 +1,5 @@
 from __future__ import print_function
 from time import time
-import six
 import numpy as np
 from scipy.fftpack import dctn as scipy_dctn
 from scipy.fftpack import dstn as scipy_dstn
@@ -24,7 +23,7 @@ kinds = {'dst4': fftw.FFTW_RODFT11, # no scipy to compare with
          'dct1': fftw.FFTW_REDFT00,
          'dst1': fftw.FFTW_RODFT00}
 
-rkinds = {val: key for key, val in six.iteritems(kinds)}
+rkinds = {val: key for key, val in kinds.items()}
 
 def allclose(a, b):
     atol = abstol[a.dtype.char.lower()]
@@ -123,11 +122,11 @@ def test_fftw():
                             kds = np.random.randint(3, 11, size=naxes) # get naxes random transforms
                             tsf = [rkinds[k] for k in kds]
                             T = fftw.get_planned_FFT(input_array, input_array.copy(), axes=axes,
-                                         kind=kds, threads=threads, flags=fflags)
+                                                     kind=kds, threads=threads, flags=fflags)
                             C = T(A)
                             TI = fftw.get_planned_FFT(input_array.copy(), input_array.copy(), axes=axes,
-                                          kind=list([fftw.inverse[kd] for kd in kds]),
-                                          threads=threads, flags=iflags)
+                                                      kind=list([fftw.inverse[kd] for kd in kds]),
+                                                      threads=threads, flags=iflags)
 
                             C2 = TI(C)
                             M = fftw.get_normalization(kds, input_array.shape, axes)

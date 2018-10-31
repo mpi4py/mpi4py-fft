@@ -1,4 +1,5 @@
-import six
+#pylint: disable=no-name-in-module
+
 import numpy as np
 from mpi4py import MPI
 from .utilities import FFTW_FORWARD, FFTW_MEASURE
@@ -40,9 +41,9 @@ def get_fftw_lib(dtype):
 
 fftlib = {}
 for t in 'fdg':
-    lib = get_fftw_lib(t)
-    if lib is not None:
-        fftlib[t.upper()] = lib
+    fftw_lib = get_fftw_lib(t)
+    if fftw_lib is not None:
+        fftlib[t.upper()] = fftw_lib
 
 comm = MPI.COMM_WORLD
 
@@ -126,7 +127,7 @@ def export_wisdom(filename):
     """
     rank = str(comm.Get_rank())
     e = []
-    for key, lib in six.iteritems(fftlib):
+    for key, lib in fftlib.items():
         e.append(lib.export_wisdom(bytearray(key+rank+'_'+filename, 'utf-8')))
     assert np.all(np.array(e) == 1), "Not able to export wisdom {}".format(filename)
 
@@ -155,7 +156,7 @@ def import_wisdom(filename):
     """
     rank = str(comm.Get_rank())
     e = []
-    for key, lib in six.iteritems(fftlib):
+    for key, lib in fftlib.items():
         e.append(lib.import_wisdom(bytearray(key+rank+'_'+filename, 'utf-8')))
     assert np.all(np.array(e) == 1), "Not able to import wisdom {}".format(filename)
 

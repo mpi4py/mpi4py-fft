@@ -1,4 +1,4 @@
-import six
+#pylint: disable=no-name-in-module,unused-import
 import numpy as np
 from .factory import get_planned_FFT
 from .utilities import FFTW_FORWARD, FFTW_BACKWARD, FFTW_REDFT00, FFTW_REDFT01, \
@@ -8,7 +8,7 @@ from .utilities import FFTW_FORWARD, FFTW_BACKWARD, FFTW_REDFT00, FFTW_REDFT01, 
     FFTW_ESTIMATE, FFTW_WISDOM_ONLY, C2C_FORWARD, C2C_BACKWARD, R2C, C2R, \
     FFTW_R2HC, FFTW_HC2R, FFTW_DHT, get_alignment, aligned, aligned_like
 
-flag_dict = {key: val for key, val in six.iteritems(locals())
+flag_dict = {key: val for key, val in locals().items()
              if key.startswith('FFTW_')}
 
 dct_type = {
@@ -835,4 +835,3 @@ inverse = {
     hfftn: ihfftn,
     ihfftn: hfftn
 }
-

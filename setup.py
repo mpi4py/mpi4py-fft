@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 
-import os, sys
+import os
+import sys
+import re
 import shutil
 from distutils import ccompiler
-import six
 from setuptools import setup
 from setuptools.extension import Extension
 from numpy import get_include
@@ -19,49 +20,66 @@ for f in ('FFTW_ROOT', 'FFTW_DIR'):
         include_dirs.append(os.path.join(os.environ[f], 'include'))
 
 prec_map = {'float': 'f', 'double': '', 'long double': 'l'}
-compiler = ccompiler.new_compiler()
 
-libs = {}
-for d in ('float', 'double', 'long double'):
-    lib = 'fftw3'+prec_map[d]
-    if compiler.find_library_file(library_dirs, lib):
-        libs[d] = [lib]
-        tlib = '_'.join((lib, 'threads'))
-        if compiler.find_library_file(library_dirs, tlib):
-            libs[d].append(tlib)
-        if sys.platform in ('unix', 'darwin'):
-            libs[d].append('m')
+def get_fftw_libs():
+    """Return FFTW libraries"""
+    compiler = ccompiler.new_compiler()
+    libs = {}
+    for d in ('float', 'double', 'long double'):
+        lib = 'fftw3'+prec_map[d]
+        if compiler.find_library_file(library_dirs, lib):
+            libs[d] = [lib]
+            tlib = '_'.join((lib, 'threads'))
+            if compiler.find_library_file(library_dirs, tlib):
+                libs[d].append(tlib)
+            if sys.platform in ('unix', 'darwin'):
+                libs[d].append('m')
+    return libs
 
-# Generate files with float and long double if needed
-for d in ('float', 'long double'):
-    p = 'fftw'+prec_map[d]+'_'
-    for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn.pxd'):
-        fp = fl.replace('fftw_', p)
-        shutil.copy(os.path.join(fftwdir, fl), os.path.join(fftwdir, fp))
-        sedcmd = "sed -i ''" if sys.platform == 'darwin' else "sed -i''"
-        os.system(sedcmd + " 's/fftw_/{0}/g' {1}".format(p, os.path.join(fftwdir, fp)))
-        os.system(sedcmd + " 's/double/{0}/g' {1}".format(d, os.path.join(fftwdir, fp)))
+def generate_extensions(fftwlibs):
+    """Generate files with float and long double"""
+    for d in fftwlibs:
+        if d == 'double':
+            continue
+        p = 'fftw'+prec_map[d]+'_'
+        for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn.pxd'):
+            fp = fl.replace('fftw_', p)
+            shutil.copy(os.path.join(fftwdir, fl), os.path.join(fftwdir, fp))
+            sedcmd = "sed -i ''" if sys.platform == 'darwin' else "sed -i''"
+            os.system(sedcmd + " 's/fftw_/{0}/g' {1}".format(p, os.path.join(fftwdir, fp)))
+            os.system(sedcmd + " 's/double/{0}/g' {1}".format(d, os.path.join(fftwdir, fp)))
 
-ext = [Extension("mpi4py_fft.fftw.utilities",
-                 sources=[os.path.join(fftwdir, "utilities.pyx")],
-                 include_dirs=[get_include(),
-                               os.path.join(sys.prefix, 'include')])]
+def get_extensions(fftwlibs):
+    """Return list of extension modules"""
+    ext = [Extension("mpi4py_fft.fftw.utilities",
+                     sources=[os.path.join(fftwdir, "utilities.pyx")],
+                     include_dirs=include_dirs)]
 
-for d, v in six.iteritems(libs):
-    p = 'fftw'+prec_map[d]+'_'
-    ext.append(Extension("mpi4py_fft.fftw.{}xfftn".format(p),
-                         sources=[os.path.join(fftwdir, "{}xfftn.pyx".format(p)),
-                                  os.path.join(fftwdir, "{}planxfftn.c".format(p))],
-                         #define_macros=[('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
-                         libraries=v,
-                         include_dirs=include_dirs,
-                         library_dirs=library_dirs))
+    for d, libs in fftwlibs.items():
+        p = 'fftw'+prec_map[d]+'_'
+        ext.append(Extension("mpi4py_fft.fftw.{}xfftn".format(p),
+                             sources=[os.path.join(fftwdir, "{}xfftn.pyx".format(p)),
+                                      os.path.join(fftwdir, "{}planxfftn.c".format(p))],
+                             #define_macros=[('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
+                             libraries=libs,
+                             include_dirs=include_dirs,
+                             library_dirs=library_dirs))
+    return ext
 
+def version():
+    srcdir = os.path.join(cwd, 'mpi4py_fft')
+    with open(os.path.join(srcdir, '__init__.py')) as f:
+        m = re.search(r"__version__\s*=\s*'(.*)'", f.read())
+        return m.groups()[0]
+
+fftw_libs = get_fftw_libs()
+assert len(fftw_libs) > 0, "No FFTW libraries found!"
+generate_extensions(fftw_libs)
 with open("README.rst", "r") as fh:
     long_description = fh.read()
 
 setup(name="mpi4py-fft",
-      version="1.0.1",
+      version=version(),
       description="mpi4py-fft -- FFT with MPI",
       long_description=long_description,
       author="Lisandro Dalcin and Mikael Mortensen",
@@ -82,7 +100,7 @@ setup(name="mpi4py-fft",
           'Topic :: Scientific/Engineering :: Mathematics',
           'Topic :: Software Development :: Libraries :: Python Modules',
           ],
-      ext_modules=ext,
-      install_requires=["mpi4py", "numpy", "six"],
-      setup_requires=["setuptools>=18.0", "cython>=0.25", "six"]
+      ext_modules=get_extensions(fftw_libs),
+      install_requires=["mpi4py", "numpy"],
+      setup_requires=["setuptools>=18.0", "cython>=0.25"]
       )
