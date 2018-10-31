@@ -34,6 +34,7 @@ def get_fftw_libs():
                 libs[d].append(tlib)
             if sys.platform in ('unix', 'darwin'):
                 libs[d].append('m')
+    assert len(libs) > 0, "No FFTW libraries found!"
     return libs
 
 def generate_extensions(fftwlibs):
@@ -73,7 +74,6 @@ def version():
         return m.groups()[0]
 
 fftw_libs = get_fftw_libs()
-assert len(fftw_libs) > 0, "No FFTW libraries found!"
 generate_extensions(fftw_libs)
 with open("README.rst", "r") as fh:
     long_description = fh.read()
