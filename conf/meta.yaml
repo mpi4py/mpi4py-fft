@@ -1,8 +1,6 @@
-{% set data = load_setup_py_data() %}
-
 package:
   name: mpi4py_fft
-  version: {{ data.get('version') }}
+  version: "{{ GIT_DESCRIBE_TAG }}"
 
 source:
   git_url: ../
