@@ -25,6 +25,7 @@ def get_include_dirs():
     for f in ('FFTW_ROOT', 'FFTW_DIR'):
         if f in os.environ:
             inc_dirs.append(os.path.join(os.environ[f], 'include'))
+    return inc_dirs
 
 def get_fftw_libs():
     """Return FFTW libraries"""
@@ -62,7 +63,7 @@ def get_extensions(fftwlibs):
     library_dirs = get_library_dirs()
     ext = [Extension("mpi4py_fft.fftw.utilities",
                      sources=[os.path.join(fftwdir, "utilities.pyx")],
-                     include_dirs=include_dirs]
+                     include_dirs=include_dirs)]
 
     for d, libs in fftwlibs.items():
         p = 'fftw'+prec_map[d]+'_'
