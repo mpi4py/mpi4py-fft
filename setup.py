@@ -11,19 +11,25 @@ from numpy import get_include
 
 cwd = os.path.abspath(os.path.dirname(__file__))
 fftwdir = os.path.join(cwd, 'mpi4py_fft', 'fftw')
-
-include_dirs = [get_include(), os.path.join(sys.prefix, 'include')]
-library_dirs = [os.path.join(sys.prefix, 'lib')]
-for f in ('FFTW_ROOT', 'FFTW_DIR'):
-    if f in os.environ:
-        library_dirs.append(os.path.join(os.environ[f], 'lib'))
-        include_dirs.append(os.path.join(os.environ[f], 'include'))
-
 prec_map = {'float': 'f', 'double': '', 'long double': 'l'}
+
+def get_library_dirs():
+    lib_dirs = [os.path.join(sys.prefix, 'lib')]
+    for f in ('FFTW_ROOT', 'FFTW_DIR'):
+        if f in os.environ:
+            lib_dirs.append(os.path.join(os.environ[f], 'lib'))
+    return lib_dirs
+
+def get_include_dirs():
+    inc_dirs = [get_include(), os.path.join(sys.prefix, 'include')]
+    for f in ('FFTW_ROOT', 'FFTW_DIR'):
+        if f in os.environ:
+            inc_dirs.append(os.path.join(os.environ[f], 'include'))
 
 def get_fftw_libs():
     """Return FFTW libraries"""
     compiler = ccompiler.new_compiler()
+    library_dirs = get_library_dirs()
     libs = {}
     for d in ('float', 'double', 'long double'):
         lib = 'fftw3'+prec_map[d]
@@ -52,9 +58,11 @@ def generate_extensions(fftwlibs):
 
 def get_extensions(fftwlibs):
     """Return list of extension modules"""
+    include_dirs = get_include_dirs()
+    library_dirs = get_library_dirs()
     ext = [Extension("mpi4py_fft.fftw.utilities",
                      sources=[os.path.join(fftwdir, "utilities.pyx")],
-                     include_dirs=include_dirs)]
+                     include_dirs=include_dirs]
 
     for d, libs in fftwlibs.items():
         p = 'fftw'+prec_map[d]+'_'
@@ -73,34 +81,35 @@ def version():
         m = re.search(r"__version__\s*=\s*'(.*)'", f.read())
         return m.groups()[0]
 
-fftw_libs = get_fftw_libs()
-generate_extensions(fftw_libs)
 with open("README.rst", "r") as fh:
     long_description = fh.read()
 
-setup(name="mpi4py-fft",
-      version=version(),
-      description="mpi4py-fft -- FFT with MPI",
-      long_description=long_description,
-      author="Lisandro Dalcin and Mikael Mortensen",
-      url='https://bitbucket.org/mpi4py/mpi4py-fft',
-      packages=["mpi4py_fft",
-                "mpi4py_fft.fftw",
-                "mpi4py_fft.utilities"],
-      package_dir={"mpi4py_fft": "mpi4py_fft"},
-      classifiers=[
-          'Development Status :: 4 - Beta',
-          'Environment :: Console',
-          'Intended Audience :: Developers',
-          'Intended Audience :: Science/Research',
-          'Programming Language :: Python',
-          'Programming Language :: Python :: 2',
-          'Programming Language :: Python :: 3',
-          'License :: OSI Approved :: BSD License',
-          'Topic :: Scientific/Engineering :: Mathematics',
-          'Topic :: Software Development :: Libraries :: Python Modules',
-          ],
-      ext_modules=get_extensions(fftw_libs),
-      install_requires=["mpi4py", "numpy"],
-      setup_requires=["setuptools>=18.0", "cython>=0.25"]
-      )
+if __name__ == '__main__':
+    fftw_libs = get_fftw_libs()
+    generate_extensions(fftw_libs)
+    setup(name="mpi4py-fft",
+          version=version(),
+          description="mpi4py-fft -- FFT with MPI",
+          long_description=long_description,
+          author="Lisandro Dalcin and Mikael Mortensen",
+          url='https://bitbucket.org/mpi4py/mpi4py-fft',
+          packages=["mpi4py_fft",
+                    "mpi4py_fft.fftw",
+                    "mpi4py_fft.utilities"],
+          package_dir={"mpi4py_fft": "mpi4py_fft"},
+          classifiers=[
+              'Development Status :: 4 - Beta',
+              'Environment :: Console',
+              'Intended Audience :: Developers',
+              'Intended Audience :: Science/Research',
+              'Programming Language :: Python',
+              'Programming Language :: Python :: 2',
+              'Programming Language :: Python :: 3',
+              'License :: OSI Approved :: BSD License',
+              'Topic :: Scientific/Engineering :: Mathematics',
+              'Topic :: Software Development :: Libraries :: Python Modules',
+              ],
+          ext_modules=get_extensions(fftw_libs),
+          install_requires=["mpi4py", "numpy"],
+          setup_requires=["setuptools>=18.0", "cython>=0.25"]
+          )
