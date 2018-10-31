@@ -1,4 +1,4 @@
-VERSION=$(shell python -c "import mpi4py_fft; print(mpi4py_fft.__version__)")
+VERSION=$(shell python3 -c "import mpi4py_fft; print(mpi4py_fft.__version__)")
 
 default:
 	python setup.py build_ext -i
