@@ -54,7 +54,6 @@ Mpi4py-fft depends on Python packages
     * mpi4py
     * numpy
     * cython
-    * six
 
 and the C-library
 

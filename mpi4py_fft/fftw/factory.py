@@ -24,19 +24,19 @@ def get_fftw_lib(dtype):
         try:
             from . import fftwl_xfftn
             return fftwl_xfftn
-        except ImportError:
+        except ImportError: #pragma: no cover
             return None
     elif dtype == 'D':
         try:
             from . import fftw_xfftn
             return fftw_xfftn
-        except ImportError:
+        except ImportError: #pragma: no cover
             return None
     elif dtype == 'F':
         try:
             from . import fftwf_xfftn
             return fftwf_xfftn
-        except ImportError:
+        except ImportError: #pragma: no cover
             return None
 
 fftlib = {}
