@@ -49,7 +49,7 @@ It can also be built using conda build from the main source directory::
 
 which will pull in the required dependencies from the conda-forge channel.
 
-Mpi4py-fft depends on Python packages
+However, note that mpi4py-fft depends on Python packages
 
     * mpi4py
     * numpy
@@ -59,10 +59,14 @@ and the C-library
 
     * `FFTW <http://www.fftw.org>`_
 
-Note that *mpi4py* requires a working MPI installation, with the compiler
-wrapper *mpicc* on your search path. All of the above dependencies are
-available and will be downloaded through the conda-forge channel if
-conda is used for installation.
+Note in particular that *mpi4py* requires that you have a working
+MPI installation, with the compiler wrapper *mpicc*, on your search path.
+The FFTW header and libraries must also be available on the search path, and
+we will build wrappers for any precision found of the FFTW libraries.
+
+All of the above dependencies are available and will be downloaded through
+the conda-forge channel if conda is used for installation. However, pip
+will not help you with MPI or FFTW.
 
 For IO you need to install either `h5py <https://www.h5py.org>`_ or
 `netCDF4 <http://unidata.github.io/netcdf4-python/>`_ with support for
