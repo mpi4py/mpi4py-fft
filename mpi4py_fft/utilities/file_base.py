@@ -18,7 +18,7 @@ class FileBase(object):
     def __init__(self, T, domain=None, **kw):
         self.f = None
         self.T = T
-        self.domain = domain if domain is not None else ((0, 2*np.pi),)*T.ndim()
+        self.domain = domain if domain is not None else ((0, 2*np.pi),)*T.dimensions()
 
     def write(self, step, fields, **kw):
         """Write snapshot ``step`` of ``fields`` to file

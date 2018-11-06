@@ -41,7 +41,7 @@ class NCFile(FileBase):
         FileBase.__init__(self, T, domain=domain, **kw)
         from netCDF4 import Dataset
         self.f = Dataset(ncname, mode=mode, clobber=clobber, parallel=True, comm=comm, **kw)
-        self.N = N = T.shape(False)[-T.ndim():]
+        self.N = N = T.shape(False)[-T.dimensions():]
         dtype = self.T.dtype(False)
         assert dtype.char in 'fdg'
         self._dtype = dtype
@@ -55,19 +55,19 @@ class NCFile(FileBase):
             d = list(self.domain)
             if not isinstance(self.domain[0], np.ndarray):
                 assert len(self.domain[0]) == 2
-                for i in range(T.ndim()):
+                for i in range(T.dimensions()):
                     d[i] = np.arange(N[i], dtype=np.float)*2*np.pi/N[i]
             else:
-                for i in range(T.ndim()):
+                for i in range(T.dimensions()):
                     d[i] = np.squeeze(d[i])
             self.domain = d
-            for i in range(T.ndim()):
+            for i in range(T.dimensions()):
                 xyz = 'xyzrst'[i]
                 self.f.createDimension(xyz, N[i])
                 self.dims.append(xyz)
                 nc_xyz = self.f.createVariable(xyz, self._dtype, (xyz))
                 nc_xyz[:] = d[i]
-            self.f.setncatts({"ndim": T.ndim(), "shape": T.shape(False)})
+            self.f.setncatts({"ndim": T.dimensions(), "shape": T.shape(False)})
             self.handles = dict()
             self.f.sync()
 

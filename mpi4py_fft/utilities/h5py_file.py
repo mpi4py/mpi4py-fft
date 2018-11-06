@@ -35,13 +35,13 @@ class HDF5File(FileBase):
                 self.f.create_group("mesh")
             else:
                 self.f.create_group("domain")
-            for i in range(T.ndim()):
+            for i in range(T.dimensions()):
                 d = self.domain[i]
                 if isinstance(d, np.ndarray):
                     self.f["mesh"].create_dataset("x{}".format(i), data=np.squeeze(d))
                 else:
                     self.f["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
-            self.f.attrs.create("ndim", T.ndim())
+            self.f.attrs.create("ndim", T.dimensions())
             self.f.attrs.create("shape", T.shape(False))
 
     @staticmethod
@@ -92,8 +92,7 @@ class HDF5File(FileBase):
         of the *global* arrays.
 
         """
-        forward_output = kw.get('forward_output', False)
-        FileBase.write(self, step, fields, forward_output=forward_output)
+        FileBase.write(self, step, fields, **kw)
 
     def read(self, u, name, **kw):
         """Read into array ``u``
@@ -113,8 +112,7 @@ class HDF5File(FileBase):
         forward_output = kw.get('forward_output', False)
         step = kw.get('step', 0)
         s = self.T.local_slice(forward_output)
-        ndim = self.T.ndim()
-        dset = "/".join((name, "{}D".format(ndim), str(step)))
+        dset = "/".join((name, "{}D".format(u.ndim), str(step)))
         u[:] = self.f[dset][tuple(s)]
 
     def _write_slice_step(self, name, step, slices, field, **kw):
@@ -138,7 +136,7 @@ class HDF5File(FileBase):
     def _write_group(self, name, u, step, **kw):
         forward_output = kw.get('forward_output', False)
         s = tuple(self.T.local_slice(forward_output))
-        group = "/".join((name, "{}D".format(self.T.ndim())))
+        group = "/".join((name, "{}D".format(self.T.dimensions())))
         if group not in self.f:
             self.f.create_group(group)
         self.f[group].create_dataset(str(step), shape=self.T.shape(forward_output), dtype=u.dtype)

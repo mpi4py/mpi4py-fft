@@ -44,7 +44,6 @@ class Transform(object):
         """Return output pencil of Transform"""
         return self._pencil[1]
 
-    #@profile
     def __call__(self, input_array=None, output_array=None, **kw):
         """Compute transform
 
@@ -61,14 +60,6 @@ class Transform(object):
         as planned with serial transform object _xfftn.
 
         """
-        #arrayB = input_array
-        #for i in range(len(self._transfer)):
-        #    self._xfftn[i](arrayB, None, **kw)
-        #    arrayA = self._xfftn[i].output_array
-        #    arrayB = self._xfftn[i+1].input_array
-        #    self._transfer[i](arrayA, arrayB)
-        #return self._xfftn[-1](arrayB, output_array, **kw)
-
         if input_array is not None:
             self.input_array[...] = input_array
 
@@ -364,10 +355,20 @@ class PFFT(object):
             return self._output_shape
         return self._input_shape
 
-    def ndim(self):
+    def dimensions(self):
+        """The number of dimensions for transformed arrays"""
         return len(self.forward.input_array.shape)
 
     def dtype(self, forward_output=False):
+        """The type of transformed arrays
+
+        Parameters
+        ----------
+            forward_output : bool, optional
+                If True then return dtype of an array that is the result of a
+                forward transform. Otherwise, return the dtype of an array that
+                is input to a forward transform.
+        """
         if forward_output:
             return self.forward.output_array.dtype
         return self.forward.input_array.dtype
