@@ -129,7 +129,7 @@ class HDF5File(FileBase):
         if group not in self.f:
             self.f.create_group(group)
         N = self.T.shape(forward_output)
-        self.f[group].create_dataset(str(step), shape=np.take(N, sp), dtype=field.dtype)
+        self.f[group].require_dataset(str(step), shape=tuple(np.take(N, sp)), dtype=field.dtype)
         if inside == 1:
             self.f["/".join((group, str(step)))][sf] = field[sl]
 
@@ -139,5 +139,5 @@ class HDF5File(FileBase):
         group = "/".join((name, "{}D".format(self.T.dimensions())))
         if group not in self.f:
             self.f.create_group(group)
-        self.f[group].create_dataset(str(step), shape=self.T.shape(forward_output), dtype=u.dtype)
+        self.f[group].require_dataset(str(step), shape=tuple(self.T.shape(forward_output)), dtype=u.dtype)
         self.f["/".join((group, str(step)))][s] = u

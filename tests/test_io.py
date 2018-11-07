@@ -67,6 +67,17 @@ def test_3D(backend, forward_output):
                                    (v, [slice(None), 6, slice(None)]),
                                    (v, [6, 6, slice(None)])]},
                          forward_output=forward_output)
+        # One more time with same k
+        h0file.write(k, {'u': [u,
+                               (u, [slice(None), slice(None), 4]),
+                               (u, [5, 5, slice(None)])],
+                         'v': [v,
+                               (v, [slice(None), 6, slice(None)])]},
+                     forward_output=forward_output)
+        h1file.write(k, {'v': [v,
+                               (v, [slice(None), 6, slice(None)]),
+                               (v, [6, 6, slice(None)])]},
+                     forward_output=forward_output)
         h0file.close()
         h1file.close()
         if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
