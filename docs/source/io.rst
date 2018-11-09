@@ -32,8 +32,6 @@ reads data in parallel. A simple example of usage is::
     v[:] = 3
     f0.write(1, fields)
     f1.write(1, fields)
-    f0.close()
-    f1.close()
 
 Note that we are creating two datafiles ``h5test.h5`` and ``nctest.nc``,
 for storing in HDF5 or NetCDF4 formats respectively. Normally, one would be
@@ -51,8 +49,6 @@ The stored dataarrays can be retrieved later on::
     f0.read(u1, 'u', 1)
     f1.read(u0, 'u', 0)
     f1.read(u1, 'u', 1)
-    f0.close()
-    f1.close()
 
 Note that one does not have to use the same number of processors when
 retrieving the data as when they were stored.

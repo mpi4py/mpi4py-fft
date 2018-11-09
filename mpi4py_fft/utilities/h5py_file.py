@@ -29,24 +29,30 @@ class HDF5File(FileBase):
     def __init__(self, h5name, T, domain=None, mode='r', **kw):
         FileBase.__init__(self, T, domain=domain, **kw)
         import h5py
-        self.f = h5py.File(h5name, mode, driver="mpio", comm=comm)
+        self.filename = h5name
+        self.f = f = h5py.File(h5name, mode, driver="mpio", comm=comm)
         if mode == 'w':
             if isinstance(self.domain[0], np.ndarray):
-                self.f.create_group("mesh")
+                f.create_group("mesh")
             else:
-                self.f.create_group("domain")
+                f.create_group("domain")
             for i in range(T.dimensions()):
                 d = self.domain[i]
                 if isinstance(d, np.ndarray):
-                    self.f["mesh"].create_dataset("x{}".format(i), data=np.squeeze(d))
+                    f["mesh"].create_dataset("x{}".format(i), data=np.squeeze(d))
                 else:
-                    self.f["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
-            self.f.attrs.create("ndim", T.dimensions())
-            self.f.attrs.create("shape", T.shape(False))
+                    f["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
+            f.attrs.create("ndim", T.dimensions())
+            f.attrs.create("shape", T.shape(False))
+        self.close()
 
     @staticmethod
     def backend():
         return 'hdf5'
+
+    def open(self):
+        import h5py
+        self.f = h5py.File(self.filename, 'r+', driver="mpio", comm=comm)
 
     def write(self, step, fields, **kw):
         """Write snapshot ``step`` of ``fields`` to HDF5 file
@@ -92,7 +98,9 @@ class HDF5File(FileBase):
         of the *global* arrays.
 
         """
+        self.open()
         FileBase.write(self, step, fields, **kw)
+        self.close()
 
     def read(self, u, name, **kw):
         """Read into array ``u``
@@ -111,9 +119,11 @@ class HDF5File(FileBase):
         """
         forward_output = kw.get('forward_output', False)
         step = kw.get('step', 0)
+        self.open()
         s = self.T.local_slice(forward_output)
         dset = "/".join((name, "{}D".format(u.ndim), str(step)))
         u[:] = self.f[dset][tuple(s)]
+        self.close()
 
     def _write_slice_step(self, name, step, slices, field, **kw):
         forward_output = kw.get('forward_output', False)

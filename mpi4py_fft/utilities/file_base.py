@@ -1,4 +1,7 @@
+from mpi4py import MPI
 import numpy as np
+
+comm = MPI.COMM_WORLD
 
 class FileBase(object):
     """Base class for reading/writing structured arrays
@@ -17,6 +20,7 @@ class FileBase(object):
     """
     def __init__(self, T, domain=None, **kw):
         self.f = None
+        self.filename = None
         self.T = T
         self.domain = domain if domain is not None else ((0, 2*np.pi),)*T.dimensions()
 
@@ -59,6 +63,9 @@ class FileBase(object):
 
     def close(self):
         self.f.close()
+
+    def open(self):
+        raise NotImplementedError
 
     @staticmethod
     def backend():

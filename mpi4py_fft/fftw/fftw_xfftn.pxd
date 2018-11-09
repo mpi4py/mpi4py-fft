@@ -58,4 +58,3 @@ cdef extern from "fftw_planxfftn.h":
                              unsigned flags)
 
 ctypedef void (*generic_function)(void *plan, void *_in, void *_out) nogil
-

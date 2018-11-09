@@ -28,7 +28,6 @@ def test_2D(backend, forward_output):
         u = Function(T, forward_output=forward_output, val=1)
         hfile.write(0, {'u': [u]}, forward_output=forward_output)
         hfile.write(1, {'u': [u]}, forward_output=forward_output)
-        hfile.close()
         if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
             generate_xdmf(filename)
             generate_xdmf(filename, order='visit')
@@ -37,7 +36,6 @@ def test_2D(backend, forward_output):
         read = reader[backend](filename, T)
         read.read(u0, 'u', step=0, forward_output=forward_output)
         assert np.allclose(u0, u)
-        read.close()
 
 def test_3D(backend, forward_output):
     if backend == 'netcdf4':
@@ -78,8 +76,7 @@ def test_3D(backend, forward_output):
                                (v, [slice(None), 6, slice(None)]),
                                (v, [6, 6, slice(None)])]},
                      forward_output=forward_output)
-        h0file.close()
-        h1file.close()
+
         if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
             generate_xdmf('uv'+filename)
             generate_xdmf('v'+filename, periodic=False)
@@ -92,7 +89,6 @@ def test_3D(backend, forward_output):
         assert np.allclose(u0, u)
         read.read(u0, 'v', forward_output=forward_output, step=0)
         assert np.allclose(u0, v)
-        read.close()
 
 def test_4D(backend, forward_output):
     if backend == 'netcdf4':
@@ -116,7 +112,7 @@ def test_4D(backend, forward_output):
             h0file.write(k, {'u': [u, (u, [slice(None), 4, slice(None), slice(None)])],
                              'v': [v, (v, [slice(None), slice(None), 5, 6])]},
                          forward_output=forward_output)
-        h0file.close()
+
         if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
             generate_xdmf('uv'+filename)
 
@@ -126,7 +122,6 @@ def test_4D(backend, forward_output):
         assert np.allclose(u0, u)
         read.read(u0, 'v', forward_output=forward_output, step=0)
         assert np.allclose(u0, v)
-        read.close()
 
 if __name__ == '__main__':
     #pylint: disable=unused-import
