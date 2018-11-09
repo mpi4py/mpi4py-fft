@@ -222,7 +222,7 @@ class PFFT(object):
                     shape[ax[0]] = int(np.floor(shape[ax[0]]*padding[ax[0]]))
                     padding[ax[0]] = shape[ax[0]] / old
 
-        self._input_shape = copy(shape)
+        self._input_shape = tuple(shape)
         assert len(shape) > 0
         assert min(shape) > 0
 
@@ -292,7 +292,7 @@ class PFFT(object):
                 pencilA = Pencil(pencilB.subcomm, shape, axes[-1])
 
         self.pencil[1] = pencilA
-        self._output_shape = copy(shape)
+        self._output_shape = tuple(shape)
 
         self.forward = Transform(
             [o.forward for o in self.xfftn],
@@ -339,7 +339,7 @@ class PFFT(object):
             ip = self.backward.input_pencil
             s = [slice(start, start+shape) for start, shape in zip(ip.substart,
                                                                    ip.subshape)]
-        return s
+        return tuple(s)
 
     def shape(self, forward_output=False):
         """Return shape of tensor for space

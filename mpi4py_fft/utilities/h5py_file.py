@@ -122,7 +122,7 @@ class HDF5File(FileBase):
         self.open()
         s = self.T.local_slice(forward_output)
         dset = "/".join((name, "{}D".format(u.ndim), str(step)))
-        u[:] = self.f[dset][tuple(s)]
+        u[:] = self.f[dset][s]
         self.close()
 
     def _write_slice_step(self, name, step, slices, field, **kw):
@@ -145,9 +145,9 @@ class HDF5File(FileBase):
 
     def _write_group(self, name, u, step, **kw):
         forward_output = kw.get('forward_output', False)
-        s = tuple(self.T.local_slice(forward_output))
+        s = self.T.local_slice(forward_output)
         group = "/".join((name, "{}D".format(self.T.dimensions())))
         if group not in self.f:
             self.f.create_group(group)
-        self.f[group].require_dataset(str(step), shape=tuple(self.T.shape(forward_output)), dtype=u.dtype)
+        self.f[group].require_dataset(str(step), shape=self.T.shape(forward_output), dtype=u.dtype)
         self.f["/".join((group, str(step)))][s] = u

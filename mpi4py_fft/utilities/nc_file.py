@@ -115,8 +115,8 @@ class NCFile(FileBase):
         step = kw.get('step', 0)
         self.open()
         s = self.T.local_slice(False)
-        s = [step] + s
-        u[:] = self.f[name][tuple(s)]
+        s = (step,) + s
+        u[:] = self.f[name][s]
         self.close()
 
     def _write_slice_step(self, name, step, slices, field, **kw):
@@ -151,6 +151,6 @@ class NCFile(FileBase):
         else:
             h = self.f.variables[name]
         h.set_collective(True)
-        s = tuple([step] + s)
+        s = (step,) + s
         h[s] = u
         self.f.sync()
