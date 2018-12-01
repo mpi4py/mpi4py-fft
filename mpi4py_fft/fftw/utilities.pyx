@@ -1,3 +1,5 @@
+#cython: language_level=3
+
 cimport numpy as np
 import numpy as np
 from libc.stdint cimport intptr_t
@@ -100,4 +102,3 @@ cpdef aligned_like(z, fill=None):
     """
     n = get_alignment(z)
     return aligned(z.shape, n=n, dtype=z.dtype, fill=fill)
-

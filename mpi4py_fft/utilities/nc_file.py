@@ -14,21 +14,21 @@ class NCFile(FileBase):
 
     Parameters
     ----------
-        ncname : str
-            Name of netcdf file to be created
-        T : PFFT
-            Instance of a :class:`.PFFT` class. Must be the same as the space
-            used for storing with :class:`NCWriter.write`
-        domain : Sequence
-            The spatial domain. Sequence of either
+    ncname : str
+        Name of netcdf file to be created
+    T : PFFT
+        Instance of a :class:`.PFFT` class. Must be the same as the space
+        used for storing with :class:`NCWriter.write`
+    domain : Sequence
+        The spatial domain. Sequence of either
 
-                - 2-tuples, where each 2-tuple contains the (origin, length)
-                  of each dimension, e.g., (0, 2*pi).
-                - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
-                  array per dimension.
-        clobber : bool, optional
-        mode : str
-            ``r`` or ``w`` for read or write. Default is 'r'.
+            - 2-tuples, where each 2-tuple contains the (origin, length)
+              of each dimension, e.g., (0, 2*pi).
+            - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
+              array per dimension.
+    clobber : bool, optional
+    mode : str
+        ``r`` or ``w`` for read or write. Default is 'r'.
     Note
     ----
     Each class instance creates one unique NetCDF4-file, with one step-counter.

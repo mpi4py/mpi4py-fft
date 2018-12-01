@@ -346,10 +346,10 @@ class PFFT(object):
 
         Parameters
         ----------
-            forward_output : bool, optional
-                If True then return shape of spectral space, i.e., the input to
-                a backward transfer. If False then return shape of physical
-                space, i.e., the input to a forward transfer.
+        forward_output : bool, optional
+            If True then return shape of spectral space, i.e., the input to
+            a backward transfer. If False then return shape of physical
+            space, i.e., the input to a forward transfer.
         """
         if forward_output:
             return self._output_shape
@@ -364,10 +364,10 @@ class PFFT(object):
 
         Parameters
         ----------
-            forward_output : bool, optional
-                If True then return dtype of an array that is the result of a
-                forward transform. Otherwise, return the dtype of an array that
-                is input to a forward transform.
+        forward_output : bool, optional
+            If True then return dtype of an array that is the result of a
+            forward transform. Otherwise, return the dtype of an array that
+            is input to a forward transform.
         """
         if forward_output:
             return self.forward.output_array.dtype
@@ -393,7 +393,6 @@ class Function(np.ndarray):
     tensor: int or tuple
         For tensorvalued Functions, e.g., tensor=(3) for a vector in 3D.
 
-
     For more information, see `numpy.ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_
 
     Examples
@@ -401,8 +400,8 @@ class Function(np.ndarray):
     >>> from mpi4py import MPI
     >>> from mpi4py_fft.mpifft import PFFT, Function
     >>> FFT = PFFT(MPI.COMM_WORLD, [64, 64, 64])
-    >>> u = Function(FFT, tensor=3)
-    >>> u_hat = Function(FFT, False, tensor=3)
+    >>> u = Function(FFT, False, tensor=3)
+    >>> u_hat = Function(FFT, True, tensor=3)
 
     """
     def __new__(cls, pfft, forward_output=True, val=0, tensor=None):

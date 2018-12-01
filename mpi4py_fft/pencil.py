@@ -170,10 +170,10 @@ class Transfer(object):
 
         Parameters
         ----------
-            arrayA : array
-                Array of shape subshapeA, containing data to be redistributed
-            arrayB : array
-                Array of shape subshapeB, for receiving data
+        arrayA : array
+            Array of shape subshapeA, containing data to be redistributed
+        arrayB : array
+            Array of shape subshapeB, for receiving data
         """
         assert self.subshapeA == arrayA.shape
         assert self.subshapeB == arrayB.shape
@@ -187,10 +187,10 @@ class Transfer(object):
 
         Parameters
         ----------
-            arrayB : array
-                Array of shape subshapeB, containing data to be redistributed
-            arrayA : array
-                Array of shape subshapeA, for receiving data
+        arrayB : array
+            Array of shape subshapeB, containing data to be redistributed
+        arrayA : array
+            Array of shape subshapeA, for receiving data
 
         """
         assert self.subshapeA == arrayA.shape
@@ -311,8 +311,8 @@ class Pencil(object):
 
         Parameters
         ----------
-            axis : int
-                The axis along which the pencil is aligned
+        axis : int
+            The axis along which the pencil is aligned
         """
         assert -len(self.shape) <= axis < len(self.shape)
         if axis < 0:
@@ -330,10 +330,10 @@ class Pencil(object):
 
         Parameters
         ----------
-            pencil : :class:`.Pencil`
-                The receiving pencil of a forward transform
-            dtype : dtype
-                The type of the sending pencil
+        pencil : :class:`.Pencil`
+            The receiving pencil of a forward transform
+        dtype : dtype
+            The type of the sending pencil
         """
         penA, penB = self, pencil
         assert penA.shape == penB.shape

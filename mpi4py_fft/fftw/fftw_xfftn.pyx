@@ -1,7 +1,8 @@
 cimport fftw_xfftn
+#cython: language_level=3
+cimport numpy as np
 from .utilities import *
 import numpy as np
-cimport numpy as np
 from libc.stdint cimport intptr_t
 from libc.stdlib cimport malloc, free
 

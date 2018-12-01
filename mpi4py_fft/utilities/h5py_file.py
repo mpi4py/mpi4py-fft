@@ -11,20 +11,20 @@ class HDF5File(FileBase):
 
     Parameters
     ----------
-        h5name : str
-            Name of hdf5 file to be created.
-        T : PFFT
-            Instance of a :class:`PFFT` class. Must be the same as the space
-            used for storing with :class:`HDF5Writer.write`.
-        domain : Sequence, optional
-            The spatial domain. Sequence of either
+    h5name : str
+        Name of hdf5 file to be created.
+    T : PFFT
+        Instance of a :class:`PFFT` class. Must be the same as the space
+        used for storing with :class:`HDF5Writer.write`.
+    domain : Sequence, optional
+        The spatial domain. Sequence of either
 
-                - 2-tuples, where each 2-tuple contains the (origin, length)
-                  of each dimension, e.g., (0, 2*pi).
-                - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
-                  array per dimension.
-        mode : str, optional
-            ``r`` or ``w`` for read or write. Default is ``r``.
+            - 2-tuples, where each 2-tuple contains the (origin, length)
+              of each dimension, e.g., (0, 2*pi).
+            - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
+              array per dimension.
+    mode : str, optional
+        ``r`` or ``w`` for read or write. Default is ``r``.
     """
     def __init__(self, h5name, T, domain=None, mode='r', **kw):
         FileBase.__init__(self, T, domain=domain, **kw)

@@ -101,17 +101,17 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
 
     Parameters
     ----------
-        h5filename : str
-            Name of hdf5-file that we want to decorate with xdmf
-        periodic : bool or dim-sequence of bools, optional
-            If true along axis i, assume data is periodic.
-            Only affects the calculation of the domain size and only if the
-            domain is given as 2-tuple of origin+dx.
-        order : str
-            ``paraview`` or ``visit``
-            For some reason Paraview and Visit requires the mesh stored in
-            opposite order in the XDMF-file for 2D slices. Make choice of
-            order here.
+    h5filename : str
+        Name of hdf5-file that we want to decorate with xdmf
+    periodic : bool or dim-sequence of bools, optional
+        If true along axis i, assume data is periodic.
+        Only affects the calculation of the domain size and only if the
+        domain is given as 2-tuple of origin+dx.
+    order : str
+        ``paraview`` or ``visit``
+        For some reason Paraview and Visit requires the mesh stored in
+        opposite order in the XDMF-file for 2D slices. Make choice of
+        order here.
     """
     import h5py
     f = h5py.File(h5filename)

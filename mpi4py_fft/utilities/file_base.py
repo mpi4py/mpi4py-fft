@@ -8,15 +8,15 @@ class FileBase(object):
 
     Parameters
     ----------
-        T : PFFT
-            Instance of a :class:`.PFFT` class.
-        domain : sequence, optional
-            The spatial domain. Sequence of either
+    T : PFFT
+        Instance of a :class:`.PFFT` class.
+    domain : sequence, optional
+        The spatial domain. Sequence of either
 
-                - 2-tuples, where each 2-tuple contains the (origin, length)
-                  of each dimension, e.g., (0, 2*pi).
-                - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
-                  array per dimension.
+            - 2-tuples, where each 2-tuple contains the (origin, length)
+              of each dimension, e.g., (0, 2*pi).
+            - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
+              array per dimension.
     """
     def __init__(self, T, domain=None, **kw):
         self.f = None
