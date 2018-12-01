@@ -42,14 +42,18 @@ or, to get the latest version from bitbucket::
 
     pip install git+https://bitbucket.org/mpi4py/mpi4py-fft@master
 
-It can also be built using conda build from the main source directory::
+Install with conda from the coda-forge channel::
+
+    conda install -c conda-forge mpi4py-fft
+
+or build it with conda build from the main source directory::
 
     conda build -c conda-forge conf/
     conda create --name mpi4py_fft mpi4py_fft --use-local
 
 which will pull in the required dependencies from the conda-forge channel.
 
-However, note that mpi4py-fft depends on Python packages
+Note that mpi4py-fft depends on Python packages
 
     * mpi4py
     * numpy
@@ -70,7 +74,7 @@ will not help you with MPI or FFTW.
 
 For IO you need to install either `h5py <https://www.h5py.org>`_ or
 `netCDF4 <http://unidata.github.io/netcdf4-python/>`_ with support for
-MPI. These libraries are, unfortunately, not compiled with MPI on
+MPI. These libraries are, unfortunately, not yet compiled with MPI on
 conda-forge. The two libraries are available, though, for both OSX and
 linux from the `spectralDNS <https://anaconda.org/spectralDNS>`_ channel
 on anaconda cloud::
