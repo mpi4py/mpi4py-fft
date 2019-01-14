@@ -24,24 +24,26 @@ class HDF5File(FileBase):
             - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
               array per dimension.
     mode : str, optional
-        ``r`` or ``w`` for read or write. Default is ``r``.
+        ``r``, ``w`` or ``a`` for read, write or append. Default is ``a``.
     """
-    def __init__(self, h5name, T, domain=None, mode='r', **kw):
+    def __init__(self, h5name, T, domain=None, mode='a', **kw):
         FileBase.__init__(self, T, domain=domain, **kw)
         import h5py
         self.filename = h5name
         self.f = f = h5py.File(h5name, mode, driver="mpio", comm=comm)
-        if mode == 'w':
+        if mode in ('w', 'a'):
             if isinstance(self.domain[0], np.ndarray):
-                f.create_group("mesh")
+                f.require_group("mesh")
             else:
-                f.create_group("domain")
+                f.require_group("domain")
             for i in range(T.dimensions()):
                 d = self.domain[i]
                 if isinstance(d, np.ndarray):
-                    f["mesh"].create_dataset("x{}".format(i), data=np.squeeze(d))
+                    d0 = np.squeeze(d)
+                    f["mesh"].require_dataset("x{}".format(i), shape=d0.shape, dtype=d0.dtype, data=d0)
                 else:
-                    f["domain"].create_dataset("x{}".format(i), data=np.array([d[0], d[1]]))
+                    d0 = np.array([d[0], d[1]])
+                    f["domain"].require_dataset("x{}".format(i), shape=d0.shape, dtype=d0.dtype, data=d0)
             f.attrs.create("ndim", T.dimensions())
             f.attrs.create("shape", T.shape(False))
         self.close()

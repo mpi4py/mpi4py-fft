@@ -16,7 +16,7 @@ without any transforms at all.
 For more information, see `documentation <https://mpi4py-fft.readthedocs.io>`_.
 
 """
-__version__ = '1.1.1'
+__version__ = '1.1.2'
 __author__ = 'Lisandro Dalcin and Mikael Mortensen'
 
 from .mpifft import PFFT, Function
