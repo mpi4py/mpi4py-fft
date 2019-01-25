@@ -8,13 +8,14 @@ source:
   #git_tag: master
 
 build:
-  number: 0
+  number: 2
 
 requirements:
   build:
     - python
     - cython
     - mpi4py
+    - {{ mpi }}
     - numpy
     - nomkl
     - pip
@@ -24,12 +25,14 @@ requirements:
   run:
     - python
     - mpi4py
+    - {{ mpi }}
     - numpy
     - fftw
     - pyfftw
     - nomkl
     - scipy >=1.0.0
-    - h5py-parallel
+    - hdf5 1.10.4 mpi_{{ mpi }}_*
+    - h5py
     - netcdf4-parallel
 
 test:
