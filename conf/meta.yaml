@@ -8,10 +8,13 @@ source:
   #git_tag: master
 
 build:
-  number: 2000
+  number: 2001
 
 requirements:
   build:
+    - {{ compiler('c') }}
+
+  host:
     - python
     - cython
     - mpi4py
