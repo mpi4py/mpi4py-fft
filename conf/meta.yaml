@@ -1,5 +1,5 @@
 package:
-  name: mpi4py_fft
+  name: mpi4py_fft_test
   version: "{{ GIT_DESCRIBE_TAG }}"
 
 source:
@@ -33,7 +33,7 @@ requirements:
     - scipy >=1.0.0
     - hdf5 1.10.4 mpi_{{ mpi }}_*
     - h5py 2.9.0 mpi_{{ mpi }}_*
-    - netcdf4-parallel
+    #- netcdf4-parallel
 
 test:
   requires:

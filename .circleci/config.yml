@@ -20,7 +20,7 @@ jobs:
             source ~/miniconda/bin/activate root
             conda config --set always_yes yes
             conda update -q conda
-            conda config --add channels spectralDNS
+            #conda config --add channels spectralDNS
             conda config --add channels conda-forge
             conda install -n root conda-build
             pip install --no-deps codacy-coverage coverage
@@ -35,8 +35,8 @@ jobs:
           command: |
             source ~/miniconda/bin/activate root
             conda build --no-test --python 3.6 ./conf
-            conda create --name mpi4py_fft python=3.6 mpi4py_fft coverage --use-local
-            conda activate mpi4py_fft
+            conda create --name mpi4py_fft_env python=3.6 mpi4py_fft_test coverage --use-local
+            conda activate mpi4py_fft_env
             cd tests && ./runtests.sh
 
       - run:
