@@ -23,20 +23,13 @@ jobs:
             conda config --add channels conda-forge
             conda install -n root conda-build
             pip install --no-deps codacy-coverage coverage
+            conda build ./conf
+            cd tests && ./runtests.sh
 
       - save_cache:
           key: v3-miniconda-{{ .Branch }}
           paths:
             - /home/circleci/miniconda
-
-      - run:
-          name: Build and test latest Python
-          command: |
-            source ~/miniconda/bin/activate root
-            conda build --no-test ./conf
-            conda create --name mpi4py_fft_env mpi4py_fft_test coverage --use-local
-            conda activate mpi4py_fft_env
-            cd tests && ./runtests.sh
 
       - deploy:
           name: Deploy
@@ -70,11 +63,6 @@ jobs:
             conda update -q conda
             conda config --add channels conda-forge
             conda install -n root conda-build
-
-      - run:
-          name: Build and test Python 2.7
-          command: |
-            source ~/miniconda2/bin/activate root
             conda build ./conf
 
       - save_cache:
