@@ -81,3 +81,10 @@ jobs:
           key: v2-miniconda-{{ .Branch }}
           paths:
             - /home/circleci/miniconda2
+
+workflows:
+  version: 2
+  build_and_test:
+    jobs:
+      - build_python_latest
+      - build_python_27
