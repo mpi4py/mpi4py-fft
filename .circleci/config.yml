@@ -31,11 +31,11 @@ jobs:
             - /home/circleci/miniconda
 
       - run:
-          name: Build and test Python 3.6
+          name: Build and test latest Python
           command: |
             source ~/miniconda/bin/activate root
-            conda build --no-test --python 3.6 ./conf
-            conda create --name mpi4py_fft_env python=3.6 mpi4py_fft_test coverage --use-local
+            conda build --no-test ./conf
+            conda create --name mpi4py_fft_env mpi4py_fft_test coverage --use-local
             conda activate mpi4py_fft_env
             cd tests && ./runtests.sh
 
