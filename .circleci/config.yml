@@ -1,6 +1,6 @@
 version: 2
 jobs:
-  build:
+  build_python_latest:
     machine: true
     steps:
       - checkout
@@ -20,7 +20,6 @@ jobs:
             source ~/miniconda/bin/activate root
             conda config --set always_yes yes
             conda update -q conda
-            #conda config --add channels spectralDNS
             conda config --add channels conda-forge
             conda install -n root conda-build
             pip install --no-deps codacy-coverage coverage
@@ -39,12 +38,6 @@ jobs:
             conda activate mpi4py_fft_env
             cd tests && ./runtests.sh
 
-      - run:
-          name: Build and test Python 2.7
-          command: |
-            source ~/miniconda/bin/activate root
-            conda build --python 2.7 ./conf
-
       - deploy:
           name: Deploy
           command: |
@@ -54,3 +47,37 @@ jobs:
             coverage xml
             bash codecov.sh -X gcov -X fix
             python-codacy-coverage -r coverage.xml
+
+  build_python_27:
+    machine: true
+    steps:
+      - checkout
+
+      - restore_cache:
+          key: v2-miniconda-{{ .Branch }}
+
+      - run:
+          name: install miniconda
+          command: |
+            if [[ ! -d /home/circleci/miniconda2 ]]; then
+                wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda2.sh &&
+                bash miniconda2.sh -b -f -p /home/circleci/miniconda2;
+            else
+                echo "Using cached miniconda2";
+            fi
+            source ~/miniconda2/bin/activate root
+            conda config --set always_yes yes
+            conda update -q conda
+            conda config --add channels conda-forge
+            conda install -n root conda-build
+
+      - run:
+          name: Build and test Python 2.7
+          command: |
+            source ~/miniconda2/bin/activate root
+            conda build ./conf
+
+      - save_cache:
+          key: v2-miniconda-{{ .Branch }}
+          paths:
+            - /home/circleci/miniconda2
