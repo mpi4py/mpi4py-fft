@@ -150,6 +150,7 @@ def test_mpifft():
                                 ax = 0 if axes is None else axes[0] if isinstance(axes[0], int) else axes[0][0]
                                 assert fft.forward.output_pencil.substart[ax] == 0
                                 assert fft.backward.input_pencil.substart[ax] == 0
+                                assert fft.dimensions() == len(shape)
 
                                 U = random_like(fft.forward.input_array)
 

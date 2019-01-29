@@ -1,7 +1,7 @@
 [run]
 source = mpi4py_fft
 omit =
-    */utilities/nc_file.py
+    mpi4py_fft/utilities/nc_file.py
 
 [report]
 exclude_lines =
