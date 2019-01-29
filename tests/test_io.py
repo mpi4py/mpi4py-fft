@@ -140,16 +140,17 @@ def test_4D(backend, forward_output):
 
 if __name__ == '__main__':
     #pylint: disable=unused-import
-    skip = False
+    skip = {'hdf5': False, 'netcdf4': False}
     try:
         import h5py
+    except ImportError:
+        skip['hdf5'] = True
+    try:
         import netCDF4
     except ImportError:
-        skip = True
-
-    if not skip:
-        #for bnd in ('hdf5', 'netcdf4'):
-        for bnd in ('hdf5', ): # disable broken netcdf4
+        skip['netcdf4'] = True
+    for bnd in ('hdf5', 'netcdf4'):
+        if not skip[bnd]:
             forw_output = [False]
             if bnd == 'hdf5':
                 forw_output.append(True)
