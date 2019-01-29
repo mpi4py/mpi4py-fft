@@ -1,7 +1,8 @@
 [run]
 source=mpi4py_fft
 parallel=True
-omit=mpi4py_fft/utilities/nc_file.py
+omit =
+    */utilities/nc_file.py
 
 [report]
 exclude_lines =
