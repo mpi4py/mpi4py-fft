@@ -3,7 +3,6 @@ from time import time
 import numpy as np
 from scipy.fftpack import dctn as scipy_dctn
 from scipy.fftpack import dstn as scipy_dstn
-import scipy.fftpack
 from mpi4py_fft import fftw
 
 has_pyfftw = True

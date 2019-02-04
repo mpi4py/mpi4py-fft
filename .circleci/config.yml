@@ -23,7 +23,7 @@ jobs:
           command: |
             source ~/miniconda/bin/activate root
             conda build --no-test ./conf
-            conda create --name mpi4py_fft_env mpi4py_fft_test coverage scipy --use-local
+            conda create --name mpi4py_fft_env mpi4py_fft_test coverage scipy pyfftw codecov --use-local
             conda activate mpi4py_fft_env
             cd tests && ./runtests.sh
 
