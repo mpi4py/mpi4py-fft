@@ -11,18 +11,7 @@ jobs:
       - run:
           name: install miniconda
           command: |
-            if [[ ! -d /home/circleci/miniconda ]]; then
-                wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh &&
-                bash miniconda.sh -b -f -p /home/circleci/miniconda;
-            else
-                echo "Using cached miniconda";
-            fi
-            source ~/miniconda/bin/activate root
-            conda config --set always_yes yes
-            conda update -q conda
-            conda config --add channels conda-forge
-            conda install -n root conda-build
-            pip install --no-deps codacy-coverage coverage
+           ./.circleci/install_conda.sh
 
       - save_cache:
           key: v3-miniconda-{{ .Branch }}
@@ -54,28 +43,19 @@ jobs:
       - checkout
 
       - restore_cache:
-          key: v2-miniconda-{{ .Branch }}
+          key: v3-miniconda-{{ .Branch }}
 
       - run:
           name: install miniconda
           command: |
-            if [[ ! -d /home/circleci/miniconda2 ]]; then
-                wget https://repo.continuum.io/miniconda/Miniconda2-latest-Linux-x86_64.sh -O miniconda2.sh &&
-                bash miniconda2.sh -b -f -p /home/circleci/miniconda2;
-            else
-                echo "Using cached miniconda2";
-            fi
-            source ~/miniconda2/bin/activate root
-            conda config --set always_yes yes
-            conda update -q conda
-            conda config --add channels conda-forge
-            conda install -n root conda-build
-            conda build ./conf
+            ./.circleci/install_conda.sh
 
-      - save_cache:
-          key: v2-miniconda-{{ .Branch }}
-          paths:
-            - /home/circleci/miniconda2
+      - run:
+          name: Build and test python 2.7
+          command: |
+            source ~/miniconda/bin/activate root
+            cd /home/circleci/project
+            conda build --python 2.7 ./conf
 
 workflows:
   version: 2
