@@ -24,6 +24,7 @@ requirements:
   run:
     - python
     - mpi4py
+    - mpich
     - {{ pin_compatible('numpy') }}
     - fftw
     - nomkl
@@ -36,6 +37,7 @@ test:
     - coverage # [py3k]
     - codecov # [py3k]
     - scipy >=1.0.0
+    - pyfftw
 
   source_files:
     - tests
