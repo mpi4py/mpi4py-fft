@@ -4,7 +4,7 @@ Storing datafiles
 mpi4py-fft works with regular Numpy arrays. However, since arrays in parallel
 can become very large, and the arrays live on multiple processors, we require
 parallel IO capabilities that goes beyond Numpys regular methods.
-In the :mod:`.utilities` module there are two helper classes for dumping
+In the :mod:`mpi4py_fft.utilities` module there are two helper classes for dumping
 dataarrays to either `HDF5 <https://www.hdf5.org>`_ or
 `NetCDF <https://www.unidata.ucar.edu/software/netcdf/>`_ format:
 
@@ -109,7 +109,7 @@ two different ways when creating the datafiles:
 
         f0 = HDF5File('filename.h5', T, domain=((0, pi), (0, 2*np.pi), (0, 3*np.pi)))
 
-    2) One array giving the coordinates for each dimension. For example::
+    2) A sequence of arrays giving the coordinates for each dimension. For example::
 
         d = (np.arange(N[0], dtype=np.float)*1*np.pi/N[0],
              np.arange(N[1], dtype=np.float)*2*np.pi/N[1],
@@ -146,7 +146,7 @@ and `Visit <https://www.visitusers.org>`_, whereas NetCDF4 files can at the time
 opened with `Visit <https://www.visitusers.org>`_.
 
 To view the HDF5-files we first need to generate some light-weight *xdmf*-files that can
-be understood by both Paraview or Visit. To generate such files, simply throw the
+be understood by both Paraview and Visit. To generate such files, simply throw the
 module :mod:`.utilities.generate_xdmf` on the HDF5-files::
 
     from mpi4py_fft.utilities import generate_xdmf

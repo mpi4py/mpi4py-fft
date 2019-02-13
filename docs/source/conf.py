@@ -14,20 +14,23 @@
 #
 import os
 import sys
+import subprocess
 sys.path.insert(0, os.path.abspath('.'))
 sys.path.insert(0, os.path.abspath('../'))
 
 # -- Project information -----------------------------------------------------
 
 project = 'mpi4py-fft'
-copyright = '2018, Mikael Mortensen and Lisandro Dalcin'
+copyright = '2019, Mikael Mortensen and Lisandro Dalcin'
 author = 'Mikael Mortensen and Lisandro Dalcin'
 
 # The short X.Y version
-version = ''
-# The full version, including alpha/beta/rc tags
-release = '1.0-beta'
+p = subprocess.Popen(["git describe --tags | cut -d'-' -f 1"], stdout=subprocess.PIPE, shell=True)
 
+# The short X.Y version
+version = p.communicate()[0].rstrip().decode('utf-8')
+# The full version, including alpha/beta/rc tags
+release = version
 
 # -- General configuration ---------------------------------------------------
 
@@ -49,6 +52,9 @@ extensions = [
 napoleon_google_docstring = False
 napoleon_use_param = False
 napoleon_use_ivar = True
+
+# For some reason mathjax 2.7.5 renders bold type ugly. Use 2.7.1
+mathjax_path = 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -161,7 +167,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
     (master_doc, 'mpi4py-fft', 'mpi4py-fft Documentation',
-     author, 'mpi4py-fft', 'One line description of project.',
+     author, 'mpi4py-fft', 'Parallel fast Fourier transforms',
      'Miscellaneous'),
 ]
 

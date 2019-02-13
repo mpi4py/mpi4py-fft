@@ -31,7 +31,7 @@ to
 
 .. math::
 
-    \tilde{u}_{j_0/P,k_1,k_2} &= \mathcal{F}_1( \mathcal{F}_{2}(u_{j_0/P, j_1, j_2}), \\
+    \tilde{u}_{j_0/P,k_1,k_2} &= \mathcal{F}_1( \mathcal{F}_{2}(u_{j_0/P, j_1, j_2})), \\
     \tilde{u}_{j_0, k_1/P, k_2} &\xleftarrow[P]{1\rightarrow 0} \tilde{u}_{j_0/P, k_1, k_2}, \\
     \hat{u}_{k_0,k_1/P,k_2} &= \mathcal{F}_0(\tilde{u}_{j_0, k_1/P, k_2}).
 
@@ -126,7 +126,7 @@ objects by combining whenever possible. Take our example, the array
 :math:`u_{j_0/P,j_1,j_2}` can transform along both axes 1 and 2 simultaneously,
 without any intermediate global redistributions. By setting
 ``collapse=True`` only one object of ``rfftn(u, axes=(1, 2))`` will be
-used instead of two (like ``rfftn(rfftn(u, axes=2), axes=1)``).
+used instead of two (like ``fftn(rfftn(u, axes=2), axes=1)``).
 Note that a collapse can also be configured through the ``axes`` keyword,
 using::
 
@@ -282,12 +282,12 @@ get
     \widehat{ab}_k &= \int_{0}^{2\pi} \left( \sum_{p=-N/2}^{N/2-1} \hat{a}_p e^{i p x} \sum_{q=-N/2}^{N/2-1} \hat{b}_q e^{i q x} \right)  e^{-i k x} dx, \quad \forall \, k \in [-N/2, \ldots, N/2-1] \\
     \widehat{ab}_k &= \sum_{p=-N/2}^{N/2-1} \sum_{q=-N/2}^{N/2-1} \hat{a}_p  \hat{b}_q \int_{0}^{2\pi} e^{-i (p+q-k) x} dx, \quad \forall \, k \in [-N/2, \ldots, N/2-1]
 
-The final integral is unity for :math:`p+q=k` and zero otherwise. Consequently, we get
+The final integral is :math:`2\pi` for :math:`p+q=k` and zero otherwise. Consequently, we get
 
 .. math::
     :label: ab_convolve2
 
-    \widehat{ab}_k = \sum_{p=-N/2}^{N/2-1}\sum_{q=-N/2}^{N/2-1} \hat{a}_p  \hat{b}_{q} \delta_{p+q, k} , \quad \forall \, k \in [-N/2, \ldots, N/2-1]
+    \widehat{ab}_k = 2\pi \sum_{p=-N/2}^{N/2-1}\sum_{q=-N/2}^{N/2-1} \hat{a}_p  \hat{b}_{q} \delta_{p+q, k} , \quad \forall \, k \in [-N/2, \ldots, N/2-1]
 
 Unfortunately, the convolution sum :eq:`ab_convolve2` is very expensive to
 compute, and the direct application of :eq:`dft_convolve` leads to

@@ -2,4 +2,3 @@
 
 pushd tests
 ./runtests.sh
-
