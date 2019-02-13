@@ -1,10 +1,7 @@
-=======================
-LICENSE: mpi4py-fft
-=======================
+BSD 2-Clause License
 
 :Author:  Lisandro Dalcin and Mikael Mortensen
 :Contact: dalcinl@gmail.com or mikaem@math.uio.no
-
 
 Copyright (c) 2017, Lisandro Dalcin and Mikael Mortensen.
 All rights reserved.
