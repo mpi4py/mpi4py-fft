@@ -14,6 +14,10 @@ mpi4py-fft
 .. image:: https://readthedocs.org/projects/mpi4py-fft/badge/?version=latest
    :target: https://mpi4py-fft.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
+  
+.. image:: https://anaconda.org/conda-forge/mpi4py-fft/badges/downloads.svg
+   :target: https://anaconda.org/conda-forge/mpi4py-fft
+   :alt: Total downloads from conda-forge
 
 
 mpi4py-fft is a Python package for computing Fast Fourier Transforms (FFTs).
