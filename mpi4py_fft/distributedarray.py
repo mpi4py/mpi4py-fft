@@ -55,14 +55,18 @@ class DistributedArray(np.ndarray):
         obj.global_shape = global_shape
         return obj
 
-    def alignment(self):
-        return self.p0.axis
-
     def __array_finalize__(self, obj):
         if obj is None:
             return
         self.p0 = getattr(obj, 'p0', None)
         self.global_shape = getattr(obj, 'global_shape', None)
+
+    def alignment(self):
+        return self.p0.axis
+
+    def local_slice(self):
+        return [slice(start, start+shape) for start, shape in zip(self.p0.substart,
+                                                                  self.p0.subshape)]
 
     def redistribute(self, axis):
         """Global redistribution of array into alignment in ``axis``
