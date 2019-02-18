@@ -13,8 +13,8 @@ class DistributedArray(np.ndarray):
         Shape of non-distributed global array
     subcomm : None, Subcomm instance or sequence of ints
         Describes how to distribute the array
-    val : int
-        Initialize array with this value if buffer is not given
+    val : int or None
+        Initialize array with this int if buffer is not given
     dtype : np.dtype
         Type of array
     buffer : np.ndarray
@@ -23,7 +23,7 @@ class DistributedArray(np.ndarray):
         Make sure array is aligned in this direction
 
     """
-    def __new__(cls, global_shape, subcomm=None, val=0, dtype=np.float,
+    def __new__(cls, global_shape, subcomm=None, val=None, dtype=np.float,
                 buffer=None, alignment=None):
         if isinstance(subcomm, Subcomm):
             pass
@@ -49,7 +49,7 @@ class DistributedArray(np.ndarray):
             alignment = np.flatnonzero(np.array(sizes) == 1)[-1]
         p0 = Pencil(subcomm, global_shape, axis=alignment)
         obj = np.ndarray.__new__(cls, p0.subshape, dtype=dtype, buffer=buffer)
-        if buffer is None:
+        if buffer is None and isinstance(val, int):
             obj.fill(val)
         obj.p0 = p0
         obj.global_shape = global_shape
@@ -79,15 +79,14 @@ class DistributedArray(np.ndarray):
         Returns
         -------
         DistributedArray
-            self array globally redistributed along new axis
+            New DistributedArray globally redistributed along axis
 
         """
         p1 = self.p0.pencil(axis)
         transfer = self.p0.transfer(p1, self.dtype)
-        z0 = np.zeros(p1.subshape, dtype=self.dtype)
+        z0 = DistributedArray(self.global_shape,
+                              subcomm=p1.subcomm,
+                              dtype=self.dtype,
+                              alignment=axis)
         transfer.forward(self, z0)
-        return DistributedArray(self.global_shape,
-                                subcomm=p1.subcomm,
-                                dtype=self.dtype,
-                                alignment=axis,
-                                buffer=z0)
+        return z0
