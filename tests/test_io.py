@@ -2,7 +2,7 @@ import functools
 import os
 from mpi4py import MPI
 import numpy as np
-from mpi4py_fft import PFFT, HDF5File, NCFile, getDarray, generate_xdmf
+from mpi4py_fft import PFFT, HDF5File, NCFile, newDarray, generate_xdmf
 
 N = (12, 13, 14, 15)
 comm = MPI.COMM_WORLD
@@ -34,14 +34,14 @@ def test_2D(backend, forward_output):
             remove_if_exists(filename)
         hfile = writer[backend](filename, T, domain=domain)
         assert hfile.backend() == backend
-        u = getDarray(T, forward_output=forward_output, val=1)
+        u = newDarray(T, forward_output=forward_output, val=1)
         hfile.write(0, {'u': [u]}, forward_output=forward_output)
         hfile.write(1, {'u': [u]}, forward_output=forward_output)
         if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
             generate_xdmf(filename)
             generate_xdmf(filename, order='visit')
 
-        u0 = getDarray(T, forward_output=forward_output)
+        u0 = newDarray(T, forward_output=forward_output)
         read = reader[backend](filename, T)
         read.read(u0, 'u', step=0, forward_output=forward_output)
         assert np.allclose(u0, u)
@@ -63,8 +63,8 @@ def test_3D(backend, forward_output):
 
         h0file = writer[backend]('uv'+filename, T, domain)
         h1file = writer[backend]('v'+filename, T, domain)
-        u = getDarray(T, forward_output=forward_output)
-        v = getDarray(T, forward_output=forward_output)
+        u = newDarray(T, forward_output=forward_output)
+        v = newDarray(T, forward_output=forward_output)
         u[:] = np.random.random(u.shape)
         v[:] = 2
         for k in range(3):
@@ -96,7 +96,7 @@ def test_3D(backend, forward_output):
             generate_xdmf('v'+filename, periodic=(True, True, True))
             generate_xdmf('v'+filename, order='visit')
 
-        u0 = getDarray(T, forward_output=forward_output)
+        u0 = newDarray(T, forward_output=forward_output)
         read = reader[backend]('uv'+filename, T)
         read.read(u0, 'u', forward_output=forward_output, step=0)
         assert np.allclose(u0, u)
@@ -119,8 +119,8 @@ def test_4D(backend, forward_output):
         if backend == 'netcdf4':
             remove_if_exists('uv'+filename)
         h0file = writer[backend]('uv'+filename, T, domain)
-        u = getDarray(T, forward_output=forward_output)
-        v = getDarray(T, forward_output=forward_output)
+        u = newDarray(T, forward_output=forward_output)
+        v = newDarray(T, forward_output=forward_output)
         u[:] = np.random.random(u.shape)
         v[:] = 2
         for k in range(3):
@@ -131,7 +131,7 @@ def test_4D(backend, forward_output):
         if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
             generate_xdmf('uv'+filename)
 
-        u0 = getDarray(T, forward_output=forward_output)
+        u0 = newDarray(T, forward_output=forward_output)
         read = reader[backend]('uv'+filename, T)
         read.read(u0, 'u', forward_output=forward_output, step=0)
         assert np.allclose(u0, u)

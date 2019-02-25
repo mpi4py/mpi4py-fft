@@ -15,6 +15,7 @@ the main modules:
 
     * :mod:`.mpifft`
     * :mod:`.pencil`
+    * :mod:`.distributedarray`
     * :mod:`.libfft`
     * :mod:`.fftw`
 
@@ -26,6 +27,11 @@ The :mod:`.pencil` module is responsible for global redistributions through MPI.
 However, this module is rarely used on its own, unless one simply needs to do
 global redistributions without any transforms at all. The :mod:`.pencil` module
 is used heavily by the :class:`.PFFT` class.
+
+The :mod:`.distributedarray` module contains classes for simply distributing
+multidimensional arrays, with no regard to transforms. The distributed arrays
+created from the classes here can very well be used in any MPI application that
+requires a large multidimensional distributed array.
 
 The :mod:`.libfft` module provides a common interface to any of the serial
 transforms in the `FFTW <http://www.fftw.org>`_  library.

@@ -43,7 +43,9 @@ data along this axis. For the figure above, the slab distribution gives each
 processor data that is fully available along two axes, whereas the pencil
 distribution only has data fully available along one axis. Rearranging data,
 such that it becomes aligned in a different direction, is usually termed
-a global redistribution, or a global transpose operation.
+a global redistribution, or a global transpose operation. Note that with
+mpi4py-fft we always require that at least one axis of a multidimensional
+array remains aligned (non-distributed).
 
 Distribution and global redistribution is in mpi4py-fft handled by three
 classes in the :mod:`.pencil` module:
@@ -52,72 +54,137 @@ classes in the :mod:`.pencil` module:
     * :class:`.Subcomm`
     * :class:`.Transfer`
 
-To illustrate how these classes work together, lets first consider a 2D
-dataarray of global shape (8, 8) and distribute it first in axis 0::
+These classes are the low-level backbone of the higher-level :class:`.PFFT` and
+:class:`.DistributedArray` classes. To use these low-level classes
+directly is not recommended and usually not necessary. However, for
+clarity we start by describing how these low-level classes work together.
+
+Lets first consider a 2D dataarray of global shape (8, 8) that will be
+distributed along axis 0. With a high level API we could then simply
+do::
 
     import numpy as np
-    from mpi4py_fft import pencil
+    from mpi4py_fft import DistributedArray
+    N = (8, 8)
+    a = DistributedArray(N, [0, 1])
+
+where the ``[0, 1]`` list decides that the first axis can be distributed,
+whereas the second axis is using one processor only and as such is
+aligned (non-distributed). We may now inspect the low-level
+:class:`.Pencil` class associated with ``a``::
+
+    p0 = a.pencil
+
+The ``p0`` :class:`.Pencil` object now contains information about the
+distribution of a 2D dataarray of global shape (8, 8), that will be
+distributed in the first axis and aligned in the second. However, ``p0``
+does not contain any of the data itself. Distributed arrays are instead
+created using the information that is in ``p0``. The distributed array
+``a`` uses the associated pencil to look up information about the global
+array, for example::
+
+    a.alignment
+    a.global_shape
+    a.subcomm
+    a.commsizes
+
+will return, respectively, ``1``, ``(8, 8)``, a list of two subcommunicators
+(subcomm) and finally their sizes. Naturally, their sizes will depend on the
+number of processors used to run the program. If we used 4, then
+``a.commsizes`` would return ``[1, 4]``.
+
+We note that a low-level approach to creating such a distributed array would
+be::
+
+    import numpy as np
+    from mpi4py_fft import Pencil, Subcomm
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
     N = (8, 8)
     subcomm = Subcomm(comm, [0, 1])
     p0 = Pencil(subcomm, N, axis=1)
+    a0 = np.zeros(p0.subshape)
 
-The ``p0`` :class:`.Pencil` instance now contains information about the
-distribution of a 2D dataarray of global shape (8, 8), that will be
-distributed in the first axis and aligned in the second. However, ``p0``
-does not contain any of the data itself. Distributed arrays are instead
-created using the information that is in ``p0``.
+Note that this last array ``a0`` would be equivalent to ``a``, but
+it would be a pure Numpy array (created on each processor) and it would
+not contain any of the information about the global array that it is
+part of ``(global_shape, pencil, subcomm, etc.)``. It contains the same
+amount of data as ``a`` though and ``a0`` is as such a perfectly fine
+distributed array.
 
 Since at least one axis needs to be aligned (non-distributed), a 2D array
 can only be distributed with
 one processor group. If we wanted to distribute the second axis instead
-of the first, then we would have used ``axis=0`` in the creation of ``p0``,
-as well as ``[1, 0]`` in the creation of ``subcomm``. A better way to get
-the second ``pencil``, that is aligned with axis 0, is to create it from
-``p0``::
+of the first, then we would could have done::
+
+    a = DistributedArray(N, [1, 0])
+
+With the low-level approach we would have had to use ``axis=0`` in the
+creation of ``p0``, as well as ``[1, 0]`` in the creation of ``subcomm``.
+Another way to get the second ``pencil``, that is aligned with axis 0,
+is to create it from ``p0``::
 
     p1 = p0.pencil(0)
 
 Now the ``p1`` object will represent a (8, 8) global array distributed in the
 second axis.
 
-Lets create a global array of shape (8, 8), distribute it like ``p0`` and fill
-it with the value of each processors rank::
+Lets create a complete script (``pencils.py``) that fills the array ``a`` with
+the value of each processors rank (note that it would also work to follow the
+low-level approach and use ``a0``)::
 
-    a0 = np.zeros(p0.subshape)
-    a0[:] = comm.Get_rank()
-    print(a0.shape)
+    import numpy as np
+    from mpi4py_fft import DistributedArray
+    from mpi4py import MPI
+    comm = MPI.COMM_WORLD
+    N = (8, 8)
+    a = DistributedArray(N, [0, 1])
+    a[:] = comm.Get_rank()
+    print(a.shape)
 
-If we save this code (all of it, from ``import numpy as np``) to a file called
-``pencils.py``, we can run it with::
+We can run it with::
 
     mpirun -np 4 python pencils.py
 
-and obtain the printed results from the last line (``print(a0.shape)``)::
+and obtain the printed results from the last line (``print(a.shape)``)::
 
     (2, 8)
     (2, 8)
     (2, 8)
     (2, 8)
 
-The shape of the local ``a0`` arrays is (2, 8) on all 4 processors. Now assume
+The shape of the local ``a`` arrays is (2, 8) on all 4 processors. Now assume
 that we need these data aligned in the x-direction (axis=0) instead. For this
-to happen we need to perform a *global redistribution*. With mpi4py-fft
-this is achieved with the :class:`.Transfer` class, that is designed to
-transfer data between any two sets of pencils, like represented by ``p0`` and ``p1``.
-First create an instance of the :class:`.Transfer` class, using the datatype
-of the array that is to be sent::
+to happen we need to perform a *global redistribution*. The easiest approach
+is then to execute the following::
+
+    b = a.redistribute(0)
+    print(b.shape)
+
+which would print the following::
+
+    (8, 2)
+    (8, 2)
+    (8, 2)
+    (8, 2)
+
+Under the hood the global redistribution is executed with the help of the
+:class:`.Transfer` class, that is designed to
+transfer data between any two sets of pencils, like those represented by
+``p0`` and ``p1``. With low-level API a transfer object may be created
+using the pencils and the datatype of the array that is to be sent::
 
     transfer = p0.transfer(p1, np.float)
 
 Executing the global redistribution is then simply a matter of::
 
     a1 = np.zeros(p1.subshape)
-    transfer.forward(a0, a1)
+    transfer.forward(a, a1)
 
 Now it is important to realise that the global array does not change. The local
-``a1`` arrays  will now contain the same data as ``a0``, only aligned differently.
+``a1`` arrays  will now contain the same data as ``a``, only aligned differently.
+However, the exchange is not performed in-place. The new array is as such a
+copy of the original that is aligned differently.
 Some images, :numref:`2dpencila` and :numref:`2dpencilb`, can be used to
 illustrate:
 
@@ -178,13 +245,15 @@ object is created. Under the hood all transfers are executing calls to
 `MPI.Alltoallw <https://www.mpich.org/static/docs/v3.2/www3/MPI_Alltoallw.html>`_.
 
 
-Multidimensional arrays
------------------------
+Multidimensional distributed arrays
+-----------------------------------
 
 The procedure discussed above remains the same for any type of array, of any
 dimension. With mpi4py-fft we can distribute any array of arbitrary dimensionality
 using an arbitrary number of processor groups. How to distribute is completely
 configurable through the classes in the :mod:`.pencil` module.
+
+The
 
 We denote a global :math:`d`-dimensional array as :math:`u_{j_0, j_1, \ldots, j_{d-1}}`,
 where :math:`j_m\in\textbf{j}_m` for :math:`m=[0, 1, \ldots, d-1]`.

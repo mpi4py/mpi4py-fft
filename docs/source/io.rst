@@ -16,12 +16,12 @@ reads data in parallel. A simple example of usage is::
 
     from mpi4py import MPI
     import numpy as np
-    from mpi4py_fft import PFFT, HDF5File, NCFile, Function
+    from mpi4py_fft import PFFT, HDF5File, NCFile, newDarray
 
     N = (128, 256, 512)
     T = PFFT(MPI.COMM_WORLD, N)
-    u = Function(T, forward_output=False)
-    v = Function(T, forward_output=False, val=2)
+    u = newDarray(T, forward_output=False)
+    v = newDarray(T, forward_output=False, val=2)
     u[:] = np.random.random(N)
 
     fields = {'u': [u], 'v': [v]}
@@ -43,8 +43,8 @@ The stored dataarrays can be retrieved later on::
 
     f0 = HDF5File('h5test.h5', T, mode='r')
     f1 = NCFile('nctest.nc', T, mode='r')
-    u0 = Function(T, forward_output=False)
-    u1 = Function(T, forward_output=False)
+    u0 = newDarray(T, forward_output=False)
+    u1 = newDarray(T, forward_output=False)
     f0.read(u0, 'u', 0)
     f0.read(u1, 'u', 1)
     f1.read(u0, 'u', 0)

@@ -159,10 +159,10 @@ class PFFT(object):
     --------
     >>> import numpy as np
     >>> from mpi4py import MPI
-    >>> from mpi4py_fft.mpifft import PFFT, getDarray
+    >>> from mpi4py_fft import PFFT, newDarray
     >>> N = np.array([12, 14, 15], dtype=int)
     >>> fft = PFFT(MPI.COMM_WORLD, N, axes=(0, 1, 2))
-    >>> u = getDarray(fft, False)
+    >>> u = newDarray(fft, False)
     >>> u[:] = np.random.random(u.shape).astype(u.dtype)
     >>> u_hat = fft.forward(u)
     >>> uj = np.zeros_like(u)
@@ -177,7 +177,7 @@ class PFFT(object):
     >>> idct = functools.partial(idctn, type=3)
     >>> transforms = {(1, 2): (dct, idct)}
     >>> r2c = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2)), transforms=transforms)
-    >>> u = getDarray(r2c, False)
+    >>> u = newDarray(r2c, False)
     >>> u[:] = np.random.random(u.shape).astype(u.dtype)
     >>> u_hat = r2c.forward(u)
     >>> uj = np.zeros_like(u)

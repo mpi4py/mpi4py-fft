@@ -18,7 +18,7 @@ the following code snippet::
 
     import numpy as np
     from mpi4py import MPI
-    from mpi4py_fft.mpifft import PFFT, Function
+    from mpi4py_fft import PFFT, newDarray
     N = np.array([128, 128, 128], dtype=int)
     fft = PFFT(MPI.COMM_WORLD, N, axes=(0, 1, 2), dtype=np.float, slab=True)
 
@@ -47,7 +47,7 @@ With data aligned in axis 0, we can perform the final transform
 Assume now that all the code in this section is stored to a file named
 ``pfft_example.py``, and add to the above code::
 
-    u = Function(fft, False)
+    u = newDarray(fft, False)
     u[:] = np.random.random(u.shape).astype(u.dtype)
     u_hat = fft.forward(u)
     uj = np.zeros_like(u)
@@ -63,9 +63,9 @@ should raise no exception, and the output should be::
 
 This shows that the first index has been shared between the two processors
 equally. The array ``u`` thus corresponds to :math:`u_{j_0/P,j_1,j_2}`. Note
-that :class:`.Function` is an overloaded Numpy ndarray which simply has
+that :class:`.newDarray` is an overloaded Numpy ndarray which simply has
 a constructor using ``fft`` to determine its size and type.
-``Function(fft, False)`` here simply returns an ndarray of shape (64, 128, 128)
+``newDarray(fft, False)`` here simply returns an ndarray of shape (64, 128, 128)
 and type ``np.float``. The ``False`` argument indicates that the shape
 and type should be of the input array type, as opposed to the output
 array type (:math:`\hat{u}_{k_0,k_1/P,k_2}` that one gets with ``True``).
@@ -79,7 +79,7 @@ The output array will be distributed in axis 1, so the output array
 shape should be (128, 64, 65). We check this by adding the following
 code and rerunning::
 
-    u_hat = Function(fft, True)
+    u_hat = newDarray(fft, True)
     print(MPI.COMM_WORLD.Get_rank(), u_hat.shape)
 
 leading to an additional print of::
@@ -146,7 +146,7 @@ with real-to-complex transforms like this::
     idct = functools.partial(idctn, type=3)
     transforms = {(0,): (rfftn, irfftn), (1, 2): (dct, idct)}
     r2c = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2)), transforms=transforms)
-    u = Function(r2c, False)
+    u = newDarray(r2c, False)
     u[:] = np.random.random(u.shape).astype(u.dtype)
     u_hat = r2c.forward(u)
     uj = np.zeros_like(u)
@@ -169,7 +169,7 @@ A parallel transform object can be created and tested as::
     fft = PFFT(MPI.COMM_WORLD, N, ((0,), (1, 2), (3, 4)), slab=True,
                transforms={(1, 2): (dctn, idctn), (3, 4): (dstn, idstn)})
 
-    A = Function(fft, False)
+    A = newDarray(fft, False)
     A[:] = np.random.random(A.shape)
     C = fftw.aligned_like(A)
     B = fft.forward(A)
@@ -189,11 +189,11 @@ in the PFFT calling::
 
     import numpy as np
     from mpi4py import MPI
-    from mpi4py_fft.mpifft import PFFT, Function
+    from mpi4py_fft import PFFT, newDarray
 
     N = np.array([128, 128, 128], dtype=int)
     fft = PFFT(MPI.COMM_WORLD, N, axes=(0, 1, 2), dtype=np.float)
-    u = Function(fft, False)
+    u = newDarray(fft, False)
     u[:] = np.random.random(u.shape).astype(u.dtype)
     u_hat = fft.forward(u)
     uj = np.zeros_like(u)
@@ -326,7 +326,7 @@ With mpi4py-fft we can compute this convolution using the ``padding`` keyword
 of the :class:`.PFFT` class::
 
     import numpy as np
-    from mpi4py_fft import PFFT, Function
+    from mpi4py_fft import PFFT, newDarray
     from mpi4py import MPI
 
     comm = MPI.COMM_WORLD
@@ -334,14 +334,14 @@ of the :class:`.PFFT` class::
     fft = PFFT(comm, N, padding=[1.5, 1.5], dtype=np.complex)
 
     # Create arrays in normal spectral space
-    a_hat = Function(fft, True)
-    b_hat = Function(fft, True)
+    a_hat = newDarray(fft, True)
+    b_hat = newDarray(fft, True)
     a_hat[:] = np.random.random(a_hat.shape) + np.random.random(a_hat.shape)*1j
     b_hat[:] = np.random.random(a_hat.shape) + np.random.random(a_hat.shape)*1j
 
     # Transform to real space with padding
-    a = Function(fft, False)
-    b = Function(fft, False)
+    a = newDarray(fft, False)
+    b = newDarray(fft, False)
     assert a.shape == (192//comm.Get_size(), 192)
     a = fft.backward(a_hat, a)
     b = fft.backward(b_hat, b)

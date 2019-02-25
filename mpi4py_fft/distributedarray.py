@@ -1,7 +1,9 @@
+import os
 import numpy as np
 from mpi4py import MPI
 from .pencil import Pencil, Subcomm
 
+comm = MPI.COMM_WORLD
 
 class DistributedArray(np.ndarray):
     """Distributed Numpy array
@@ -124,6 +126,69 @@ class DistributedArray(np.ndarray):
             v0._rank = 0
         return v0
 
+    def get_global_slice(self, lslice):
+        """Return global slice of DistributedArray
+
+        Parameters
+        ----------
+        lslice : sequence of slice(None) and ints
+            The slice of the global array. Must be composed of integers and
+            slice(None) objects
+
+        Returns
+        -------
+        Numpy array
+            The slice of the global array is returned on rank 0, whereas the
+            remaining ranks return None
+
+        Example
+        -------
+        >>> import subprocess
+        >>> fx = open('gs_script.py', 'w')
+        >>> h = fx.write('''
+        ... from mpi4py import MPI
+        ... from mpi4py_fft.distributedarray import DistributedArray
+        ... comm = MPI.COMM_WORLD
+        ... N = (6, 6, 6)
+        ... z = DistributedArray(N, dtype=float, alignment=0)
+        ... z[:] = comm.Get_rank()
+        ... g = z.get_global_slice((0, slice(None), 0))
+        ... if comm.Get_rank() == 0:
+        ...     print(g)''')
+        >>> fx.close()
+        >>> print(subprocess.getoutput('mpirun -np 4 python gs_script.py'))
+        [0. 0. 0. 2. 2. 2.]
+        """
+        # Note that this implementation uses h5py to take care of the local to
+        # global MPI. We create a global file with MPI, but then open it without
+        # MPI and only on rank 0.
+        import h5py
+        f = h5py.File('tmp.h5', 'w', driver="mpio", comm=comm)
+        s = self.local_slice()
+        si = np.nonzero([isinstance(s, int) for s in lslice])[0]
+        sp = np.nonzero([isinstance(x, slice) for x in lslice])[0]
+        sf = tuple(np.take(s, sp))
+        N = self.global_shape
+        f.require_dataset('0', shape=tuple(np.take(N, sp)), dtype=self.dtype)
+        lslice = list(lslice)
+        si = np.nonzero([isinstance(x, int) and not z == slice(None) for x, z in zip(lslice, s)])[0]
+        on_this_proc = True
+        for i in si:
+            if lslice[i] >= s[i].start and lslice[i] < s[i].stop:
+                lslice[i] -= s[i].start
+            else:
+                on_this_proc = False
+        if on_this_proc:
+            f["0"][sf] = self[tuple(lslice)]
+        f.close()
+        c = None
+        if comm.Get_rank() == 0:
+            h = h5py.File('tmp.h5', 'r')
+            c = h['0'].__array__()
+            h.close()
+            os.remove('tmp.h5')
+        return c
+
     def local_slice(self):
         """Local view into global array
 
@@ -201,15 +266,15 @@ class DistributedArray(np.ndarray):
         transfer.forward(self, z0)
         return z0
 
-def getDarray(pfft, forward_output=True, val=0, rank=0):
+def newDarray(pfft, forward_output=True, val=0, rank=0):
     """Return DistributedArray for instance of PFFT class
 
     Parameters
     ----------
     pfft : Instance of :class:`.PFFT` class
     forward_output: boolean, optional
-        If False then create getDarray of shape/type for input to
-        forward transform, otherwise create getDarray of shape/type for
+        If False then create newDarray of shape/type for input to
+        forward transform, otherwise create newDarray of shape/type for
         output from forward transform.
     val : int or float
         Value used to initialize array.
@@ -221,10 +286,10 @@ def getDarray(pfft, forward_output=True, val=0, rank=0):
     Examples
     --------
     >>> from mpi4py import MPI
-    >>> from mpi4py_fft import PFFT, getDarray
+    >>> from mpi4py_fft import PFFT, newDarray
     >>> FFT = PFFT(MPI.COMM_WORLD, [64, 64, 64])
-    >>> u = getDarray(FFT, False, rank=1)
-    >>> u_hat = getDarray(FFT, True, rank=1)
+    >>> u = newDarray(FFT, False, rank=1)
+    >>> u_hat = newDarray(FFT, True, rank=1)
 
     """
     if forward_output is True:
@@ -250,8 +315,8 @@ def getDarray(pfft, forward_output=True, val=0, rank=0):
 
 def Function(*args, **kwargs): #pragma: no cover
     import warnings
-    warnings.warn("Function() is deprecated; use getDarray().", FutureWarning)
+    warnings.warn("Function() is deprecated; use newDarray().", FutureWarning)
     if 'tensor' in kwargs:
         kwargs['rank'] = 1
         del kwargs['tensor']
-    return getDarray(*args, **kwargs)
+    return newDarray(*args, **kwargs)
