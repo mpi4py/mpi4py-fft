@@ -302,14 +302,7 @@ def newDarray(pfft, forward_output=True, val=0, rank=0):
         p0 = pfft.pencil[0]
     commsizes = [s.Get_size() for s in p0.subcomm]
     global_shape = tuple([s*p for s, p in zip(shape, commsizes)])
-
-    if rank == 1:
-        global_shape = (len(shape),) + global_shape
-    elif rank == 2:
-        global_shape = (len(shape), len(shape)) + global_shape
-    else:
-        assert rank == 0
-
+    global_shape = (len(shape),)*rank + global_shape
     return DistributedArray(global_shape, subcomm=p0.subcomm, val=val,
                             dtype=dtype, rank=rank)
 
