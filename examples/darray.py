@@ -1,7 +1,7 @@
 import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.pencil import Subcomm
-from mpi4py_fft.distributedarray import DistributedArray, getDarray
+from mpi4py_fft.distributedarray import DistributedArray, getDarray, Function
 from mpi4py_fft.mpifft import PFFT
 
 # Test DistributedArray. Start with alignment in axis 0, then tranfer to 1 and
@@ -26,7 +26,8 @@ assert abs(s0-s1) < 1e-12, s0-s1
 
 print(z3.local_slice(), z3.substart, z3.commsizes)
 
-v0 = getDarray(fft, forward_output=False, rank=1)
+#v0 = getDarray(fft, forward_output=False, rank=1)
+v0 = Function(fft, forward_output=False, rank=1)
 v0[:] = np.random.random(v0.shape)
 v0c = v0.copy()
 v1 = getDarray(fft, forward_output=True, rank=1)

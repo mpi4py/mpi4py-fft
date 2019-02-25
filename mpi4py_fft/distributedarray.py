@@ -40,7 +40,7 @@ class DistributedArray(np.ndarray):
 
     """
     def __new__(cls, global_shape, subcomm=None, val=None, dtype=np.float,
-                buffer=None, alignment=None, rank=0):
+                buffer=None, alignment=None, rank=0, **kw):
 
         if isinstance(subcomm, Subcomm):
             pass
@@ -248,3 +248,11 @@ def getDarray(pfft, forward_output=True, val=0, rank=0):
 
     return DistributedArray(global_shape, subcomm=p0.subcomm, val=val,
                             dtype=dtype, rank=rank)
+
+def Function(*args, **kwargs):
+    import warnings
+    warnings.warn("Function() is deprecated; use getDarray().", FutureWarning)
+    if 'tensor' in kwargs:
+        kwargs['rank'] = 1
+        del kwargs['tensor']
+    return getDarray(*args, **kwargs)

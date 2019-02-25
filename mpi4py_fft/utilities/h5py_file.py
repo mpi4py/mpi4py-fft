@@ -75,11 +75,11 @@ class HDF5File(FileBase):
         Example
         -------
         >>> from mpi4py import MPI
-        >>> from mpi4py_fft import PFFT, HDF5File, Function
+        >>> from mpi4py_fft import PFFT, HDF5File, getDarray
         >>> comm = MPI.COMM_WORLD
         >>> T = PFFT(comm, (15, 16, 17))
-        >>> u = Function(T, forward_output=False, val=1)
-        >>> v = Function(T, forward_output=False, val=2)
+        >>> u = getDarray(T, forward_output=False, val=1)
+        >>> v = getDarray(T, forward_output=False, val=2)
         >>> f = HDF5File('h5filename.h5', T)
         >>> f.write(0, {'u': [u, (u, [slice(None), 4, slice(None)])],
         ...             'v': [v, (v, [slice(None), 5, 5])]})
