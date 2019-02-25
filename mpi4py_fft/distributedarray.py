@@ -2,7 +2,6 @@ import numpy as np
 from mpi4py import MPI
 from .pencil import Pencil, Subcomm
 
-comm = MPI.COMM_WORLD
 
 class DistributedArray(np.ndarray):
     """Distributed Numpy array
@@ -40,7 +39,7 @@ class DistributedArray(np.ndarray):
 
     """
     def __new__(cls, global_shape, subcomm=None, val=None, dtype=np.float,
-                buffer=None, alignment=None, rank=0, **kw):
+                buffer=None, alignment=None, rank=0):
 
         if isinstance(subcomm, Subcomm):
             pass
@@ -249,7 +248,7 @@ def getDarray(pfft, forward_output=True, val=0, rank=0):
     return DistributedArray(global_shape, subcomm=p0.subcomm, val=val,
                             dtype=dtype, rank=rank)
 
-def Function(*args, **kwargs):
+def Function(*args, **kwargs): #pragma: no cover
     import warnings
     warnings.warn("Function() is deprecated; use getDarray().", FutureWarning)
     if 'tensor' in kwargs:
