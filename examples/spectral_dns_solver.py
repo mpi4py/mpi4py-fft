@@ -10,7 +10,7 @@ http://github.com/spectralDNS/spectralDNS
 from time import time
 import numpy as np
 from mpi4py import MPI
-from mpi4py_fft.mpifft import PFFT, Function
+from mpi4py_fft import PFFT, getDarray
 
 # Set viscosity, end time and time step
 nu = 0.000625
@@ -28,18 +28,18 @@ FFT = PFFT(MPI.COMM_WORLD, N, collapse=False)
 FFT_pad = FFT
 
 # Declare variables needed to solve Navier-Stokes
-U = Function(FFT, False, tensor=3)       # Velocity
-U_hat = Function(FFT, tensor=3)          # Velocity transformed
-P = Function(FFT, False)                 # Pressure (scalar)
-P_hat = Function(FFT)                    # Pressure transformed
-U_hat0 = Function(FFT, tensor=3)         # Runge-Kutta work array
-U_hat1 = Function(FFT, tensor=3)         # Runge-Kutta work array
-a = [1./6., 1./3., 1./3., 1./6.]         # Runge-Kutta parameter
-b = [0.5, 0.5, 1.]                       # Runge-Kutta parameter
-dU = Function(FFT, tensor=3)             # Right hand side of ODEs
-curl = Function(FFT, False, tensor=3)
-U_pad = Function(FFT_pad, False, tensor=3)
-curl_pad = Function(FFT_pad, False, tensor=3)
+U = getDarray(FFT, False, rank=1)       # Velocity
+U_hat = getDarray(FFT, rank=1)          # Velocity transformed
+P = getDarray(FFT, False)               # Pressure (scalar)
+P_hat = getDarray(FFT)                  # Pressure transformed
+U_hat0 = getDarray(FFT, rank=1)         # Runge-Kutta work array
+U_hat1 = getDarray(FFT, rank=1)         # Runge-Kutta work array
+a = [1./6., 1./3., 1./3., 1./6.]        # Runge-Kutta parameter
+b = [0.5, 0.5, 1.]                      # Runge-Kutta parameter
+dU = getDarray(FFT, rank=1)             # Right hand side of ODEs
+curl = getDarray(FFT, False, rank=1)
+U_pad = getDarray(FFT_pad, False, rank=1)
+curl_pad = getDarray(FFT_pad, False, rank=1)
 
 def get_local_mesh(FFT, L):
     """Returns local mesh."""
@@ -52,10 +52,8 @@ def get_local_mesh(FFT, L):
 
 def get_local_wavenumbermesh(FFT, L):
     """Returns local wavenumber mesh."""
-
     s = FFT.local_slice()
     N = FFT.shape()
-
     # Set wavenumbers in grid
     k = [np.fft.fftfreq(n, 1./n).astype(int) for n in N[:-1]]
     k.append(np.fft.rfftfreq(N[-1], 1./N[-1]).astype(int))

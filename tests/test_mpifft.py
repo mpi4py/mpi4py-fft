@@ -4,7 +4,8 @@ import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT
 from mpi4py_fft.pencil import Subcomm
-from mpi4py_fft import fftw, Function
+from mpi4py_fft.distributedarray import DistributedArray, getDarray
+from mpi4py_fft import fftw
 
 has_pyfftw = True
 try:
@@ -36,10 +37,10 @@ def test_r2r():
     idctn = functools.partial(fftw.idctn, type=3)
     dstn = functools.partial(fftw.dstn, type=3)
     idstn = functools.partial(fftw.idstn, type=3)
-    fft = PFFT(MPI.COMM_WORLD, N, ((0,), (1, 2), (3, 4)), slab=True,
+    fft = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2), (3, 4)), slab=True,
                transforms={(1, 2): (dctn, idctn), (3, 4): (dstn, idstn)})
 
-    A = Function(fft, False)
+    A = getDarray(fft, forward_output=False)
     A[:] = np.random.random(A.shape)
     C = fftw.aligned_like(A)
     B = fft.forward(A)

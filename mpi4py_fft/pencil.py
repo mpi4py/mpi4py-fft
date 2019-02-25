@@ -37,7 +37,7 @@ class Subcomm(tuple):
     comm : A communicator or group of communicators
     dims : None, int or sequence of ints
         dims = [0, 0, 1] will give communicators distributed in the two first
-        indices, whereas the thirs will not be distributed
+        indices, whereas the third will not be distributed
 
     Examples
     --------
@@ -216,7 +216,7 @@ class Pencil(object):
     ----------
     subcomm : MPI communicator
     shape : sequence of ints
-        Shape of pencil (local array)
+        Shape of global array
     axis : int, optional
         Pencil is aligned in this direction
 

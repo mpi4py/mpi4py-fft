@@ -24,7 +24,7 @@ if [ $PY -eq 3 ]; then
     # mpiexec -n 12 python -m coverage test_mpifft.py
     mpiexec -n 2 python -m coverage run spectral_dns_solver.py
     mpiexec -n 2 python -m coverage run -m test_io
-    mpiexec -n 4 python -m coverage run -m test_io # 4 required for 100% coverage, but netcdf hangs, so skip netcdf
+    mpiexec -n 4 python -m coverage run -m test_io
 
     python -m coverage combine
 

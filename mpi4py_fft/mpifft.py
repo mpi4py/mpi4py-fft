@@ -82,7 +82,7 @@ class PFFT(object):
     Parameters
     ----------
     comm : MPI communicator
-    shape : sequence of ints
+    shape : sequence of ints, optional
         shape of input array planned for
     axes : None, int, sequence of ints or sequence of sequence of ints, optional
         axes to transform over.
@@ -116,6 +116,12 @@ class PFFT(object):
         fftn/ifftn for complex input arrays. Real-to-real transforms can be
         configured using this dictionary and real-to-real transforms from the
         :mod:`.fftw.xfftn` module. See Examples.
+
+    Other Parameters
+    ----------------
+    darray : DistributedArray object, optional
+        Create PFFT using information contained in ``darray``, neglecting most
+        optional Parameters above
 
     Methods
     -------
@@ -153,10 +159,10 @@ class PFFT(object):
     --------
     >>> import numpy as np
     >>> from mpi4py import MPI
-    >>> from mpi4py_fft.mpifft import PFFT, Function
+    >>> from mpi4py_fft.mpifft import PFFT, getDarray
     >>> N = np.array([12, 14, 15], dtype=int)
     >>> fft = PFFT(MPI.COMM_WORLD, N, axes=(0, 1, 2))
-    >>> u = Function(fft, False)
+    >>> u = getDarray(fft, False)
     >>> u[:] = np.random.random(u.shape).astype(u.dtype)
     >>> u_hat = fft.forward(u)
     >>> uj = np.zeros_like(u)
@@ -171,7 +177,7 @@ class PFFT(object):
     >>> idct = functools.partial(idctn, type=3)
     >>> transforms = {(1, 2): (dct, idct)}
     >>> r2c = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2)), transforms=transforms)
-    >>> u = Function(r2c, False)
+    >>> u = getDarray(r2c, False)
     >>> u[:] = np.random.random(u.shape).astype(u.dtype)
     >>> u_hat = r2c.forward(u)
     >>> uj = np.zeros_like(u)
@@ -179,12 +185,16 @@ class PFFT(object):
     >>> assert np.allclose(uj, u)
 
     """
-    def __init__(self, comm, shape, axes=None, dtype=float,
-                 slab=False, padding=False, collapse=False,
-                 use_pyfftw=False, transforms=None, **kw):
+    def __init__(self, comm, shape=None, axes=None, dtype=float, slab=False,
+                 padding=False, collapse=False, use_pyfftw=False,
+                 transforms=None, darray=None, **kw):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
+
+        if shape is None:
+            assert darray is not None
+            shape = darray._p0.shape
 
         if axes is not None:
             axes = list(axes) if np.ndim(axes) else [axes]
@@ -211,45 +221,52 @@ class PFFT(object):
             assert sorted(axes[i]) == sorted(set(axes[i]))
 
         self.axes = axes
-
         shape = list(shape)
-        if padding is not False:
-            assert len(padding) == len(shape)
-            for ax in axes:
-                if len(ax) == 1 and padding[ax[0]] > 1.0+1e-6:
-                    old = np.float(shape[ax[0]])
-                    shape[ax[0]] = int(np.floor(shape[ax[0]]*padding[ax[0]]))
-                    padding[ax[0]] = shape[ax[0]] / old
 
-        self._input_shape = tuple(shape)
-        assert len(shape) > 0
-        assert min(shape) > 0
+        if darray is None:
+            dtype = np.dtype(dtype)
+            assert dtype.char in 'fdgFDG'
 
-        dtype = np.dtype(dtype)
-        assert dtype.char in 'fdgFDG'
+            if padding is not False:
+                assert len(padding) == len(shape)
+                for ax in axes:
+                    if len(ax) == 1 and padding[ax[0]] > 1.0+1e-6:
+                        old = np.float(shape[ax[0]])
+                        shape[ax[0]] = int(np.floor(shape[ax[0]]*padding[ax[0]]))
+                        padding[ax[0]] = shape[ax[0]] / old
 
-        if isinstance(comm, Subcomm):
-            assert slab is False
-            assert len(comm) == len(shape)
-            assert np.all([comm[ax].Get_size() == 1 for ax in axes[-1]])
-            self.subcomm = comm
-        else:
-            if slab is False or slab is None:
-                dims = [0] * len(shape)
-                for ax in axes[-1]:
-                    dims[ax] = 1
+            self._input_shape = tuple(shape)
+            assert len(shape) > 0
+            assert min(shape) > 0
+
+            if isinstance(comm, Subcomm):
+                assert slab is False
+                assert len(comm) == len(shape)
+                assert np.all([comm[ax].Get_size() == 1 for ax in axes[-1]])
+                self.subcomm = comm
             else:
-                if slab is True:
-                    axis = (axes[-1][-1] + 1) % len(shape)
+                if slab is False or slab is None:
+                    dims = [0] * len(shape)
+                    for ax in axes[-1]:
+                        dims[ax] = 1
                 else:
-                    axis = slab
-                    if axis < 0:
-                        axis = axis + len(shape)
-                    assert 0 <= axis < len(shape)
-                dims = [1] * len(shape)
-                dims[axis] = comm.Get_size()
+                    if slab is True:
+                        axis = (axes[-1][-1] + 1) % len(shape)
+                    else:
+                        axis = slab
+                        if axis < 0:
+                            axis = axis + len(shape)
+                        assert 0 <= axis < len(shape)
+                    dims = [1] * len(shape)
+                    dims[axis] = comm.Get_size()
 
-            self.subcomm = Subcomm(comm, dims)
+                self.subcomm = Subcomm(comm, dims)
+        else:
+            dtype = darray.dtype
+            self.subcomm = darray.subcomm
+            self._input_shape = tuple(shape)
+            commsizes = darray.commsizes
+            assert np.all([commsizes[ax] == 1 for ax in axes[-1]]), "Set keyword axes such that axes to transform first are aligned"
 
         self.collapse = collapse
         if collapse is True:
@@ -371,55 +388,3 @@ class PFFT(object):
         if forward_output:
             return self.forward.output_array.dtype
         return self.forward.input_array.dtype
-
-
-class Function(np.ndarray):
-    """Distributed Numpy array for instance of PFFT class
-
-    Basically just a Numpy array created with the shape according to the input
-    PFFT instance
-
-    Parameters
-    ----------
-
-    pfft : Instance of :class:`.PFFT` class
-    forward_output: boolean, optional
-        If False then create Function of shape/type for input to
-        forward transform, otherwise create Function of shape/type for
-        output from forward transform.
-    val : int or float
-        Value used to initialize array.
-    tensor: int or tuple
-        For tensorvalued Functions, e.g., tensor=(3) for a vector in 3D.
-
-    For more information, see `numpy.ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_
-
-    Examples
-    --------
-    >>> from mpi4py import MPI
-    >>> from mpi4py_fft.mpifft import PFFT, Function
-    >>> FFT = PFFT(MPI.COMM_WORLD, [64, 64, 64])
-    >>> u = Function(FFT, False, tensor=3)
-    >>> u_hat = Function(FFT, True, tensor=3)
-
-    """
-    def __new__(cls, pfft, forward_output=True, val=0, tensor=None):
-
-        shape = pfft.forward.input_array.shape
-        dtype = pfft.forward.input_array.dtype
-        if forward_output is True:
-            shape = pfft.forward.output_array.shape
-            dtype = pfft.forward.output_array.dtype
-
-        if not tensor is None:
-            tensor = list(tensor) if np.ndim(tensor) else [tensor]
-            shape = tensor + list(shape)
-
-        obj = np.ndarray.__new__(cls,
-                                 shape,
-                                 dtype=dtype)
-        obj.fill(val)
-        return obj
-
-    def __init__(self, pfft, forward_output=True, val=0, tensor=None):
-        pass
