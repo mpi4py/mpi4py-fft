@@ -84,7 +84,7 @@ We denote the entries of a two-dimensional array as :math:`u_{j_0, j_1}`,
 which corresponds to a row-major matrix
 :math:`\boldsymbol{u}=\{u_{j_0, j_1}\}_{(j_0, j_1) \in \textbf{j}_0 \times \textbf{j}_1}` of
 size :math:`N_0\cdot N_1`. Denoting also :math:`\omega_m=j_m k_m / N_m`, a
-two-dimensional forward and backward DFTs can be defined as
+two-dimensional forward and backward DFT can be defined as
 
 .. math::
     :label: 2dfourier
@@ -93,7 +93,7 @@ two-dimensional forward and backward DFTs can be defined as
     u_{j_0, j_1} &= \sum_{k_1\in \textbf{k}_1} \Big( e^{2\pi i \omega_1} \sum_{k_0\in\textbf{k}_0} \Big(  e^{2\pi i \omega_0} \hat{u}_{k_0, k_1} \Big) \Big), \quad \forall \, (j_0, j_1) \in \textbf{j}_0 \times \textbf{j}_1.
 
 Note that the forward transform corresponds to taking the 1D Fourier
-transform first along axis 1, once for each of the indices in :math:`j_0`.
+transform first along axis 1, once for each of the indices in :math:`\textbf{j}_0`.
 Afterwords the transform is executed along axis 0. The two steps are more
 easily understood if we break things up a little bit and write the forward
 transform in :eq:`2dfourier` in two steps as
@@ -184,7 +184,7 @@ depending on the requested precision being single, double or long double,
 respectively. Except from precision, the tree classes are identical.
 All transforms are non-normalized by default. Note that all these functions
 are *planners*. They do not execute the transforms, they simply return an
-instance of a class that can do it. See docstrings of each function for usage.
+instance of a class that can do it (see docstrings of each function for usage).
 For quick reference, the 2D transform :ref:`shown for Numpy <numpy2d>` can be
 done using :mod:`.fftw` as::
 

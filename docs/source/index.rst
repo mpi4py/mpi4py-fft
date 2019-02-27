@@ -17,10 +17,11 @@ Welcome to mpi4py-fft's documentation!
    dft
    parallel
    io
+   installation
+   howtocite
+   howtocontribute
 
-Indices and tables
-==================
+.. toctree::
+   :caption: Indices and tables
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+   indices

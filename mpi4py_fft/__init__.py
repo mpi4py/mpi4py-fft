@@ -19,7 +19,7 @@ For more information, see `documentation <https://mpi4py-fft.readthedocs.io>`_.
 __version__ = '1.1.2'
 __author__ = 'Lisandro Dalcin and Mikael Mortensen'
 
-from .distributedarray import DistributedArray, newDarray
+from .distributedarray import DistributedArray, newDarray, Function
 from .mpifft import PFFT
 from . import fftw
 from .utilities import HDF5File, NCFile, generate_xdmf

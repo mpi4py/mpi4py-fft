@@ -26,22 +26,36 @@ class DistributedArray(np.ndarray):
     alignment : None or int, optional
         Make sure array is aligned in this direction. Note that alignment does
         not take rank into consideration.
-    rank : int
+    rank : int, optional
         Rank of tensor (scalar is zero, vector one, matrix two)
+
+
+    For more information, see `numpy.ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_
 
     Note
     ----
     Tensors of rank higher than 0 are not distributed in the first ``rank``
-    indices. For example, when creating a vector of distributed arrays of global
-    shape (12, 14, 16) the returned DistributedArray will have global shape
-    (3, 12, 14, 16), and it can only be distributed in the last three axes.
+    indices. For example,
+
+    >>> from mpi4py_fft import DistributedArray
+    >>> a = DistributedArray((3, 8, 8, 8), rank=1)
+    >>> print(a.pencil.shape)
+    (8, 8, 8)
+
+    The array ``a`` cannot be distributed in the first axis of length 3 since
+    rank is 1 and this first index represent the vector component. The ``pencil``
+    attribute of ``a`` thus only considers the last three axes.
+
     Also note that the ``alignment`` keyword does not take rank into
     consideration. Setting alignment=2 for the array above means that the last
-    axis (of length 16) will be aligned, also when rank>0.
+    axis will be aligned, also when rank>0.
 
     """
     def __new__(cls, global_shape, subcomm=None, val=None, dtype=np.float,
                 buffer=None, alignment=None, rank=0):
+
+        if rank > 0:
+            assert global_shape[:rank] == (len(global_shape[rank:]),)*rank
 
         if isinstance(subcomm, Subcomm):
             pass
@@ -117,23 +131,26 @@ class DistributedArray(np.ndarray):
         return self._rank
 
     def __getitem__(self, i):
+        # Return DistributedArray if i is an integer and rank > 0
+        # Otherwise return ndarray view
         if isinstance(i, int) and self.rank > 0:
             v0 = np.ndarray.__getitem__(self, i)
             v0._rank -= 1
             return v0
-        v0 = np.ndarray.__getitem__(self, i)
-        if isinstance(v0, DistributedArray):
-            v0._rank = 0
-        return v0
+        return np.ndarray.__getitem__(self.v, i)
 
-    def get_global_slice(self, lslice):
+    @property
+    def v(self):
+        """ Return ``self`` as an ``ndarray`` object"""
+        return self.__array__()
+
+    def get_global_slice(self, gslice):
         """Return global slice of DistributedArray
 
         Parameters
         ----------
-        lslice : sequence of slice(None) and ints
-            The slice of the global array. Must be composed of integers and
-            slice(None) objects
+        gslice : sequence of slice(None) and ints
+            The slice of the global array.
 
         Returns
         -------
@@ -165,21 +182,20 @@ class DistributedArray(np.ndarray):
         import h5py
         f = h5py.File('tmp.h5', 'w', driver="mpio", comm=comm)
         s = self.local_slice()
-        si = np.nonzero([isinstance(s, int) for s in lslice])[0]
-        sp = np.nonzero([isinstance(x, slice) for x in lslice])[0]
+        sp = np.nonzero([isinstance(x, slice) for x in gslice])[0]
         sf = tuple(np.take(s, sp))
         N = self.global_shape
         f.require_dataset('0', shape=tuple(np.take(N, sp)), dtype=self.dtype)
-        lslice = list(lslice)
-        si = np.nonzero([isinstance(x, int) and not z == slice(None) for x, z in zip(lslice, s)])[0]
+        gslice = list(gslice)
+        si = np.nonzero([isinstance(x, int) and not z == slice(None) for x, z in zip(gslice, s)])[0]
         on_this_proc = True
         for i in si:
-            if lslice[i] >= s[i].start and lslice[i] < s[i].stop:
-                lslice[i] -= s[i].start
+            if gslice[i] >= s[i].start and gslice[i] < s[i].stop:
+                gslice[i] -= s[i].start
             else:
                 on_this_proc = False
         if on_this_proc:
-            f["0"][sf] = self[tuple(lslice)]
+            f["0"][sf] = self[tuple(gslice)]
         f.close()
         c = None
         if comm.Get_rank() == 0:
@@ -244,29 +260,38 @@ class DistributedArray(np.ndarray):
         p1 = self._p0.pencil(axis)
         return p1, self._p0.transfer(p1, self.dtype)
 
-    def redistribute(self, axis):
-        """Global redistribution of array into alignment in ``axis``
+    def redistribute(self, axis=None, darray=None):
+        """Global redistribution of array ``self``
 
         Parameters
         ----------
-        axis : int
-            Align array along this axis
+        axis : int, optional
+            Align ``self`` array along this axis
+        darray : DistributedArray, optional
+            Copy data to this array of possibly different alignment
 
         Returns
         -------
-        DistributedArray
-            New DistributedArray, globally redistributed along ``axis``
+        DistributedArray : darray
+            The ``self`` array globally redistributed. If ``darray`` is None
+            then a new DistributedArray (aligned along ``axis``) is created and
+            returned
         """
+        if axis is None:
+            assert isinstance(darray, np.ndarray)
+            assert self.global_shape == darray.global_shape
+            axis = darray.alignment
         p1, transfer = self.get_pencil_and_transfer(axis)
-        z0 = DistributedArray(self.global_shape,
-                              subcomm=p1.subcomm,
-                              dtype=self.dtype,
-                              alignment=axis,
-                              rank=self.rank)
-        transfer.forward(self, z0)
-        return z0
+        if darray is None:
+            darray = DistributedArray(self.global_shape,
+                                      subcomm=p1.subcomm,
+                                      dtype=self.dtype,
+                                      alignment=axis,
+                                      rank=self.rank)
+        transfer.forward(self, darray)
+        return darray
 
-def newDarray(pfft, forward_output=True, val=0, rank=0):
+def newDarray(pfft, forward_output=True, val=0, rank=0, view=False):
     """Return DistributedArray for instance of PFFT class
 
     Parameters
@@ -280,8 +305,10 @@ def newDarray(pfft, forward_output=True, val=0, rank=0):
         Value used to initialize array.
     rank: int
         Scalar has rank 0, vector 1 and matrix 2
-
-    For more information, see `numpy.ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_
+    view : bool
+        If True return view of the underlying Numpy array, i.e., return
+        cls.view(np.ndarray). Note that the DistributedArray still will
+        be accessible through the base attribute of the view.
 
     Examples
     --------
@@ -303,8 +330,9 @@ def newDarray(pfft, forward_output=True, val=0, rank=0):
     commsizes = [s.Get_size() for s in p0.subcomm]
     global_shape = tuple([s*p for s, p in zip(shape, commsizes)])
     global_shape = (len(shape),)*rank + global_shape
-    return DistributedArray(global_shape, subcomm=p0.subcomm, val=val,
-                            dtype=dtype, rank=rank)
+    z = DistributedArray(global_shape, subcomm=p0.subcomm, val=val,
+                         dtype=dtype, rank=rank)
+    return z.v if view else z
 
 def Function(*args, **kwargs): #pragma: no cover
     import warnings

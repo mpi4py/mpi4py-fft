@@ -63,11 +63,12 @@ should raise no exception, and the output should be::
 
 This shows that the first index has been shared between the two processors
 equally. The array ``u`` thus corresponds to :math:`u_{j_0/P,j_1,j_2}`. Note
-that :class:`.newDarray` is an overloaded Numpy ndarray which simply has
-a constructor using ``fft`` to determine its size and type.
-``newDarray(fft, False)`` here simply returns an ndarray of shape (64, 128, 128)
-and type ``np.float``. The ``False`` argument indicates that the shape
-and type should be of the input array type, as opposed to the output
+that the :func:`.newDarray` function returns a :class:`.DistributedArray`
+object, which in turn is a subclassed Numpy ndarray. The :func:`.newDarray`
+function uses ``fft`` to determine the size and type of the created distributed
+array, i.e., (64, 128, 128) and ``np.float`` for both processors.
+The ``False`` argument indicates that the shape
+and type should be that of the input array, as opposed to the output
 array type (:math:`\hat{u}_{k_0,k_1/P,k_2}` that one gets with ``True``).
 
 Note that because the input array is of real type, and not complex, the
@@ -76,8 +77,8 @@ output array will be of global shape::
     128, 128, 65
 
 The output array will be distributed in axis 1, so the output array
-shape should be (128, 64, 65). We check this by adding the following
-code and rerunning::
+shape should be (128, 64, 65) on each processor. We check this by adding
+the following code and rerunning::
 
     u_hat = newDarray(fft, True)
     print(MPI.COMM_WORLD.Get_rank(), u_hat.shape)

@@ -6,8 +6,8 @@ Fourier Transforms (FFTs) of (large) multidimensional arrays. There is really
 no limit as to how large the arrays can be, just as long as there is sufficient
 computing powers available. Also, there are no limits as to how transforms can
 be configured. Just about any combination of transforms from the FFTW library
-is supported. Furthermore, mpi4py-fft can also be used simply to perform global
-redistributions (distribute and communicate) of large arrays with MPI, without
+is supported. Finally, mpi4py-fft can also be used simply to distribute
+and redistribute large multidimensional arrays with MPI, without
 any transforms at all.
 
 The main contribution of mpi4py-fft can be found in just a few classes in
@@ -29,7 +29,7 @@ global redistributions without any transforms at all. The :mod:`.pencil` module
 is used heavily by the :class:`.PFFT` class.
 
 The :mod:`.distributedarray` module contains classes for simply distributing
-multidimensional arrays, with no regard to transforms. The distributed arrays
+multidimensional arrays, with no regards to transforms. The distributed arrays
 created from the classes here can very well be used in any MPI application that
 requires a large multidimensional distributed array.
 

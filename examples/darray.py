@@ -58,3 +58,15 @@ z[:] = MPI.COMM_WORLD.Get_rank()
 g = z.get_global_slice((0, slice(None), 0))
 if MPI.COMM_WORLD.Get_rank() == 0:
     print(g)
+
+z2 = DistributedArray(N, dtype=float, alignment=2)
+z.redistribute(darray=z2)
+
+g = z2.get_global_slice((0, slice(None), 0))
+if MPI.COMM_WORLD.Get_rank() == 0:
+    print(g)
+
+s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(z)**2)
+s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(z2)**2)
+print(s0, s1)
+assert abs(s0-s1) < 1e-12

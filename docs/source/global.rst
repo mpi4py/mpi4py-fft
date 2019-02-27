@@ -75,21 +75,22 @@ aligned (non-distributed). We may now inspect the low-level
 
     p0 = a.pencil
 
-The ``p0`` :class:`.Pencil` object now contains information about the
-distribution of a 2D dataarray of global shape (8, 8), that will be
-distributed in the first axis and aligned in the second. However, ``p0``
-does not contain any of the data itself. Distributed arrays are instead
-created using the information that is in ``p0``. The distributed array
-``a`` uses the associated pencil to look up information about the global
-array, for example::
+The ``p0`` :class:`.Pencil` object contains information about the
+distribution of a 2D dataarray of global shape (8, 8). The
+distributed array ``a`` has been created using the information that is in
+``p0``, and ``p0`` is used by ``a`` to look up information about
+the global array, for example::
 
-    a.alignment
-    a.global_shape
-    a.subcomm
-    a.commsizes
+    >>> a.alignment
+    1
+    >>> a.global_shape
+    (8, 8)
+    >>> a.subcomm
+    (<mpi4py.MPI.Cartcomm at 0x10cc14a68>, <mpi4py.MPI.Cartcomm at 0x10e028690>)
+    >>> a.commsizes
+    [1, 1]
 
-will return, respectively, ``1``, ``(8, 8)``, a list of two subcommunicators
-(subcomm) and finally their sizes. Naturally, their sizes will depend on the
+Naturally, the sizes of the communicators will depend on the
 number of processors used to run the program. If we used 4, then
 ``a.commsizes`` would return ``[1, 4]``.
 
@@ -110,12 +111,13 @@ it would be a pure Numpy array (created on each processor) and it would
 not contain any of the information about the global array that it is
 part of ``(global_shape, pencil, subcomm, etc.)``. It contains the same
 amount of data as ``a`` though and ``a0`` is as such a perfectly fine
-distributed array.
+distributed array. Used together with ``p0`` it contains exactly the
+same information as ``a``.
 
 Since at least one axis needs to be aligned (non-distributed), a 2D array
 can only be distributed with
 one processor group. If we wanted to distribute the second axis instead
-of the first, then we would could have done::
+of the first, then we would have done::
 
     a = DistributedArray(N, [1, 0])
 
@@ -249,11 +251,9 @@ Multidimensional distributed arrays
 -----------------------------------
 
 The procedure discussed above remains the same for any type of array, of any
-dimension. With mpi4py-fft we can distribute any array of arbitrary dimensionality
+dimensionality. With mpi4py-fft we can distribute any array of arbitrary dimensionality
 using an arbitrary number of processor groups. How to distribute is completely
 configurable through the classes in the :mod:`.pencil` module.
-
-The
 
 We denote a global :math:`d`-dimensional array as :math:`u_{j_0, j_1, \ldots, j_{d-1}}`,
 where :math:`j_m\in\textbf{j}_m` for :math:`m=[0, 1, \ldots, d-1]`.
@@ -261,51 +261,17 @@ A :math:`d`-dimensional array distributed with only one processor group in the
 first axis is denoted as :math:`u_{j_0/P, j_1, \ldots, j_{d-1}}`. If using more
 than one processor group, the groups are indexed, like :math:`P_0, P_1` etc.
 
-Lets illustrate using a 4-dimensional array and 3 processor groups::
-
-    N = (8, 8, 8, 8)
-    subcomm = Subcomm(comm, [0, 0, 0, 1])
-    p0 = Pencil(subcomm, N, axis=3)
-    p1 = p0.pencil(2)
-    p2 = p1.pencil(1)
-    p3 = p2.pencil(0)
-
-Here we have defined 4 different pencil groups, ``p0, p1, p2, p3``, aligned in
-axis 3, 2, 1 and 0, respectively. Transfer objects for arrays of type ``np.float``
-are then created as::
-
-    transfer01 = p0.transfer(p1, np.float)
-    transfer12 = p1.transfer(p2, np.float)
-    transfer23 = p2.transfer(p3, np.float)
-
-Note that we can create transfer objects between any two pencils, not just
-neighbouring axes.
-
-We may now perform three different global redistributions as::
-
-    a0 = np.zeros(p0.subshape)
-    a1 = np.zeros(p1.subshape)
-    a2 = np.zeros(p2.subshape)
-    a3 = np.zeros(p3.subshape)
-    a0[:] = np.random.random(a0.shape)
-    transfer01.forward(a0, a1)
-    transfer12.forward(a1, a2)
-    transfer23.forward(a2, a3)
-
-Storing this code under ``pencils4d.py``, we can use 8 processors that will
-give us 3 processor groups with 2 processors in each group::
-
-    mpirun -np 8 python pencils4d.py
-
-Mathematically, we will now, with the three calls to ``transfer``, be executing
-the three following global redistributions:
+Lets illustrate using a 4-dimensional array with 3 processor groups. Let the
+array be aligned only in axis 3 first (:math:`u_{j_0/P_0, j_1/P_1, j_2/P_2, j_3}`),
+and then redistributed for alignment along axes 2, 1 and finally 0. Mathematically,
+we will now be executing the three following global redistributions:
 
 .. math::
+    :label: 4d_redistribute
 
-   u_{j_0/P_0, j_1/P_1, j_2, j_3/P_2} \xleftarrow[P_2]{3 \rightarrow 2}  u_{j_0/P_0, j_1/P_1, j_2/P_2, j_3} \\
-   u_{j_0/P_0, j_1, j_2/P_1, j_3/P_2} \xleftarrow[P_1]{2 \rightarrow 1}  u_{j_0/P_0, j_1/P_1, j_2, j_3/P_2} \\
-   u_{j_0, j_1/P_0, j_2/P_1, j_3/P_2} \xleftarrow[P_0]{1 \rightarrow 0}  u_{j_0/P_0, j_1, j_2/P_1, j_3/P_2}
-
+    u_{j_0/P_0, j_1/P_1, j_2, j_3/P_2} \xleftarrow[P_2]{3 \rightarrow 2}  u_{j_0/P_0, j_1/P_1, j_2/P_2, j_3} \\
+    u_{j_0/P_0, j_1, j_2/P_1, j_3/P_2} \xleftarrow[P_1]{2 \rightarrow 1}  u_{j_0/P_0, j_1/P_1, j_2, j_3/P_2} \\
+    u_{j_0, j_1/P_0, j_2/P_1, j_3/P_2} \xleftarrow[P_0]{1 \rightarrow 0}  u_{j_0/P_0, j_1, j_2/P_1, j_3/P_2}
 
 Now, it is not necessary to use three processor groups just because we have a
 four-dimensional array. We could just as well have been using 2 or 1. The advantage
@@ -317,3 +283,66 @@ it is possible to use 8, 64 and 512 number of processors for 1, 2 and 3
 processor groups, respectively. On the other hand, if you can get away with it,
 or if you do not have access to a great number of processors, then fewer groups
 are usually found to be faster for the same number of processors in total.
+
+We can implement the global redistribution using the high-level :class:`.DistributedArray`
+class::
+
+    N = (8, 8, 8, 8)
+    a3 = DistributedArray(N, [0, 0, 0, 1])
+    a2 = a3.redistribute(2)
+    a1 = a2.redistribute(1)
+    a0 = a1.redistribute(0)
+
+Note that the three redistribution steps correspond exactly to the three steps
+in :eq:`4d_redistribute`.
+
+Using a low-level API the same can be achieved with a little more elaborate
+coding. We start by creating pencils for the 4 different alignments::
+
+    subcomm = Subcomm(comm, [0, 0, 0, 1])
+    p3 = Pencil(subcomm, N, axis=3)
+    p2 = p3.pencil(2)
+    p1 = p2.pencil(1)
+    p0 = p1.pencil(0)
+
+Here we have defined 4 different pencil groups, ``p0, p1, p2, p3``, aligned in
+axis 0, 1, 2 and 3, respectively. Transfer objects for arrays of type ``np.float``
+are then created as::
+
+    transfer32 = p3.transfer(p2, np.float)
+    transfer21 = p2.transfer(p1, np.float)
+    transfer10 = p1.transfer(p0, np.float)
+
+Note that we can create transfer objects between any two pencils, not just
+neighbouring axes. We may now perform three different global redistributions
+as::
+
+    a0 = np.zeros(p0.subshape)
+    a1 = np.zeros(p1.subshape)
+    a2 = np.zeros(p2.subshape)
+    a3 = np.zeros(p3.subshape)
+    a0[:] = np.random.random(a0.shape)
+    transfer32.forward(a3, a2)
+    transfer21.forward(a2, a1)
+    transfer10.forward(a1, a0)
+
+Storing this code under ``pencils4d.py``, we can use 8 processors that will
+give us 3 processor groups with 2 processors in each group::
+
+    mpirun -np 8 python pencils4d.py
+
+Note that with the low-level approach we can now easily go back using the
+reverse ``backward`` method of the :class:`.Transfer` objects::
+
+    transfer10.backward(a0, a1)
+
+A different approach is also possible with the high-level API::
+
+    a0.redistribute(darray=a1)
+    a1.redistribute(darray=a2)
+    a2.redistribute(darray=a3)
+
+which corresponds to the backward transfers. However, with the high-level
+API the transfer objects are created (and deleted on exit) during the call
+to ``redistribute`` and as such this latter approach may be slightly less
+efficient.
