@@ -97,37 +97,37 @@ class DistributedArray(np.ndarray):
 
     @property
     def alignment(self):
-        """Return alignment of DistributedArray"""
+        """Return alignment of local ``self`` array"""
         return self._p0.axis
 
     @property
     def global_shape(self):
-        """Return global shape of DistributedArray"""
+        """Return global shape of ``self``"""
         return self.shape[:self.rank] + self._p0.shape
 
     @property
     def substart(self):
-        """Return starting indices of DistributedArray on this processor"""
+        """Return starting indices of local ``self`` array"""
         return (0,)*self.rank + self._p0.substart
 
     @property
     def subcomm(self):
-        """Return tuple of subcommunicators for DistributedArray"""
+        """Return tuple of subcommunicators for all axes of ``self``"""
         return (MPI.COMM_SELF,)*self.rank + self._p0.subcomm
 
     @property
     def commsizes(self):
-        """Return number of processors along each axis"""
+        """Return number of processors along each axis of ``self``"""
         return [s.Get_size() for s in self.subcomm]
 
     @property
     def pencil(self):
-        """Return pencil describing distribution of DistributedArray"""
+        """Return pencil describing distribution of ``self``"""
         return self._p0
 
     @property
     def rank(self):
-        """Return rank of DistributedArray"""
+        """Return rank of ``self``"""
         return self._rank
 
     def __getitem__(self, i):
@@ -141,11 +141,11 @@ class DistributedArray(np.ndarray):
 
     @property
     def v(self):
-        """ Return ``self`` as an ``ndarray`` object"""
+        """ Return local ``self`` array as an ``ndarray`` object"""
         return self.__array__()
 
     def get_global_slice(self, gslice):
-        """Return global slice of DistributedArray
+        """Return global slice of ``self``
 
         Parameters
         ----------
@@ -206,13 +206,13 @@ class DistributedArray(np.ndarray):
         return c
 
     def local_slice(self):
-        """Local view into global array
+        """Return local view into global ``self`` array
 
         Returns
         -------
         List of slices
             Each item of the returned list is the slice along that axis,
-            describing the view of the current array into the global array.
+            describing the view of the ``self`` array into the global array.
 
         Example
         -------
@@ -243,7 +243,7 @@ class DistributedArray(np.ndarray):
         return [slice(0, s) for s in self.shape[:self.rank]] + v
 
     def get_pencil_and_transfer(self, axis):
-        """Return new pencil and transfer object for alignment in ``axis``
+        """Return pencil and transfer objects for alignment along ``axis``
 
         Parameters
         ----------
@@ -261,21 +261,21 @@ class DistributedArray(np.ndarray):
         return p1, self._p0.transfer(p1, self.dtype)
 
     def redistribute(self, axis=None, darray=None):
-        """Global redistribution of array ``self``
+        """Global redistribution of local ``self`` array
 
         Parameters
         ----------
         axis : int, optional
-            Align ``self`` array along this axis
-        darray : DistributedArray, optional
+            Align local ``self`` array along this axis
+        darray : :class:`.DistributedArray`, optional
             Copy data to this array of possibly different alignment
 
         Returns
         -------
-        DistributedArray : darray
-            The ``self`` array globally redistributed. If ``darray`` is None
-            then a new DistributedArray (aligned along ``axis``) is created and
-            returned
+        :class:`.DistributedArray` : darray
+            The ``self`` array globally redistributed. If keyword ``darray`` is
+            None then a new DistributedArray (aligned along ``axis``) is created
+            and returned
         """
         if axis is None:
             assert isinstance(darray, np.ndarray)
@@ -292,11 +292,11 @@ class DistributedArray(np.ndarray):
         return darray
 
 def newDarray(pfft, forward_output=True, val=0, rank=0, view=False):
-    """Return DistributedArray for instance of PFFT class
+    """Return a :class:`.DistributedArray` for provided :class:`.PFFT` object
 
     Parameters
     ----------
-    pfft : Instance of :class:`.PFFT` class
+    pfft : :class:`.PFFT` object
     forward_output: boolean, optional
         If False then create newDarray of shape/type for input to
         forward transform, otherwise create newDarray of shape/type for
