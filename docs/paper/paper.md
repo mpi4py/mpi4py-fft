@@ -28,10 +28,10 @@ discrete Fourier transform. The FFT is one of the most important algorithms
 utilized throughout science and society and it has been named *the most
 important numerical algorith of our time* by Prof Gilbert Strang [@strang].
 
-``Mpi4py-fft`` (https://bitbucket.org/mpi4py/mpi4py-fft) is an open-source
+``mpi4py-fft`` (https://bitbucket.org/mpi4py/mpi4py-fft) is an open-source
 Python package for computing (in parallel) FFTs of possibly very large and
 distributed multidimensional arrays.
-A multidimensional FFT is computed sequentially over all axes, one axis at the time.
+A multidimensional FFT is computed sequentially, over all axes, one axis at the time.
 A problem with parallel FFTs is that, to fit in the memory of multiple processors,
 multidimensional arrays will be distributed along some, but not all, of its axes.
 Consequently, parallel FFTs are computed as sequential (serial) transforms over
@@ -49,7 +49,7 @@ under the hood by MPI for Python. For serial transforms
 from Python. We include wrappers for complex-to-complex, real-to-complex,
 complex-to-real and real-to-real transforms.
 
-``Mpi4py-fft`` is highly configurable in how it distributes and redistributes
+``mpi4py-fft`` is highly configurable in how it distributes and redistributes
 arrays. Large arrays may be globally redistributed for alignement
 along any given axis, whenever needed by the user. This
 flexibility has enabled the development of ``shenfun``
@@ -57,10 +57,15 @@ flexibility has enabled the development of ``shenfun``
 for solving partial differential equations (PDEs) by the spectral Galerkin method.
 In ``shenfun`` it is possible to solve PDEs of any given dimensionality, by creating
 tensor product bases as outer products of one-dimensional bases. This leads to
-large multidimensional arrays that are distributed effortlessly using ``mpi4py-fft``.
+large multidimensional arrays that are distributed effortlessly through ``mpi4py-fft``.
 
-``Mpi4py-fft`` can be utilized by anyone that needs to perform FFTs on large
-multidimensional arrays. It is installable from ``pypi`` and conda-forge, and
+``mpi4py-fft`` can be utilized by anyone that needs to perform FFTs on large
+multidimensional arrays. Through its distributed array interface it can also be
+utilized by any application relying on algorithms (not just FFTs) with varying
+degrees of locality on multidimensional arrays, where MPI can be used to boost
+performance.
+
+``mpi4py-fft`` is installable from ``pypi`` and ``conda-forge``, and
 released under a permissive 2-clause BSD-license, in the hope that it will be
 useful.
 

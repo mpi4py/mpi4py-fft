@@ -18,8 +18,8 @@ class DistArray(np.ndarray):
         Shape of non-distributed global array
     subcomm : None, Subcomm instance or sequence of ints, optional
         Describes how to distribute the array
-    val : int or None, optional
-        Initialize array with this int if buffer is not given
+    val : Number or None, optional
+        Initialize array with this number if buffer is not given
     dtype : np.dtype, optional
         Type of array
     buffer : np.ndarray, optional
