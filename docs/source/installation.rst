@@ -37,7 +37,7 @@ is not installed. This can be achieved with, e.g.,
 
 ::
 
-    conda create --name mpi4py-fft -c conda-forge mpi4py-fft mpich nomkl
+    conda create --name mpi4py-fft -c conda-forge mpi4py-fft mpich nomkl h5py=*=mpi*
 
 Note that the nomkl package makes sure that numpy is installed without
 mkl, whereas mpich here chooses this backend over openmpi.
@@ -50,11 +50,13 @@ any version of mpi4py-fft hosted on `pypi`_ using `pip`_
 
     pip install mpi4py-fft
 
-whereas the following will install the latest version from github
+whereas either one of the following will install the latest version
+from github
 
 ::
 
     pip install git+https://bitbucket.org/mpi4py/mpi4py-fft@master
+    pip install https://bitbucket.org/mpi4py/mpi4py-fft/get/master.zip
 
 You can also build mpi4py-fft yourselves from the top directory,
 after cloning or forking

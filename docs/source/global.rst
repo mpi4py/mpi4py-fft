@@ -252,8 +252,10 @@ Multidimensional distributed arrays
 
 The procedure discussed above remains the same for any type of array, of any
 dimensionality. With mpi4py-fft we can distribute any array of arbitrary dimensionality
-using an arbitrary number of processor groups. How to distribute is completely
-configurable through the classes in the :mod:`.pencil` module.
+using any number of processor groups. We only require that the number of processor
+groups is at least one less than the number of dimensions, since one axis must
+remain aligned. Apart from this the distribution is completely configurable through
+the classes in the :mod:`.pencil` module.
 
 We denote a global :math:`d`-dimensional array as :math:`u_{j_0, j_1, \ldots, j_{d-1}}`,
 where :math:`j_m\in\textbf{j}_m` for :math:`m=[0, 1, \ldots, d-1]`.
@@ -263,7 +265,7 @@ than one processor group, the groups are indexed, like :math:`P_0, P_1` etc.
 
 Lets illustrate using a 4-dimensional array with 3 processor groups. Let the
 array be aligned only in axis 3 first (:math:`u_{j_0/P_0, j_1/P_1, j_2/P_2, j_3}`),
-and then redistributed for alignment along axes 2, 1 and finally 0. Mathematically,
+and then redistribute for alignment along axes 2, 1 and finally 0. Mathematically,
 we will now be executing the three following global redistributions:
 
 .. math::
@@ -272,6 +274,13 @@ we will now be executing the three following global redistributions:
     u_{j_0/P_0, j_1/P_1, j_2, j_3/P_2} \xleftarrow[P_2]{3 \rightarrow 2}  u_{j_0/P_0, j_1/P_1, j_2/P_2, j_3} \\
     u_{j_0/P_0, j_1, j_2/P_1, j_3/P_2} \xleftarrow[P_1]{2 \rightarrow 1}  u_{j_0/P_0, j_1/P_1, j_2, j_3/P_2} \\
     u_{j_0, j_1/P_0, j_2/P_1, j_3/P_2} \xleftarrow[P_0]{1 \rightarrow 0}  u_{j_0/P_0, j_1, j_2/P_1, j_3/P_2}
+
+Note that in the first step it is only processor group :math:`P_2` that is
+active in the redistribution, and the output (left hand side) is now aligned
+in axis 2. This can be seen since there is no processor group there to
+share the :math:`j_2` index.
+In the second step processor group :math:`P_1` is the active one, and
+in the final step :math:`P_0`.
 
 Now, it is not necessary to use three processor groups just because we have a
 four-dimensional array. We could just as well have been using 2 or 1. The advantage

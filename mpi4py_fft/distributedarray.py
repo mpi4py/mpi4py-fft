@@ -1,4 +1,5 @@
 import os
+from numbers import Number
 import numpy as np
 from mpi4py import MPI
 from .pencil import Pencil, Subcomm
@@ -85,7 +86,7 @@ class DistributedArray(np.ndarray):
         if rank > 0:
             subshape = global_shape[:rank] + subshape
         obj = np.ndarray.__new__(cls, subshape, dtype=dtype, buffer=buffer)
-        if buffer is None and isinstance(val, int):
+        if buffer is None and isinstance(val, Number):
             obj.fill(val)
         obj._p0 = p0
         obj._rank = rank
