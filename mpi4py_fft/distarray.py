@@ -140,7 +140,7 @@ class DistArray(np.ndarray):
             v0 = np.ndarray.__getitem__(self, i)
             v0._rank -= 1
             return v0
-        if isinstance(i, tuple) and self.rank == 2:
+        if isinstance(i, tuple) and len(i) == 2 and self.rank == 2:
             v0 = np.ndarray.__getitem__(self, i)
             v0._rank = 0
             return v0

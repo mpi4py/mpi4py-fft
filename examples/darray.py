@@ -70,12 +70,12 @@ s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(z)**2)
 s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(z2)**2)
 if MPI.COMM_WORLD.Get_rank() == 0:
     assert abs(s0-s1) < 1e-12
-
+print('hei')
 N = (3, 3, 6, 6, 6)
 z2 = DistArray(N, dtype=float, val=1, alignment=2, rank=2)
 z2[:] = MPI.COMM_WORLD.Get_rank()
-z1 = z2.redistribute(1)
-z0 = z1.redistribute(0)
+#z1 = z2.redistribute(1)
+#z0 = z1.redistribute(0)
 
 s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(z2)**2)
 s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(z0)**2)
