@@ -119,7 +119,7 @@ class PFFT(object):
 
     Other Parameters
     ----------------
-    darray : DistributedArray object, optional
+    darray : DistArray object, optional
         Create PFFT using information contained in ``darray``, neglecting most
         optional Parameters above
 
@@ -159,10 +159,10 @@ class PFFT(object):
     --------
     >>> import numpy as np
     >>> from mpi4py import MPI
-    >>> from mpi4py_fft import PFFT, newDarray
+    >>> from mpi4py_fft import PFFT, newDistArray
     >>> N = np.array([12, 14, 15], dtype=int)
     >>> fft = PFFT(MPI.COMM_WORLD, N, axes=(0, 1, 2))
-    >>> u = newDarray(fft, False)
+    >>> u = newDistArray(fft, False)
     >>> u[:] = np.random.random(u.shape).astype(u.dtype)
     >>> u_hat = fft.forward(u)
     >>> uj = np.zeros_like(u)
@@ -177,7 +177,7 @@ class PFFT(object):
     >>> idct = functools.partial(idctn, type=3)
     >>> transforms = {(1, 2): (dct, idct)}
     >>> r2c = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2)), transforms=transforms)
-    >>> u = newDarray(r2c, False)
+    >>> u = newDistArray(r2c, False)
     >>> u[:] = np.random.random(u.shape).astype(u.dtype)
     >>> u_hat = r2c.forward(u)
     >>> uj = np.zeros_like(u)

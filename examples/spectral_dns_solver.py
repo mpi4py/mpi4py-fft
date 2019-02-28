@@ -10,7 +10,7 @@ http://github.com/spectralDNS/spectralDNS
 from time import time
 import numpy as np
 from mpi4py import MPI
-from mpi4py_fft import PFFT, newDarray
+from mpi4py_fft import PFFT, newDistArray
 
 # Set viscosity, end time and time step
 nu = 0.000625
@@ -28,18 +28,18 @@ FFT = PFFT(MPI.COMM_WORLD, N, collapse=False)
 FFT_pad = FFT
 
 # Declare variables needed to solve Navier-Stokes
-U = newDarray(FFT, False, rank=1)       # Velocity
-U_hat = newDarray(FFT, rank=1)          # Velocity transformed
-P = newDarray(FFT, False)               # Pressure (scalar)
-P_hat = newDarray(FFT)                  # Pressure transformed
-U_hat0 = newDarray(FFT, rank=1)         # Runge-Kutta work array
-U_hat1 = newDarray(FFT, rank=1)         # Runge-Kutta work array
+U = newDistArray(FFT, False, rank=1)       # Velocity
+U_hat = newDistArray(FFT, rank=1)          # Velocity transformed
+P = newDistArray(FFT, False)               # Pressure (scalar)
+P_hat = newDistArray(FFT)                  # Pressure transformed
+U_hat0 = newDistArray(FFT, rank=1)         # Runge-Kutta work array
+U_hat1 = newDistArray(FFT, rank=1)         # Runge-Kutta work array
 a = [1./6., 1./3., 1./3., 1./6.]        # Runge-Kutta parameter
 b = [0.5, 0.5, 1.]                      # Runge-Kutta parameter
-dU = newDarray(FFT, rank=1)             # Right hand side of ODEs
-curl = newDarray(FFT, False, rank=1)
-U_pad = newDarray(FFT_pad, False, rank=1)
-curl_pad = newDarray(FFT_pad, False, rank=1)
+dU = newDistArray(FFT, rank=1)             # Right hand side of ODEs
+curl = newDistArray(FFT, False, rank=1)
+U_pad = newDistArray(FFT_pad, False, rank=1)
+curl_pad = newDistArray(FFT_pad, False, rank=1)
 
 def get_local_mesh(FFT, L):
     """Returns local mesh."""

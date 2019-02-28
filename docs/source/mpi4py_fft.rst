@@ -38,10 +38,10 @@ mpi4py\_fft.pencil module
     :undoc-members:
     :show-inheritance:
 
-mpi4py\_fft.distributedarray module
+mpi4py\_fft.distarray module
 -----------------------------------
 
-.. automodule:: mpi4py_fft.distributedarray
+.. automodule:: mpi4py_fft.distarray
     :members:
     :undoc-members:
     :show-inheritance:

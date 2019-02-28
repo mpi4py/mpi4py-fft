@@ -11,7 +11,10 @@ global shape :math:`(512, 1024, 2048)`. To lift this array into RAM requires
 machine. If, however, you have access to a distributed architecture, you can
 split the array up and share it between, e.g., four CPUs (most supercomputers
 have either 2 or 4 GB of memory per CPU), which will only need to
-hold 2 GBs of the global array each.
+hold 2 GBs of the global array each. Moreover, many algorithms with varying
+degrees of locality can take advantage of the distributed nature of the array
+to compute local array pieces concurrently, effectively exploiting multiple
+processor resources.
 
 There are several ways of distributing a large multidimensional
 array. Two such distributions for our three-dimensional global array
@@ -55,7 +58,7 @@ classes in the :mod:`.pencil` module:
     * :class:`.Transfer`
 
 These classes are the low-level backbone of the higher-level :class:`.PFFT` and
-:class:`.DistributedArray` classes. To use these low-level classes
+:class:`.DistArray` classes. To use these low-level classes
 directly is not recommended and usually not necessary. However, for
 clarity we start by describing how these low-level classes work together.
 
@@ -64,9 +67,9 @@ distributed along axis 0. With a high level API we could then simply
 do::
 
     import numpy as np
-    from mpi4py_fft import DistributedArray
+    from mpi4py_fft import DistArray
     N = (8, 8)
-    a = DistributedArray(N, [0, 1])
+    a = DistArray(N, [0, 1])
 
 where the ``[0, 1]`` list decides that the first axis can be distributed,
 whereas the second axis is using one processor only and as such is
@@ -119,7 +122,7 @@ can only be distributed with
 one processor group. If we wanted to distribute the second axis instead
 of the first, then we would have done::
 
-    a = DistributedArray(N, [1, 0])
+    a = DistArray(N, [1, 0])
 
 With the low-level approach we would have had to use ``axis=0`` in the
 creation of ``p0``, as well as ``[1, 0]`` in the creation of ``subcomm``.
@@ -136,11 +139,11 @@ the value of each processors rank (note that it would also work to follow the
 low-level approach and use ``a0``)::
 
     import numpy as np
-    from mpi4py_fft import DistributedArray
+    from mpi4py_fft import DistArray
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
     N = (8, 8)
-    a = DistributedArray(N, [0, 1])
+    a = DistArray(N, [0, 1])
     a[:] = comm.Get_rank()
     print(a.shape)
 
@@ -293,11 +296,11 @@ processor groups, respectively. On the other hand, if you can get away with it,
 or if you do not have access to a great number of processors, then fewer groups
 are usually found to be faster for the same number of processors in total.
 
-We can implement the global redistribution using the high-level :class:`.DistributedArray`
+We can implement the global redistribution using the high-level :class:`.DistArray`
 class::
 
     N = (8, 8, 8, 8)
-    a3 = DistributedArray(N, [0, 0, 0, 1])
+    a3 = DistArray(N, [0, 0, 0, 1])
     a2 = a3.redistribute(2)
     a1 = a2.redistribute(1)
     a0 = a1.redistribute(0)

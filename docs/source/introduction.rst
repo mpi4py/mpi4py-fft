@@ -1,7 +1,8 @@
 Introduction
 ============
 
-The Python package mpi4py-fft is a tool primarily for working with Fast
+The Python package `mpi4py-fft`_
+is a tool primarily for working with Fast
 Fourier Transforms (FFTs) of (large) multidimensional arrays. There is really
 no limit as to how large the arrays can be, just as long as there is sufficient
 computing powers available. Also, there are no limits as to how transforms can
@@ -15,7 +16,7 @@ the main modules:
 
     * :mod:`.mpifft`
     * :mod:`.pencil`
-    * :mod:`.distributedarray`
+    * :mod:`.distarray`
     * :mod:`.libfft`
     * :mod:`.fftw`
 
@@ -28,7 +29,7 @@ However, this module is rarely used on its own, unless one simply needs to do
 global redistributions without any transforms at all. The :mod:`.pencil` module
 is used heavily by the :class:`.PFFT` class.
 
-The :mod:`.distributedarray` module contains classes for simply distributing
+The :mod:`.distarray` module contains classes for simply distributing
 multidimensional arrays, with no regards to transforms. The distributed arrays
 created from the classes here can very well be used in any MPI application that
 requires a large multidimensional distributed array.
@@ -42,3 +43,5 @@ because `pyfftw <https://github.com/pyFFTW/pyFFTW>`_ does not include support
 for real-to-real transforms. Through the interface in :mod:`.fftw` we can do
 here, in Python, pretty much everything that you can do in the original
 FFTW library.
+
+.. _`mpi4py-fft`: https://bitbucket.org/mpi4py/mpi4py-fft

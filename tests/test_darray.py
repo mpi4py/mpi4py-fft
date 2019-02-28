@@ -1,6 +1,6 @@
 import numpy as np
 from mpi4py import MPI
-from mpi4py_fft import DistributedArray, newDarray, PFFT
+from mpi4py_fft import DistArray, newDistArray, PFFT
 from mpi4py_fft.pencil import Subcomm
 
 comm = MPI.COMM_WORLD
@@ -13,7 +13,7 @@ def test_2Darray():
             alignment = None
             if subcomm is None and rank == 1:
                 alignment = 1
-            a = DistributedArray(M, subcomm=subcomm, val=1, rank=rank, alignment=alignment)
+            a = DistArray(M, subcomm=subcomm, val=1, rank=rank, alignment=alignment)
             assert a.rank == rank
             assert a.global_shape == M
             s = a.substart
@@ -23,7 +23,7 @@ def test_2Darray():
             assert np.prod(np.array(z)) == comm.Get_size()
             if rank > 0:
                 a0 = a[0]
-                assert isinstance(a0, DistributedArray)
+                assert isinstance(a0, DistArray)
                 assert a0.rank == rank-1
             aa = a.v
             assert isinstance(aa, np.ndarray)
@@ -54,7 +54,7 @@ def test_3Darray():
             alignment = None
             if subcomm is None and rank == 1:
                 alignment = 2
-            a = DistributedArray(M, subcomm=subcomm, val=1, rank=rank, alignment=alignment)
+            a = DistArray(M, subcomm=subcomm, val=1, rank=rank, alignment=alignment)
             assert a.rank == rank
             assert a.global_shape == M
             s = a.substart
@@ -64,11 +64,11 @@ def test_3Darray():
             assert np.prod(np.array(z)) == comm.Get_size()
             if rank > 0:
                 a0 = a[0]
-                assert isinstance(a0, DistributedArray)
+                assert isinstance(a0, DistArray)
                 assert a0.rank == rank-1
             if rank == 2:
                 a0 = a[0, 1]
-                assert isinstance(a0, DistributedArray)
+                assert isinstance(a0, DistArray)
                 assert a0.rank == 0
             aa = a.v
             assert isinstance(aa, np.ndarray)
@@ -91,16 +91,16 @@ def test_3Darray():
             if MPI.COMM_WORLD.Get_rank() == 0:
                 assert abs(s0-s1) < 1e-1
 
-def test_newDarray():
+def test_newDistArray():
     N = (8, 8, 8)
     pfft = PFFT(MPI.COMM_WORLD, N)
     for forward_output in (True, False):
         for view in (True, False):
             for rank in (0, 1, 2):
-                a = newDarray(pfft, forward_output=forward_output,
+                a = newDistArray(pfft, forward_output=forward_output,
                               rank=rank, view=view)
                 if view is False:
-                    assert isinstance(a, DistributedArray)
+                    assert isinstance(a, DistArray)
                     assert a.rank == rank
                     if rank == 0:
                         qfft = PFFT(MPI.COMM_WORLD, darray=a)
@@ -113,4 +113,4 @@ def test_newDarray():
 if __name__ == '__main__':
     test_2Darray()
     test_3Darray()
-    test_newDarray()
+    test_newDistArray()

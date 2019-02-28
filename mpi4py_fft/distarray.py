@@ -6,7 +6,7 @@ from .pencil import Pencil, Subcomm
 
 comm = MPI.COMM_WORLD
 
-class DistributedArray(np.ndarray):
+class DistArray(np.ndarray):
     """Distributed Numpy array
 
     This Numpy array is part of a larger global array. Information about the
@@ -38,8 +38,8 @@ class DistributedArray(np.ndarray):
     Tensors of rank higher than 0 are not distributed in the first ``rank``
     indices. For example,
 
-    >>> from mpi4py_fft import DistributedArray
-    >>> a = DistributedArray((3, 8, 8, 8), rank=1)
+    >>> from mpi4py_fft import DistArray
+    >>> a = DistArray((3, 8, 8, 8), rank=1)
     >>> print(a.pencil.shape)
     (8, 8, 8)
 
@@ -134,7 +134,7 @@ class DistributedArray(np.ndarray):
         return self._rank
 
     def __getitem__(self, i):
-        # Return DistributedArray if the result is a component of a tensor
+        # Return DistArray if the result is a component of a tensor
         # Otherwise return ndarray view
         if isinstance(i, int) and self.rank > 0:
             v0 = np.ndarray.__getitem__(self, i)
@@ -171,10 +171,10 @@ class DistributedArray(np.ndarray):
         >>> fx = open('gs_script.py', 'w')
         >>> h = fx.write('''
         ... from mpi4py import MPI
-        ... from mpi4py_fft.distributedarray import DistributedArray
+        ... from mpi4py_fft.distarray import DistArray
         ... comm = MPI.COMM_WORLD
         ... N = (6, 6, 6)
-        ... z = DistributedArray(N, dtype=float, alignment=0)
+        ... z = DistArray(N, dtype=float, alignment=0)
         ... z[:] = comm.Get_rank()
         ... g = z.get_global_slice((0, slice(None), 0))
         ... if comm.Get_rank() == 0:
@@ -230,10 +230,10 @@ class DistributedArray(np.ndarray):
         >>> fx = open('ls_script.py', 'w')
         >>> h = fx.write('''
         ... from mpi4py import MPI
-        ... from mpi4py_fft.distributedarray import DistributedArray
+        ... from mpi4py_fft.distarray import DistArray
         ... comm = MPI.COMM_WORLD
         ... N = (16, 14, 12)
-        ... z = DistributedArray(N, dtype=float, alignment=0)
+        ... z = DistArray(N, dtype=float, alignment=0)
         ... ls = comm.gather(z.local_slice())
         ... if comm.Get_rank() == 0:
         ...     for l in ls:
@@ -274,14 +274,14 @@ class DistributedArray(np.ndarray):
         ----------
         axis : int, optional
             Align local ``self`` array along this axis
-        darray : :class:`.DistributedArray`, optional
+        darray : :class:`.DistArray`, optional
             Copy data to this array of possibly different alignment
 
         Returns
         -------
-        :class:`.DistributedArray` : darray
+        :class:`.DistArray` : darray
             The ``self`` array globally redistributed. If keyword ``darray`` is
-            None then a new DistributedArray (aligned along ``axis``) is created
+            None then a new DistArray (aligned along ``axis``) is created
             and returned
         """
         if axis is None:
@@ -290,11 +290,11 @@ class DistributedArray(np.ndarray):
             axis = darray.alignment
         p1, transfer = self.get_pencil_and_transfer(axis)
         if darray is None:
-            darray = DistributedArray(self.global_shape,
-                                      subcomm=p1.subcomm,
-                                      dtype=self.dtype,
-                                      alignment=axis,
-                                      rank=self.rank)
+            darray = DistArray(self.global_shape,
+                               subcomm=p1.subcomm,
+                               dtype=self.dtype,
+                               alignment=axis,
+                               rank=self.rank)
         if self.rank == 0:
             transfer.forward(self, darray)
         elif self.rank == 1:
@@ -307,15 +307,15 @@ class DistributedArray(np.ndarray):
 
         return darray
 
-def newDarray(pfft, forward_output=True, val=0, rank=0, view=False):
-    """Return a :class:`.DistributedArray` for provided :class:`.PFFT` object
+def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
+    """Return a :class:`.DistArray` for provided :class:`.PFFT` object
 
     Parameters
     ----------
     pfft : :class:`.PFFT` object
     forward_output: boolean, optional
-        If False then create newDarray of shape/type for input to
-        forward transform, otherwise create newDarray of shape/type for
+        If False then create newDistArray of shape/type for input to
+        forward transform, otherwise create newDistArray of shape/type for
         output from forward transform.
     val : int or float
         Value used to initialize array.
@@ -323,16 +323,16 @@ def newDarray(pfft, forward_output=True, val=0, rank=0, view=False):
         Scalar has rank 0, vector 1 and matrix 2
     view : bool
         If True return view of the underlying Numpy array, i.e., return
-        cls.view(np.ndarray). Note that the DistributedArray still will
+        cls.view(np.ndarray). Note that the DistArray still will
         be accessible through the base attribute of the view.
 
     Examples
     --------
     >>> from mpi4py import MPI
-    >>> from mpi4py_fft import PFFT, newDarray
+    >>> from mpi4py_fft import PFFT, newDistArray
     >>> FFT = PFFT(MPI.COMM_WORLD, [64, 64, 64])
-    >>> u = newDarray(FFT, False, rank=1)
-    >>> u_hat = newDarray(FFT, True, rank=1)
+    >>> u = newDistArray(FFT, False, rank=1)
+    >>> u_hat = newDistArray(FFT, True, rank=1)
 
     """
     if forward_output is True:
@@ -346,14 +346,14 @@ def newDarray(pfft, forward_output=True, val=0, rank=0, view=False):
     commsizes = [s.Get_size() for s in p0.subcomm]
     global_shape = tuple([s*p for s, p in zip(shape, commsizes)])
     global_shape = (len(shape),)*rank + global_shape
-    z = DistributedArray(global_shape, subcomm=p0.subcomm, val=val,
-                         dtype=dtype, rank=rank)
+    z = DistArray(global_shape, subcomm=p0.subcomm, val=val, dtype=dtype,
+                  rank=rank)
     return z.v if view else z
 
 def Function(*args, **kwargs): #pragma: no cover
     import warnings
-    warnings.warn("Function() is deprecated; use newDarray().", FutureWarning)
+    warnings.warn("Function() is deprecated; use newDistArray().", FutureWarning)
     if 'tensor' in kwargs:
         kwargs['rank'] = 1
         del kwargs['tensor']
-    return newDarray(*args, **kwargs)
+    return newDistArray(*args, **kwargs)
