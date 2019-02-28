@@ -28,8 +28,8 @@ print(z3.get_global_slice((5, 4, 5)))
 
 print(z3.local_slice(), z3.substart, z3.commsizes)
 
-#v0 = newDarray(fft, forward_output=False, rank=1)
-v0 = Function(fft, forward_output=False, rank=1)
+v0 = newDarray(fft, forward_output=False, rank=1)
+#v0 = Function(fft, forward_output=False, rank=1)
 v0[:] = np.random.random(v0.shape)
 v0c = v0.copy()
 v1 = newDarray(fft, forward_output=True, rank=1)
@@ -68,5 +68,16 @@ if MPI.COMM_WORLD.Get_rank() == 0:
 
 s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(z)**2)
 s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(z2)**2)
-print(s0, s1)
-assert abs(s0-s1) < 1e-12
+if MPI.COMM_WORLD.Get_rank() == 0:
+    assert abs(s0-s1) < 1e-12
+
+N = (3, 3, 6, 6, 6)
+z2 = DistributedArray(N, dtype=float, val=1, alignment=2, rank=2)
+z2[:] = MPI.COMM_WORLD.Get_rank()
+z1 = z2.redistribute(1)
+z0 = z1.redistribute(0)
+
+s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(z2)**2)
+s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(z0)**2)
+if MPI.COMM_WORLD.Get_rank() == 0:
+    assert abs(s0-s1) < 1e-12

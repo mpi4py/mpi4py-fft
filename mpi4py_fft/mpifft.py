@@ -200,9 +200,12 @@ class PFFT(object):
             axes = list(axes) if np.ndim(axes) else [axes]
         else:
             axes = list(range(len(shape)))
+            if darray is not None:
+                # Make sure aligned axis of darray is transformed first
+                axes = list(np.roll(axes, len(shape)-1-darray.alignment))
 
         for i, ax in enumerate(axes):
-            if isinstance(ax, int):
+            if isinstance(ax, (int, np.integer)):
                 if ax < 0:
                     ax += len(shape)
                 axes[i] = (ax,)

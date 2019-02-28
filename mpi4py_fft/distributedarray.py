@@ -53,7 +53,6 @@ class DistributedArray(np.ndarray):
     """
     def __new__(cls, global_shape, subcomm=None, val=None, dtype=np.float,
                 buffer=None, alignment=None, rank=0):
-
         if rank > 0:
             assert global_shape[:rank] == (len(global_shape[rank:]),)*rank
 
@@ -67,13 +66,16 @@ class DistributedArray(np.ndarray):
                     subcomm = Subcomm(comm, subcomm)
             else:
                 assert subcomm is None
+                subcomm = [0] * len(global_shape[rank:])
                 if alignment is not None:
-                    subcomm = [0] * len(global_shape[rank:])
                     subcomm[alignment] = 1
+                else:
+                    subcomm[-1] = 1
+                    alignment = len(subcomm)-1
                 subcomm = Subcomm(comm, subcomm)
         sizes = [s.Get_size() for s in subcomm]
         if alignment is not None:
-            assert isinstance(alignment, int)
+            assert isinstance(alignment, (int, np.integer))
             assert sizes[alignment] == 1
         else:
             # Decide that alignment is the last axis with size 1
@@ -131,11 +133,15 @@ class DistributedArray(np.ndarray):
         return self._rank
 
     def __getitem__(self, i):
-        # Return DistributedArray if i is an integer and rank > 0
+        # Return DistributedArray if the result is a component of a tensor
         # Otherwise return ndarray view
         if isinstance(i, int) and self.rank > 0:
             v0 = np.ndarray.__getitem__(self, i)
             v0._rank -= 1
+            return v0
+        if isinstance(i, tuple) and self.rank == 2:
+            v0 = np.ndarray.__getitem__(self, i)
+            v0._rank = 0
             return v0
         return np.ndarray.__getitem__(self.v, i)
 
@@ -288,7 +294,16 @@ class DistributedArray(np.ndarray):
                                       dtype=self.dtype,
                                       alignment=axis,
                                       rank=self.rank)
-        transfer.forward(self, darray)
+        if self.rank == 0:
+            transfer.forward(self, darray)
+        elif self.rank == 1:
+            for i in range(self.shape[0]):
+                transfer.forward(self[i], darray[i])
+        elif self.rank == 2:
+            for i in range(self.shape[0]):
+                for j in range(self.shape[1]):
+                    transfer.forward(self[i, j], darray[i, j])
+
         return darray
 
 def newDarray(pfft, forward_output=True, val=0, rank=0, view=False):
