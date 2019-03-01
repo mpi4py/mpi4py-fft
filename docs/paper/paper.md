@@ -26,7 +26,7 @@ bibliography: paper.bib
 The fast Fourier transform (FFT) is an algorithm that efficiently computes the
 discrete Fourier transform. The FFT is one of the most important algorithms
 utilized throughout science and society and it has been named *the most
-important numerical algorith of our time* by Prof Gilbert Strang [@strang].
+important numerical algorith of our time* by Prof Gilbert Strang [@strang94].
 
 ``mpi4py-fft`` (https://bitbucket.org/mpi4py/mpi4py-fft) is an open-source
 Python package for computing (in parallel) FFTs of possibly very large and
