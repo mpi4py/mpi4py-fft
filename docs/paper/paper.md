@@ -54,15 +54,16 @@ most of the FFTW library [@fftw05] and provide support for
 complex-to-complex, real-to-complex, complex-to-real and real-to-real
 transforms.
 
-``mpi4py-fft`` is highly configurable in how it distributes and redistributes
-arrays. Large arrays may be globally redistributed for alignement
-along any given axis, whenever needed by the user. This
+``mpi4py-fft`` is highly configurable in how it distributes and
+redistributes arrays. Large arrays may be globally redistributed for
+alignement along any given axis, whenever needed by the user. This
 flexibility has enabled the development of ``shenfun``
-[@mortensen_joss,@mortensen17], which is a computing platform
-for solving partial differential equations (PDEs) by the spectral Galerkin method.
-In ``shenfun`` it is possible to solve PDEs of any given dimensionality, by creating
-tensor product bases as outer products of one-dimensional bases. This leads to
-large multidimensional arrays that are distributed effortlessly through ``mpi4py-fft``.
+[@mortensen_joss,@mortensen17], which is a Python framework for
+solving partial differential equations (PDEs) by the spectral Galerkin
+method. ``shenfun`` is able to solve PDEs of any given dimensionality
+by creating tensor product bases as outer products of one-dimensional
+bases. This leads to large multidimensional arrays that are
+distributed effortlessly through ``mpi4py-fft``.
 
 ``mpi4py-fft`` can be utilized by anyone that needs to perform FFTs on large
 multidimensional arrays. Through its distributed array interface it can also be
