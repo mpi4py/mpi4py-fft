@@ -77,7 +77,11 @@ useful.
 
 # Acknowledgements
 
-M Mortensen acknowledges support from the 4DSpace Strategic Research Initiative at the
-University of Oslo
+M Mortensen acknowledges support from the 4DSpace Strategic Research
+Initiative at the University of Oslo.
+
+L Dalcin acknowledges support from the Extreme Computing Research
+Center and the KAUST Supercomputing Laboratory at King Abdullah
+University of Science and Technology.
 
 # References
