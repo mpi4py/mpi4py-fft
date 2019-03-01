@@ -42,15 +42,17 @@ successive sequential (serial) transforms over non-distributed axes,
 combined with global array redistributions (using interprocess
 communication) that realign the arrays for further serial transforms.
 
-For global redistribution ``mpi4py-fft`` makes use of a new and completely
-generic algorithm [@dalcin18] that allows for any index sets of a
-multidimensional array to be distributed. We can distribute just one index
-(a slab decomposition), two index sets (pencil decomposition) or even more for
-higher-dimensional arrays. The required MPI communications are always handled
-under the hood by MPI for Python. For serial transforms
-``mpi4py-fft`` wraps most of the FFTW library using Cython, making it callable
-from Python. We include wrappers for complex-to-complex, real-to-complex,
-complex-to-real and real-to-real transforms.
+For global redistributions, ``mpi4py-fft`` makes use of a new and
+completely generic algorithm [@dalcin18] based on advanced MPI
+features that allows for any index sets of a multidimensional array to
+be distributed. It can distribute a single index set (slab
+decomposition), two index sets (pencil decomposition), or even more
+for higher-dimensional arrays. The required MPI communications are
+always handled under the hood by MPI for Python [@mpi4py08]. For
+serial FFT transforms, ``mpi4py-fft`` uses Cython [@cython11] to wrap
+most of the FFTW library [@fftw05] and provide support for
+complex-to-complex, real-to-complex, complex-to-real and real-to-real
+transforms.
 
 ``mpi4py-fft`` is highly configurable in how it distributes and redistributes
 arrays. Large arrays may be globally redistributed for alignement
