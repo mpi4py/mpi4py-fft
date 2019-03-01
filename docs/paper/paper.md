@@ -31,16 +31,16 @@ life applications involving audio, image, and video processing.  The
 FFT has been named *the most important numerical algorithm of our
 time* by Prof Gilbert Strang [@strang94].
 
-``mpi4py-fft`` (https://bitbucket.org/mpi4py/mpi4py-fft) is an open-source
-Python package for computing (in parallel) FFTs of possibly very large and
-distributed multidimensional arrays.
-A multidimensional FFT is computed sequentially, over all axes, one axis at the time.
-A problem with parallel FFTs is that, to fit in the memory of multiple processors,
-multidimensional arrays will be distributed along some, but not all, of its axes.
-Consequently, parallel FFTs are computed as sequential (serial) transforms over
-non-distributed axes, combined with global redistributions (using MPI) that
-realign the arrays for further serial transforms. A parallel FFT is, in other
-words, computed as a combination of serial FFTs and global redistributions.
+``mpi4py-fft`` (https://bitbucket.org/mpi4py/mpi4py-fft) is an
+open-source Python package for computing (in parallel) FFTs of
+possibly very large and distributed multidimensional arrays. A
+multidimensional FFT is computed in sequence, over all axes, one axis
+at the time. In order to fit in the memory of multiple processors,
+multidimensional arrays have to be distributed along some, but not
+all, of its axes.  Consequently, parallel FFTs are computed with
+successive sequential (serial) transforms over non-distributed axes,
+combined with global array redistributions (using interprocess
+communication) that realign the arrays for further serial transforms.
 
 For global redistribution ``mpi4py-fft`` makes use of a new and completely
 generic algorithm [@dalcin18] that allows for any index sets of a
