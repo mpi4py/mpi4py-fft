@@ -28,32 +28,32 @@ FFT = PFFT(MPI.COMM_WORLD, N, collapse=False)
 FFT_pad = FFT
 
 # Declare variables needed to solve Navier-Stokes
-U = newDistArray(FFT, False, rank=1)       # Velocity
-U_hat = newDistArray(FFT, rank=1)          # Velocity transformed
-P = newDistArray(FFT, False)               # Pressure (scalar)
-P_hat = newDistArray(FFT)                  # Pressure transformed
-U_hat0 = newDistArray(FFT, rank=1)         # Runge-Kutta work array
-U_hat1 = newDistArray(FFT, rank=1)         # Runge-Kutta work array
+U = newDistArray(FFT, False, rank=1, view=True)       # Velocity
+U_hat = newDistArray(FFT, rank=1, view=True)          # Velocity transformed
+P = newDistArray(FFT, False, view=True)               # Pressure (scalar)
+P_hat = newDistArray(FFT, view=True)                  # Pressure transformed
+U_hat0 = newDistArray(FFT, rank=1, view=True)         # Runge-Kutta work array
+U_hat1 = newDistArray(FFT, rank=1, view=True)         # Runge-Kutta work array
 a = [1./6., 1./3., 1./3., 1./6.]        # Runge-Kutta parameter
 b = [0.5, 0.5, 1.]                      # Runge-Kutta parameter
-dU = newDistArray(FFT, rank=1)             # Right hand side of ODEs
-curl = newDistArray(FFT, False, rank=1)
-U_pad = newDistArray(FFT_pad, False, rank=1)
-curl_pad = newDistArray(FFT_pad, False, rank=1)
+dU = newDistArray(FFT, rank=1, view=True)             # Right hand side of ODEs
+curl = newDistArray(FFT, False, rank=1, view=True)
+U_pad = newDistArray(FFT_pad, False, rank=1, view=True)
+curl_pad = newDistArray(FFT_pad, False, rank=1, view=True)
 
 def get_local_mesh(FFT, L):
     """Returns local mesh."""
     X = np.ogrid[FFT.local_slice(False)]
-    N = FFT.shape()
+    N = FFT.global_shape()
     for i in range(len(N)):
         X[i] = (X[i]*L[i]/N[i])
-    X = [np.broadcast_to(x, FFT.local_shape(False)) for x in X]
+    X = [np.broadcast_to(x, FFT.shape(False)) for x in X]
     return X
 
 def get_local_wavenumbermesh(FFT, L):
     """Returns local wavenumber mesh."""
     s = FFT.local_slice()
-    N = FFT.shape()
+    N = FFT.global_shape()
     # Set wavenumbers in grid
     k = [np.fft.fftfreq(n, 1./n).astype(int) for n in N[:-1]]
     k.append(np.fft.rfftfreq(N[-1], 1./N[-1]).astype(int))
@@ -62,7 +62,7 @@ def get_local_wavenumbermesh(FFT, L):
     Lp = 2*np.pi/L
     for i in range(3):
         Ks[i] = (Ks[i]*Lp[i]).astype(float)
-    return [np.broadcast_to(k, FFT.local_shape(True)) for k in Ks]
+    return [np.broadcast_to(k, FFT.shape(True)) for k in Ks]
 
 X = get_local_mesh(FFT, L)
 K = get_local_wavenumbermesh(FFT, L)

@@ -10,19 +10,19 @@ class DistArray(np.ndarray):
     """Distributed Numpy array
 
     This Numpy array is part of a larger global array. Information about the
-    distribution is contained in the attributes
+    distribution is contained in the attributes.
 
     Parameters
     ----------
     global_shape : sequence of ints
         Shape of non-distributed global array
-    subcomm : None, Subcomm instance or sequence of ints, optional
+    subcomm : None, :class:`.Subcomm` object or sequence of ints, optional
         Describes how to distribute the array
     val : Number or None, optional
         Initialize array with this number if buffer is not given
     dtype : np.dtype, optional
         Type of array
-    buffer : np.ndarray, optional
+    buffer : Numpy array, optional
         Array of correct shape
     alignment : None or int, optional
         Make sure array is aligned in this direction. Note that alignment does
@@ -100,7 +100,13 @@ class DistArray(np.ndarray):
 
     @property
     def alignment(self):
-        """Return alignment of local ``self`` array"""
+        """Return alignment of local ``self`` array
+
+        Note
+        ----
+        For tensors of rank > 0 the array is actually aligned along
+        ``alignment+rank``
+        """
         return self._p0.axis
 
     @property
@@ -130,7 +136,7 @@ class DistArray(np.ndarray):
 
     @property
     def rank(self):
-        """Return rank of ``self``"""
+        """Return tensor rank of ``self``"""
         return self._rank
 
     def __getitem__(self, i):
@@ -191,9 +197,9 @@ class DistArray(np.ndarray):
         s = self.local_slice()
         sp = np.nonzero([isinstance(x, slice) for x in gslice])[0]
         sf = tuple(np.take(s, sp))
-        N = self.global_shape
-        f.require_dataset('0', shape=tuple(np.take(N, sp)), dtype=self.dtype)
+        f.require_dataset('data', shape=tuple(np.take(self.global_shape, sp)), dtype=self.dtype)
         gslice = list(gslice)
+        # We are required to check if the indices in si are on this processor
         si = np.nonzero([isinstance(x, int) and not z == slice(None) for x, z in zip(gslice, s)])[0]
         on_this_proc = True
         for i in si:
@@ -202,12 +208,12 @@ class DistArray(np.ndarray):
             else:
                 on_this_proc = False
         if on_this_proc:
-            f["0"][sf] = self[tuple(gslice)]
+            f["data"][sf] = self[tuple(gslice)]
         f.close()
         c = None
         if comm.Get_rank() == 0:
             h = h5py.File('tmp.h5', 'r')
-            c = h['0'].__array__()
+            c = h['data'].__array__()
             h.close()
             os.remove('tmp.h5')
         return c
@@ -279,10 +285,10 @@ class DistArray(np.ndarray):
 
         Returns
         -------
-        :class:`.DistArray` : darray
+        DistArray : darray
             The ``self`` array globally redistributed. If keyword ``darray`` is
             None then a new DistArray (aligned along ``axis``) is created
-            and returned
+            and returned. Otherwise the provided darray is returned.
         """
         if axis is None:
             assert isinstance(darray, np.ndarray)
@@ -308,7 +314,7 @@ class DistArray(np.ndarray):
         return darray
 
 def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
-    """Return a :class:`.DistArray` for provided :class:`.PFFT` object
+    """Return a new :class:`.DistArray` object for provided :class:`.PFFT` object
 
     Parameters
     ----------
@@ -317,14 +323,20 @@ def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
         If False then create newDistArray of shape/type for input to
         forward transform, otherwise create newDistArray of shape/type for
         output from forward transform.
-    val : int or float
+    val : int or float, optional
         Value used to initialize array.
-    rank: int
+    rank: int, optional
         Scalar has rank 0, vector 1 and matrix 2
-    view : bool
+    view : bool, optional
         If True return view of the underlying Numpy array, i.e., return
         cls.view(np.ndarray). Note that the DistArray still will
         be accessible through the base attribute of the view.
+
+    Returns
+    -------
+    Distarray
+        A new :class:`.DistArray` object. Return the ``ndarray`` view if
+        keyword ``view`` is True.
 
     Examples
     --------
@@ -335,17 +347,13 @@ def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
     >>> u_hat = newDistArray(FFT, True, rank=1)
 
     """
+    global_shape = pfft.global_shape(forward_output)
+    p0 = pfft.pencil[forward_output]
     if forward_output is True:
-        shape = pfft.forward.output_array.shape
         dtype = pfft.forward.output_array.dtype
-        p0 = pfft.pencil[1]
     else:
-        shape = pfft.forward.input_array.shape
         dtype = pfft.forward.input_array.dtype
-        p0 = pfft.pencil[0]
-    commsizes = [s.Get_size() for s in p0.subcomm]
-    global_shape = tuple([s*p for s, p in zip(shape, commsizes)])
-    global_shape = (len(shape),)*rank + global_shape
+    global_shape = (len(global_shape),)*rank + global_shape
     z = DistArray(global_shape, subcomm=p0.subcomm, val=val, dtype=dtype,
                   rank=rank)
     return z.v if view else z

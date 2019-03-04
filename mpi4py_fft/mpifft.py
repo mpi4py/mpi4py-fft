@@ -327,7 +327,7 @@ class PFFT(object):
         for trans in self.transfer:
             trans.destroy()
 
-    def local_shape(self, forward_output=True):
+    def shape(self, forward_output=True):
         """The local (to each processor) shape of data
 
         Parameters
@@ -360,14 +360,27 @@ class PFFT(object):
                                                                    ip.subshape)]
         return tuple(s)
 
-    def shape(self, forward_output=False):
-        """Return shape of tensor for space
+    def local_shape(self, forward_output=False):
+        """The local (to each processor) shape of data
 
         Parameters
         ----------
         forward_output : bool, optional
-            If True then return shape of spectral space, i.e., the input to
-            a backward transfer. If False then return shape of physical
+            Return shape of output array (spectral space) if True, else return
+            shape of input array (physical space)
+        """
+        import warnings
+        warnings.warn("local_shape() is deprecated; use shape().", FutureWarning)
+        return self.shape(forward_output)
+
+    def global_shape(self, forward_output=False):
+        """Return global shape of associated tensors
+
+        Parameters
+        ----------
+        forward_output : bool, optional
+            If True then return global shape of spectral space, i.e., the input
+            to a backward transfer. If False then return shape of physical
             space, i.e., the input to a forward transfer.
         """
         if forward_output:

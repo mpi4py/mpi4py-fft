@@ -42,7 +42,7 @@ class NCFile(FileBase):
         from netCDF4 import Dataset
         self.filename = ncname
         self.f = f = Dataset(ncname, mode=mode, clobber=clobber, parallel=True, comm=comm, **kw)
-        self.N = N = T.shape(False)[-T.dimensions():]
+        self.N = N = T.global_shape(False)[-T.dimensions():]
         dtype = self.T.dtype(False)
         assert dtype.char in 'fdg'
         self._dtype = dtype
@@ -66,7 +66,7 @@ class NCFile(FileBase):
                 self.dims.append(xyz)
                 nc_xyz = f.createVariable(xyz, self._dtype, (xyz))
                 nc_xyz[:] = d[i]
-            f.setncatts({"ndim": T.dimensions(), "shape": T.shape(False)})
+            f.setncatts({"ndim": T.dimensions(), "shape": T.global_shape(False)})
             f.sync()
         self.close()
 
