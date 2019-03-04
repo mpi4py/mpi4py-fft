@@ -24,10 +24,17 @@ bibliography: paper.bib
 # Summary
 
 The fast Fourier transform (FFT) is an algorithm that efficiently
-computes the discrete Fourier transform. The FFT is an ubiquitous
+computes the discrete Fourier transform. The FFT is a ubiquitous
 algorithm utilized throughout science and engineering. Since the dawn
-of our digital society, the FFT permeated to the heart of everyday
-life applications involving audio, image, and video processing.  The
+of our digital society, the FFT has permeated to the heart of everyday
+life applications involving audio, image, and video processing. The
+importance of the FFT extends beyond signal processing into scientific
+computing because it diagonalizes the Poisson operator, which is
+ubiquitous in descriptions of electromagnetism,  gravitation,
+acoustic and elastic waves, potential flow in fluids, stress in
+solids, Hamiltonians of the  Schroedinger’s equation for probability
+distribution of electrons in quantum mechanics, and diffusion of
+internal energy, chemical species, and momentum.  The
 FFT has been named *the most important numerical algorithm of our
 time* by Prof Gilbert Strang [@strang94].
 
@@ -38,7 +45,7 @@ multidimensional FFT is computed in sequence, over all axes, one axis
 at the time. In order to fit in the memory of multiple processors,
 multidimensional arrays have to be distributed along some, but not
 all, of its axes.  Consequently, parallel FFTs are computed with
-successive sequential (serial) transforms over non-distributed axes,
+successive sequential (serial) transforms over undivided axes,
 combined with global array redistributions (using interprocess
 communication) that realign the arrays for further serial transforms.
 
@@ -56,7 +63,7 @@ transforms.
 
 ``mpi4py-fft`` is highly configurable in how it distributes and
 redistributes arrays. Large arrays may be globally redistributed for
-alignement along any given axis, whenever needed by the user. This
+alignment along any given axis, whenever needed by the user. This
 flexibility has enabled the development of ``shenfun``
 [@mortensen_joss,@mortensen17], which is a Python framework for
 solving partial differential equations (PDEs) by the spectral Galerkin
@@ -85,7 +92,7 @@ useful.
 M Mortensen acknowledges support from the 4DSpace Strategic Research
 Initiative at the University of Oslo.
 
-L Dalcin acknowledges support from the Extreme Computing Research
+L Dalcin and D Keyes acknowledge support from the Extreme Computing Research
 Center and the KAUST Supercomputing Laboratory at King Abdullah
 University of Science and Technology.
 

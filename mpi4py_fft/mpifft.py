@@ -371,7 +371,9 @@ class PFFT(object):
         """
         import warnings
         warnings.warn("local_shape() is deprecated; use shape().", FutureWarning)
-        return self.shape(forward_output)
+        if forward_output is not True:
+            return self.forward.input_pencil.subshape
+        return self.backward.input_pencil.subshape
 
     def global_shape(self, forward_output=False):
         """Return global shape of associated tensors
