@@ -80,11 +80,11 @@ Direct Numerical Simulations (DNS) of turbulent flows
 [@mortensen16,@mortensen16b,@ketcheson], using arrays with billions of
 unknowns.
 
-``mpi4py-fft`` can be utilized by anyone in need of performing FFTs on large
-multidimensional arrays. Through its distributed array interface it can also be
-utilized by any application relying on algorithms (not just FFTs) with varying
-degrees of locality on multidimensional arrays, where MPI can be used to boost
-performance.
+``mpi4py-fft`` provides a flexible distributed Numpy array interface,
+which allows for further usage, also for applications not relying on
+the FFT. In fact, the distributed array interface can be utilized
+whenever distribution and MPI simply are considered for boosting
+performance of localized array operations.
 
 ``mpi4py-fft`` is installable from ``pypi`` and ``conda-forge``, and
 released under a permissive 2-clause BSD-license, in the hope that it will be
