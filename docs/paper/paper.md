@@ -12,12 +12,15 @@ authors:
  - name: Lisandro Dalcin
    orcid: 0000-0001-8086-0155
    affiliation: "2"
+ - name: David Elliot Keyes
+   orcid: 0000-0002-4052-7224
+   affiliation: "2"
 affiliations:
  - name: University of Oslo, Department of Mathematics
    index: 1
  - name: King Abdullah University of Science and Technology, Extreme Computing Research Center
    index: 2
-date: 7 November 2018
+date: 4 March 2019
 bibliography: paper.bib
 ---
 
@@ -72,7 +75,7 @@ by creating tensor product bases as outer products of one-dimensional
 bases. This leads to large multidimensional arrays that are
 distributed effortlessly through ``mpi4py-fft``.
 Throughout the ``spectralDNS`` (https://github.com/spectralDNS/spectralDNS)
-project ``shenfun`` and ``mpi4py-fft`` are being utilized extensively for
+project ``shenfun`` is being used extensively for
 Direct Numerical Simulations (DNS) of turbulent flows
 [@mortensen16,@mortensen16b,@ketcheson], using arrays with billions of
 unknowns.
