@@ -360,7 +360,7 @@ class PFFT(object):
                                                                    ip.subshape)]
         return tuple(s)
 
-    def local_shape(self, forward_output=False):
+    def local_shape(self, forward_output=False): #pragma: no cover
         """The local (to each processor) shape of data
 
         Parameters
