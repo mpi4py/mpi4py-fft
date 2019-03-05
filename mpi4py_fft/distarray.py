@@ -2,7 +2,7 @@ import os
 from numbers import Number
 import numpy as np
 from mpi4py import MPI
-from .pencil import Pencil, Subcomm
+from .pencil import Pencil, Subcomm, Transfer
 
 comm = MPI.COMM_WORLD
 
@@ -276,6 +276,10 @@ class DistArray(np.ndarray):
     def redistribute(self, axis=None, darray=None):
         """Global redistribution of local ``self`` array
 
+        Note
+        ----
+        Use either ``axis`` or ``darray``, not both.
+
         Parameters
         ----------
         axis : int, optional
@@ -290,10 +294,32 @@ class DistArray(np.ndarray):
             None then a new DistArray (aligned along ``axis``) is created
             and returned. Otherwise the provided darray is returned.
         """
-        if axis is None:
+        # Take care of some trivial cases first
+        if axis == self.alignment:
+            return self
+
+        # Check if self is already aligned along axis. In that case just switch
+        # axis of pencil (both axes are undivided) and return
+        if axis is not None:
+            if self.commsizes[self.rank+axis] == 1:
+                self._p0.axis = axis
+                return self
+
+        if axis is None: # darray interface
             assert isinstance(darray, np.ndarray)
             assert self.global_shape == darray.global_shape
             axis = darray.alignment
+            if self.commsizes == darray.commsizes:
+                # Just a copy required. Should probably not be here
+                darray[:] = self
+                return darray
+
+            # Check that arrays are compatible
+            for i in range(len(self._p0.shape)):
+                if i != self._p0.axis and i != darray._p0.axis:
+                    assert self._p0.subcomm[i] == darray._p0.subcomm[i]
+                    assert self._p0.subshape[i] == darray._p0.subshape[i]
+
         p1, transfer = self.get_pencil_and_transfer(axis)
         if darray is None:
             darray = DistArray(self.global_shape,
@@ -301,6 +327,7 @@ class DistArray(np.ndarray):
                                dtype=self.dtype,
                                alignment=axis,
                                rank=self.rank)
+
         if self.rank == 0:
             transfer.forward(self, darray)
         elif self.rank == 1:

@@ -45,6 +45,8 @@ def test_2Darray():
             s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(b)**2)
             if MPI.COMM_WORLD.Get_rank() == 0:
                 assert abs(s0-s1) < 1e-1
+            c = a.redistribute(a.alignment)
+            assert c is a
 
 def test_3Darray():
     N = (8, 8, 8)

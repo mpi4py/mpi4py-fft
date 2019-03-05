@@ -27,7 +27,7 @@ bibliography: paper.bib
 # Summary
 
 The fast Fourier transform (FFT) is an algorithm that efficiently
-computes the discrete Fourier transform. The FFT is a ubiquitous
+computes the discrete Fourier transform. The FFT is a celebrated
 algorithm utilized throughout science and engineering. Since the dawn
 of our digital society, the FFT has permeated to the heart of everyday
 life applications involving audio, image, and video processing. The
@@ -84,7 +84,7 @@ unknowns.
 which allows for further reuse in applications beyond the FFT. In
 fact, the distributed array interface can be used for boosting
 performance through MPI-based parallelism in any algorithm able to
-operate on local arrays by processing undivided axes one at the time.
+operate on local arrays by processing undivided axes.
 
 # Acknowledgements
 
