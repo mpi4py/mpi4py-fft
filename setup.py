@@ -96,7 +96,7 @@ if __name__ == '__main__':
           url='https://bitbucket.org/mpi4py/mpi4py-fft',
           packages=["mpi4py_fft",
                     "mpi4py_fft.fftw",
-                    "mpi4py_fft.utilities"],
+                    "mpi4py_fft.io"],
           package_dir={"mpi4py_fft": "mpi4py_fft"},
           classifiers=[
               'Development Status :: 4 - Beta',

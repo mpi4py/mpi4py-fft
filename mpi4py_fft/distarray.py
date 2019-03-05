@@ -157,7 +157,7 @@ class DistArray(np.ndarray):
         """ Return local ``self`` array as an ``ndarray`` object"""
         return self.__array__()
 
-    def get_global_slice(self, gslice):
+    def get(self, gslice):
         """Return global slice of ``self``
 
         Parameters
@@ -182,7 +182,7 @@ class DistArray(np.ndarray):
         ... N = (6, 6, 6)
         ... z = DistArray(N, dtype=float, alignment=0)
         ... z[:] = comm.Get_rank()
-        ... g = z.get_global_slice((0, slice(None), 0))
+        ... g = z.get((0, slice(None), 0))
         ... if comm.Get_rank() == 0:
         ...     print(g)''')
         >>> fx.close()

@@ -22,4 +22,4 @@ __author__ = 'Lisandro Dalcin and Mikael Mortensen'
 from .distarray import DistArray, newDistArray, Function
 from .mpifft import PFFT
 from . import fftw
-from .utilities import HDF5File, NCFile, generate_xdmf
+from .io import HDF5File, NCFile, generate_xdmf

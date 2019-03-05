@@ -4,8 +4,8 @@ from mpi4py_fft.pencil import Subcomm
 from mpi4py_fft.distarray import DistArray, newDistArray, Function
 from mpi4py_fft.mpifft import PFFT
 
-# Test DistArray. Start with alignment in axis 0, then tranfer to 1 and
-# finally to 2
+# Test DistArray. Start with alignment in axis 0, then tranfer to 2 and
+# finally to 1
 N = (16, 14, 12)
 z0 = DistArray(N, dtype=np.float, alignment=0)
 z0[:] = np.random.randint(0, 10, z0.shape)
@@ -24,8 +24,7 @@ fft.backward(z3, z2)
 s0, s1 = np.linalg.norm(z2), np.linalg.norm(z2c)
 assert abs(s0-s1) < 1e-12, s0-s1
 
-print(z3.get_global_slice((5, 4, 5)))
-
+print(z3.get((5, 4, 5)))
 print(z3.local_slice(), z3.substart, z3.commsizes)
 
 v0 = newDistArray(fft, forward_output=False, rank=1)
@@ -51,18 +50,17 @@ for i in range(3):
 s0, s1 = np.linalg.norm(v0c), np.linalg.norm(v0)
 assert abs(s0-s1) < 1e-12
 
-
 N = (6, 6, 6)
 z = DistArray(N, dtype=float, alignment=0)
 z[:] = MPI.COMM_WORLD.Get_rank()
-g = z.get_global_slice((0, slice(None), 0))
+g = z.get((0, slice(None), 0))
 if MPI.COMM_WORLD.Get_rank() == 0:
     print(g)
 
 z2 = DistArray(N, dtype=float, alignment=2)
 z.redistribute(darray=z2)
 
-g = z2.get_global_slice((0, slice(None), 0))
+g = z2.get((0, slice(None), 0))
 if MPI.COMM_WORLD.Get_rank() == 0:
     print(g)
 
