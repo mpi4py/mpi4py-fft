@@ -273,30 +273,29 @@ class DistArray(np.ndarray):
         p1 = self._p0.pencil(axis)
         return p1, self._p0.transfer(p1, self.dtype)
 
-    def redistribute(self, axis=None, darray=None):
+    def redistribute(self, axis=None, out=None):
         """Global redistribution of local ``self`` array
-
-        Note
-        ----
-        Use either ``axis`` or ``darray``, not both.
 
         Parameters
         ----------
         axis : int, optional
             Align local ``self`` array along this axis
-        darray : :class:`.DistArray`, optional
+        out : :class:`.DistArray`, optional
             Copy data to this array of possibly different alignment
 
         Returns
         -------
-        DistArray : darray
-            The ``self`` array globally redistributed. If keyword ``darray`` is
+        DistArray : out
+            The ``self`` array globally redistributed. If keyword ``out`` is
             None then a new DistArray (aligned along ``axis``) is created
-            and returned. Otherwise the provided darray is returned.
+            and returned. Otherwise the provided out array is returned.
         """
         # Take care of some trivial cases first
         if axis == self.alignment:
             return self
+
+        if axis is not None and isinstance(out, DistArray):
+            assert axis == out.alignment
 
         # Check if self is already aligned along axis. In that case just switch
         # axis of pencil (both axes are undivided) and return
@@ -305,40 +304,40 @@ class DistArray(np.ndarray):
                 self._p0.axis = axis
                 return self
 
-        if axis is None: # darray interface
-            assert isinstance(darray, np.ndarray)
-            assert self.global_shape == darray.global_shape
-            axis = darray.alignment
-            if self.commsizes == darray.commsizes:
+        if out is not None:
+            assert isinstance(out, DistArray)
+            assert self.global_shape == out.global_shape
+            axis = out.alignment
+            if self.commsizes == out.commsizes:
                 # Just a copy required. Should probably not be here
-                darray[:] = self
-                return darray
+                out[:] = self
+                return out
 
             # Check that arrays are compatible
             for i in range(len(self._p0.shape)):
-                if i != self._p0.axis and i != darray._p0.axis:
-                    assert self._p0.subcomm[i] == darray._p0.subcomm[i]
-                    assert self._p0.subshape[i] == darray._p0.subshape[i]
+                if i != self._p0.axis and i != out._p0.axis:
+                    assert self._p0.subcomm[i] == out._p0.subcomm[i]
+                    assert self._p0.subshape[i] == out._p0.subshape[i]
 
         p1, transfer = self.get_pencil_and_transfer(axis)
-        if darray is None:
-            darray = DistArray(self.global_shape,
+        if out is None:
+            out = DistArray(self.global_shape,
                                subcomm=p1.subcomm,
                                dtype=self.dtype,
                                alignment=axis,
                                rank=self.rank)
 
         if self.rank == 0:
-            transfer.forward(self, darray)
+            transfer.forward(self, out)
         elif self.rank == 1:
             for i in range(self.shape[0]):
-                transfer.forward(self[i], darray[i])
+                transfer.forward(self[i], out[i])
         elif self.rank == 2:
             for i in range(self.shape[0]):
                 for j in range(self.shape[1]):
-                    transfer.forward(self[i, j], darray[i, j])
+                    transfer.forward(self[i, j], out[i, j])
 
-        return darray
+        return out
 
 def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
     """Return a new :class:`.DistArray` object for provided :class:`.PFFT` object

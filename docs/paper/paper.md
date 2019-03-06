@@ -1,5 +1,5 @@
 ---
-title: 'Mpi4py-fft'
+title: 'mpi4py-fft: Parallel Fast Fourier Transforms with MPI for Python'
 tags:
  - Fast Fourier transforms
  - Fast Chebyshev transforms
@@ -67,7 +67,7 @@ transforms.
 redistributes arrays. Large arrays may be globally redistributed for
 alignment along any given axis, whenever needed by the user. This
 flexibility has enabled the development of ``shenfun``
-[@mortensen_joss,@mortensen17], which is a Python framework for
+[@mortensen_joss, @mortensen17], which is a Python framework for
 solving partial differential equations (PDEs) by the spectral Galerkin
 method. ``shenfun`` is able to solve PDEs of any given dimensionality
 by creating tensor product bases as outer products of one-dimensional
@@ -76,7 +76,7 @@ distributed effortlessly through ``mpi4py-fft``.
 Throughout the ``spectralDNS`` (https://github.com/spectralDNS/spectralDNS)
 project ``shenfun`` is being used extensively for
 Direct Numerical Simulations (DNS) of turbulent flows
-[@mortensen16,@mortensen16b,@ketcheson], using arrays with billions of
+[@mortensen16, @mortensen16b, @ketcheson], using arrays with billions of
 unknowns.
 
 ``mpi4py-fft`` provides a flexible distributed NumPy array interface,
