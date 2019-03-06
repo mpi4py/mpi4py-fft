@@ -27,8 +27,7 @@ bibliography: paper.bib
 # Summary
 
 The fast Fourier transform (FFT) is an algorithm that efficiently
-computes the discrete Fourier transform. The FFT is a celebrated
-algorithm utilized throughout science and engineering. Since the dawn
+computes the discrete Fourier transform. Since the dawn
 of our digital society, the FFT has permeated to the heart of everyday
 life applications involving audio, image, and video processing. The
 importance of the FFT extends beyond signal processing into scientific
@@ -39,7 +38,7 @@ solids, Hamiltonians of the  Schroedinger’s equation for probability
 distribution of electrons in quantum mechanics, and diffusion of
 internal energy, chemical species, and momentum.  The
 FFT has been named *the most important numerical algorithm of our
-time* by Prof Gilbert Strang [@strang94].
+time* by Professor Gilbert Strang [@strang94].
 
 ``mpi4py-fft`` (https://bitbucket.org/mpi4py/mpi4py-fft) is an
 open-source Python package for computing (in parallel) FFTs of
@@ -81,10 +80,10 @@ Direct Numerical Simulations (DNS) of turbulent flows
 unknowns.
 
 ``mpi4py-fft`` provides a flexible distributed NumPy array interface,
-which allows for further reuse in applications beyond the FFT. In
-fact, the distributed array interface can be used for boosting
-performance through MPI-based parallelism in any algorithm able to
-operate on local arrays by processing undivided axes.
+which allows for further reuse in applications beyond the FFT. The
+distribution requires at least one undivided axis, but apart from that
+there are no restrictions nor limitations. The interface can
+simply be used to boost performance of global array operations through MPI.
 
 # Acknowledgements
 
