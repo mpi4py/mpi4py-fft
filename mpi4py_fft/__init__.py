@@ -16,7 +16,7 @@ without any transforms at all.
 For more information, see `documentation <https://mpi4py-fft.readthedocs.io>`_.
 
 """
-__version__ = '1.2.0'
+__version__ = '2.0.0'
 __author__ = 'Lisandro Dalcin and Mikael Mortensen'
 
 from .distarray import DistArray, newDistArray, Function

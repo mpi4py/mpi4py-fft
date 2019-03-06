@@ -361,7 +361,7 @@ def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
 
     Returns
     -------
-    Distarray
+    DistArray
         A new :class:`.DistArray` object. Return the ``ndarray`` view if
         keyword ``view`` is True.
 
