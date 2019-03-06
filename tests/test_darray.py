@@ -40,7 +40,7 @@ def test_2Darray():
             p0, t = a.get_pencil_and_transfer(newaxis)
             a[:] = MPI.COMM_WORLD.Get_rank()
             b = a.redistribute(newaxis)
-            a = b.redistribute(darray=a)
+            a = b.redistribute(out=a)
             s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(a)**2)
             s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(b)**2)
             if MPI.COMM_WORLD.Get_rank() == 0:
@@ -87,7 +87,7 @@ def test_3Darray():
             p0, t = a.get_pencil_and_transfer(newaxis)
             a[:] = MPI.COMM_WORLD.Get_rank()
             b = a.redistribute(newaxis)
-            a = b.redistribute(darray=a)
+            a = b.redistribute(out=a)
             s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(a)**2)
             s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(b)**2)
             if MPI.COMM_WORLD.Get_rank() == 0:
