@@ -2,7 +2,7 @@ import os
 from numbers import Number
 import numpy as np
 from mpi4py import MPI
-from .pencil import Pencil, Subcomm, Transfer
+from .pencil import Pencil, Subcomm
 
 comm = MPI.COMM_WORLD
 
