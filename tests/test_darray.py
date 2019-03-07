@@ -41,6 +41,7 @@ def test_2Darray():
             a[:] = MPI.COMM_WORLD.Get_rank()
             b = a.redistribute(newaxis)
             a = b.redistribute(out=a)
+            a = b.redistribute(a.alignment, out=a)
             s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(a)**2)
             s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(b)**2)
             if MPI.COMM_WORLD.Get_rank() == 0:
