@@ -322,10 +322,10 @@ class DistArray(np.ndarray):
         p1, transfer = self.get_pencil_and_transfer(axis)
         if out is None:
             out = DistArray(self.global_shape,
-                               subcomm=p1.subcomm,
-                               dtype=self.dtype,
-                               alignment=axis,
-                               rank=self.rank)
+                            subcomm=p1.subcomm,
+                            dtype=self.dtype,
+                            alignment=axis,
+                            rank=self.rank)
 
         if self.rank == 0:
             transfer.forward(self, out)

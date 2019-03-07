@@ -90,7 +90,7 @@ if __name__ == '__main__':
     generate_extensions(fftw_libs)
     setup(name="mpi4py-fft",
           version=version(),
-          description="mpi4py-fft -- FFT with MPI",
+          description="mpi4py-fft -- Parallel Fast Fourier Transforms (FFTs) using MPI for Python",
           long_description=long_description,
           author="Lisandro Dalcin and Mikael Mortensen",
           url='https://bitbucket.org/mpi4py/mpi4py-fft',
@@ -112,5 +112,6 @@ if __name__ == '__main__':
               ],
           ext_modules=get_extensions(fftw_libs),
           install_requires=["mpi4py", "numpy"],
-          setup_requires=["setuptools>=18.0", "cython>=0.25"]
+          setup_requires=["setuptools>=18.0", "cython>=0.25"],
+          keywords=['Python', 'FFTW', 'FFT', 'DCT', 'DST', 'MPI']
           )

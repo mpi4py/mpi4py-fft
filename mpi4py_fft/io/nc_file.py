@@ -17,8 +17,7 @@ class NCFile(FileBase):
     ncname : str
         Name of netcdf file to be created
     T : PFFT
-        Instance of a :class:`.PFFT` class. Must be the same as the space
-        used for storing with :class:`NCWriter.write`
+        Instance of a :class:`.PFFT` class.
     domain : Sequence
         The spatial domain. Sequence of either
 

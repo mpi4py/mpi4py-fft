@@ -8,8 +8,9 @@ class FileBase(object):
 
     Parameters
     ----------
-    T : PFFT
-        Instance of a :class:`.PFFT` class.
+    global
+    u : Distributed array, optional
+        Instance of :class:`.DistArray`
     domain : sequence, optional
         The spatial domain. Sequence of either
 
@@ -18,11 +19,15 @@ class FileBase(object):
             - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
               array per dimension.
     """
-    def __init__(self, T, domain=None, **kw):
+    def __init__(self, global_shape=None, u=None, rank=None, domain=None, **kw):
         self.f = None
         self.filename = None
-        self.T = T
-        self.domain = domain if domain is not None else ((0, 2*np.pi),)*T.dimensions()
+        if u is not None:
+            assert isinstance(u, DistArray)
+        self.global_shape = global_shape if global_shape is not None else u.global_shape
+        self.rank = rank if rank is not None else u.rank
+        self.dimensions = len(self.global_shape[self.rank:])
+        self.domain = domain if domain is not None else ((0, 2*np.pi),)*self.dimensions
 
     def write(self, step, fields, **kw):
         """Write snapshot ``step`` of ``fields`` to file

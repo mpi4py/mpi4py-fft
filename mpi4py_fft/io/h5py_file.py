@@ -14,8 +14,7 @@ class HDF5File(FileBase):
     h5name : str
         Name of hdf5 file to be created.
     T : PFFT
-        Instance of a :class:`PFFT` class. Must be the same as the space
-        used for storing with :class:`HDF5Writer.write`.
+        Instance of a :class:`PFFT` class.
     domain : Sequence, optional
         The spatial domain. Sequence of either
 
