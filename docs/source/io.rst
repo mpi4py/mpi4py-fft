@@ -4,7 +4,7 @@ Storing datafiles
 mpi4py-fft works with regular Numpy arrays. However, since arrays in parallel
 can become very large, and the arrays live on multiple processors, we require
 parallel IO capabilities that goes beyond Numpys regular methods.
-In the :mod:`mpi4py_fft.utilities` module there are two helper classes for dumping
+In the :mod:`mpi4py_fft.io` module there are two helper classes for dumping
 dataarrays to either `HDF5 <https://www.hdf5.org>`_ or
 `NetCDF <https://www.unidata.ucar.edu/software/netcdf/>`_ format:
 
@@ -17,38 +17,42 @@ reads data in parallel. A simple example of usage is::
     from mpi4py import MPI
     import numpy as np
     from mpi4py_fft import PFFT, HDF5File, NCFile, newDistArray
-
     N = (128, 256, 512)
     T = PFFT(MPI.COMM_WORLD, N)
     u = newDistArray(T, forward_output=False)
     v = newDistArray(T, forward_output=False, val=2)
-    u[:] = np.random.random(N)
-
+    u[:] = np.random.random(u.shape)
+    # Store by first creating output files
     fields = {'u': [u], 'v': [v]}
-    f0 = HDF5File('h5test.h5', T)
-    f1 = NCFile('nctest.nc', T)
+    f0 = HDF5File('h5test.h5', global_shape=N, mode='w')
+    f1 = NCFile('nctest.nc', global_shape=N, mode='w')
     f0.write(0, fields)
     f1.write(0, fields)
     v[:] = 3
     f0.write(1, fields)
     f1.write(1, fields)
+    # Alternatively, just use write method of each distributed array
+    u.write('h5test.h5', 'u', step=2)
+    v.write('h5test.h5', 'v', step=2)
+    u.write('nctest.nc', 'u', step=2)
+    v.write('nctest.nc', 'v', step=2)
 
-Note that we are creating two datafiles ``h5test.h5`` and ``nctest.nc``,
+Note that we are here creating two datafiles ``h5test.h5`` and ``nctest.nc``,
 for storing in HDF5 or NetCDF4 formats respectively. Normally, one would be
 satisfied using only one format, so this is only for illustration. We store
-the fields ``u`` and ``v`` using method ``write`` on two different occasions,
-so the datafiles will contain two snapshots of each field ``u`` and ``v``.
+the fields ``u`` and ``v`` on three different occasions,
+so the datafiles will contain three snapshots of each field ``u`` and ``v``.
 
 The stored dataarrays can be retrieved later on::
 
-    f0 = HDF5File('h5test.h5', T, mode='r')
-    f1 = NCFile('nctest.nc', T, mode='r')
     u0 = newDistArray(T, forward_output=False)
     u1 = newDistArray(T, forward_output=False)
-    f0.read(u0, 'u', 0)
-    f0.read(u1, 'u', 1)
-    f1.read(u0, 'u', 0)
-    f1.read(u1, 'u', 1)
+    u0.read('h5test.h5', 'u', 0)
+    u1.read('h5test.h5', 'u', 1)
+    # or alternatively for netcdf
+    #u0.read('nctest.nc', 'u', 0)
+    #u1.read('nctest.nc', 'u', 1)
+
 
 Note that one does not have to use the same number of processors when
 retrieving the data as when they were stored.
@@ -56,7 +60,7 @@ retrieving the data as when they were stored.
 It is also possible to store only parts of the, potentially large, arrays.
 Any chosen slice may be stored, using a *global* view of the arrays::
 
-    f2 = HDF5File('variousfields.h5', T, mode='w')
+    f2 = HDF5File('variousfields.h5', global_shape=N, mode='w')
     fields = {'u': [u,
                     (u, [slice(None), slice(None), 4]),
                     (u, [5, 5, slice(None)])],
@@ -65,6 +69,8 @@ Any chosen slice may be stored, using a *global* view of the arrays::
     f2.write(0, fields)
     f2.write(1, fields)
     f2.write(2, fields)
+    # or, using write method of field, e.g.
+    #u.write('variousfields.h5', 'u', 0, [slice(None), slice(None), 4])
 
 This will lead to an hdf5-file with groups::
 
@@ -107,14 +113,14 @@ two different ways when creating the datafiles:
        originates from the origin, with lengths :math:`\pi, 2\pi, 3\pi`, can be
        given as::
 
-        f0 = HDF5File('filename.h5', T, domain=((0, pi), (0, 2*np.pi), (0, 3*np.pi)))
+        f0 = HDF5File('filename.h5', global_shape=N, domain=((0, pi), (0, 2*np.pi), (0, 3*np.pi)))
 
     2) A sequence of arrays giving the coordinates for each dimension. For example::
 
         d = (np.arange(N[0], dtype=np.float)*1*np.pi/N[0],
              np.arange(N[1], dtype=np.float)*2*np.pi/N[1],
              np.arange(N[2], dtype=np.float)*2*np.pi/N[2])
-        f0 = HDF5File('filename.h5', T, domain=d)
+        f0 = HDF5File('filename.h5', global_shape=N, domain=d)
 
 With NetCDF4 the layout is somewhat different. For ``variousfields`` above,
 if we were using :class:`.NCFile` instead of :class:`.HDF5File`,
@@ -147,9 +153,9 @@ opened with `Visit <https://www.visitusers.org>`_.
 
 To view the HDF5-files we first need to generate some light-weight *xdmf*-files that can
 be understood by both Paraview and Visit. To generate such files, simply throw the
-module :mod:`.utilities.generate_xdmf` on the HDF5-files::
+module :mod:`.io.generate_xdmf` on the HDF5-files::
 
-    from mpi4py_fft.utilities import generate_xdmf
+    from mpi4py_fft.io import generate_xdmf
     generate_xdmf('variousfields.h5')
 
 This will create a number of xdmf-files, one for each group that contains 2D

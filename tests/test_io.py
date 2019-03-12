@@ -28,23 +28,28 @@ def test_2D(backend, forward_output):
     for i, domain in enumerate([None, ((0, np.pi), (0, 2*np.pi)),
                                 (np.arange(N[0], dtype=np.float)*1*np.pi/N[0],
                                  np.arange(N[1], dtype=np.float)*2*np.pi/N[1])]):
-        filename = "".join(('test2D_{}{}'.format(ex[i == 0], ex[forward_output]),
-                            ending[backend]))
-        if backend == 'netcdf4':
-            remove_if_exists(filename)
-        hfile = writer[backend](filename, T, domain=domain)
-        assert hfile.backend() == backend
-        u = newDistArray(T, forward_output=forward_output, val=1)
-        hfile.write(0, {'u': [u]}, forward_output=forward_output)
-        hfile.write(1, {'u': [u]}, forward_output=forward_output)
-        if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
-            generate_xdmf(filename)
-            generate_xdmf(filename, order='visit')
+        for rank in range(3):
+            filename = "".join(('test2D_{}{}{}'.format(ex[i == 0], ex[forward_output], rank),
+                                ending[backend]))
+            if backend == 'netcdf4':
+                remove_if_exists(filename)
+            u = newDistArray(T, forward_output=forward_output, val=1, rank=rank)
+            hfile = writer[backend](filename, domain=domain)
+            assert hfile.backend() == backend
+            hfile.write(0, {'u': [u]})
+            hfile.write(1, {'u': [u]})
+            u.write(hfile, 'u', 2)
+            u.write(hfile, 'u', 2, [slice(None), 3])
 
-        u0 = newDistArray(T, forward_output=forward_output)
-        read = reader[backend](filename, T)
-        read.read(u0, 'u', step=0, forward_output=forward_output)
-        assert np.allclose(u0, u)
+            if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
+                generate_xdmf(filename)
+                generate_xdmf(filename, order='visit')
+
+            u0 = newDistArray(T, forward_output=forward_output, rank=rank)
+            read = reader[backend](filename, u=u0)
+            read.read(u0, 'u', step=0)
+            u0.read(filename, 'u', 2)
+            assert np.allclose(u0, u)
 
 def test_3D(backend, forward_output):
     if backend == 'netcdf4':
@@ -61,10 +66,10 @@ def test_3D(backend, forward_output):
             remove_if_exists('uv'+filename)
             remove_if_exists('v'+filename)
 
-        h0file = writer[backend]('uv'+filename, T, domain)
-        h1file = writer[backend]('v'+filename, T, domain)
         u = newDistArray(T, forward_output=forward_output)
         v = newDistArray(T, forward_output=forward_output)
+        h0file = writer[backend]('uv'+filename, u=u, domain=domain)
+        h1file = writer[backend]('v'+filename, u=v, domain=domain)
         u[:] = np.random.random(u.shape)
         v[:] = 2
         for k in range(3):
@@ -72,23 +77,19 @@ def test_3D(backend, forward_output):
                                    (u, [slice(None), slice(None), 4]),
                                    (u, [5, 5, slice(None)])],
                              'v': [v,
-                                   (v, [slice(None), 6, slice(None)])]},
-                         forward_output=forward_output)
+                                   (v, [slice(None), 6, slice(None)])]})
             h1file.write(k, {'v': [v,
                                    (v, [slice(None), 6, slice(None)]),
-                                   (v, [6, 6, slice(None)])]},
-                         forward_output=forward_output)
+                                   (v, [6, 6, slice(None)])]})
         # One more time with same k
         h0file.write(k, {'u': [u,
                                (u, [slice(None), slice(None), 4]),
                                (u, [5, 5, slice(None)])],
                          'v': [v,
-                               (v, [slice(None), 6, slice(None)])]},
-                     forward_output=forward_output)
+                               (v, [slice(None), 6, slice(None)])]})
         h1file.write(k, {'v': [v,
                                (v, [slice(None), 6, slice(None)]),
-                               (v, [6, 6, slice(None)])]},
-                     forward_output=forward_output)
+                               (v, [6, 6, slice(None)])]})
 
         if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
             generate_xdmf('uv'+filename)
@@ -97,10 +98,10 @@ def test_3D(backend, forward_output):
             generate_xdmf('v'+filename, order='visit')
 
         u0 = newDistArray(T, forward_output=forward_output)
-        read = reader[backend]('uv'+filename, T)
-        read.read(u0, 'u', forward_output=forward_output, step=0)
+        read = reader[backend]('uv'+filename, u=u0)
+        read.read(u0, 'u', step=0)
         assert np.allclose(u0, u)
-        read.read(u0, 'v', forward_output=forward_output, step=0)
+        read.read(u0, 'v', step=0)
         assert np.allclose(u0, v)
 
 def test_4D(backend, forward_output):
@@ -118,24 +119,23 @@ def test_4D(backend, forward_output):
                             ending[backend]))
         if backend == 'netcdf4':
             remove_if_exists('uv'+filename)
-        h0file = writer[backend]('uv'+filename, T, domain)
         u = newDistArray(T, forward_output=forward_output)
         v = newDistArray(T, forward_output=forward_output)
+        h0file = writer[backend]('uv'+filename, u=u, domain=domain)
         u[:] = np.random.random(u.shape)
         v[:] = 2
         for k in range(3):
             h0file.write(k, {'u': [u, (u, [slice(None), 4, slice(None), slice(None)])],
-                             'v': [v, (v, [slice(None), slice(None), 5, 6])]},
-                         forward_output=forward_output)
+                             'v': [v, (v, [slice(None), slice(None), 5, 6])]})
 
         if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
             generate_xdmf('uv'+filename)
 
         u0 = newDistArray(T, forward_output=forward_output)
-        read = reader[backend]('uv'+filename, T)
-        read.read(u0, 'u', forward_output=forward_output, step=0)
+        read = reader[backend]('uv'+filename, u=u0)
+        read.read(u0, 'u', step=0)
         assert np.allclose(u0, u)
-        read.read(u0, 'v', forward_output=forward_output, step=0)
+        read.read(u0, 'v', step=0)
         assert np.allclose(u0, v)
 
 if __name__ == '__main__':

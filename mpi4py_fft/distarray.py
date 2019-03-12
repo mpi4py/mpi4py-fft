@@ -3,6 +3,7 @@ from numbers import Number
 import numpy as np
 from mpi4py import MPI
 from .pencil import Pencil, Subcomm
+from .io import HDF5File, NCFile, FileBase
 
 comm = MPI.COMM_WORLD
 
@@ -54,8 +55,12 @@ class DistArray(np.ndarray):
     """
     def __new__(cls, global_shape, subcomm=None, val=None, dtype=np.float,
                 buffer=None, alignment=None, rank=0):
-        if rank > 0:
-            assert global_shape[:rank] == (len(global_shape[rank:]),)*rank
+        if len(global_shape) < 2:
+            obj = np.ndarray.__new__(cls, global_shape, dtype=dtype, buffer=buffer)
+            if buffer is None and isinstance(val, Number):
+                obj.fill(val)
+            obj._rank = rank
+            return obj
 
         if isinstance(subcomm, Subcomm):
             pass
@@ -139,13 +144,24 @@ class DistArray(np.ndarray):
         """Return tensor rank of ``self``"""
         return self._rank
 
+    @property
+    def dimensions(self):
+        """Return dimensions of array not including rank"""
+        return len(self._p0.shape)
+
     def __getitem__(self, i):
         # Return DistArray if the result is a component of a tensor
         # Otherwise return ndarray view
-        if isinstance(i, int) and self.rank > 0:
+        if self.ndim == 1:
+            return np.ndarray.__getitem__(self, i)
+
+        if isinstance(i, (int, slice)) and self.rank > 0:
             v0 = np.ndarray.__getitem__(self, i)
-            v0._rank -= 1
+            v0._rank = self.rank - (self.ndim - v0.ndim)
+            #if v0.ndim < self.ndim:
+            #    v0._rank -= 1
             return v0
+
         if isinstance(i, tuple) and len(i) == 2 and self.rank == 2:
             v0 = np.ndarray.__getitem__(self, i)
             v0._rank = 0
@@ -246,14 +262,14 @@ class DistArray(np.ndarray):
         ...         print(l)''')
         >>> fx.close()
         >>> print(subprocess.getoutput('mpirun -np 4 python ls_script.py'))
-        [slice(0, 16, None), slice(0, 7, None), slice(0, 6, None)]
-        [slice(0, 16, None), slice(0, 7, None), slice(6, 12, None)]
-        [slice(0, 16, None), slice(7, 14, None), slice(0, 6, None)]
-        [slice(0, 16, None), slice(7, 14, None), slice(6, 12, None)]
+        (slice(0, 16, None), slice(0, 7, None), slice(0, 6, None))
+        (slice(0, 16, None), slice(0, 7, None), slice(6, 12, None))
+        (slice(0, 16, None), slice(7, 14, None), slice(0, 6, None))
+        (slice(0, 16, None), slice(7, 14, None), slice(6, 12, None))
         """
         v = [slice(start, start+shape) for start, shape in zip(self._p0.substart,
                                                                self._p0.subshape)]
-        return [slice(0, s) for s in self.shape[:self.rank]] + v
+        return tuple([slice(0, s) for s in self.shape[:self.rank]] + v)
 
     def get_pencil_and_transfer(self, axis):
         """Return pencil and transfer objects for alignment along ``axis``
@@ -338,6 +354,74 @@ class DistArray(np.ndarray):
                     transfer.forward(self[i, j], out[i, j])
 
         return out
+
+    def write(self, filename, name='darray', step=0, global_slice=None,
+              as_scalar=False):
+        """Write snapshot ``step`` of ``self`` to file ``filename``
+
+        Parameters
+        ----------
+        filename : str or instance of :class:`.FileBase`
+            The name of the file (or the file itself) that is used to store the
+            requested data in ``self``
+        name : str, optional
+            Name used for storing snapshot in file.
+        step : int, optional
+            Index used for snapshot in file.
+        global_slice : sequence of slices or integers, optional
+            Store only this global slice of ``self``
+        as_scalar : boolean, optional
+            Whether to store rank > 0 arrays as scalars. Default is False.
+
+        Example
+        -------
+        >>> from mpi4py_fft import DistArray
+        >>> u = DistArray((8, 8), val=1)
+        >>> u.write('h5file.h5', 'u', 0)
+        >>> u.write('h5file.h5', 'u', (slice(None), 4))
+        """
+        if isinstance(filename, str):
+            writer = HDF5File if filename.endswith('.h5') else NCFile
+            f = writer(filename, u=self, mode='a')
+        elif isinstance(filename, FileBase):
+            f = filename
+        field = [self] if global_slice is None else [(self, global_slice)]
+        f.write(step, {name: field}, as_scalar=as_scalar)
+
+    def read(self, filename, name='darray', step=0):
+        """Read from file ``filename`` into array ``self``
+
+        Note
+        ----
+        Only whole arrays can be read from file, not slices.
+
+        Parameters
+        ----------
+        filename : str or instance of :class:`.FileBase`
+            The name of the file (or the file itself) holding the data that is
+            loaded into ``self``.
+        name : str, optional
+            Internal name in file of snapshot to be read.
+        step : int, optional
+            Index of field to be read. Default is 0.
+
+        Example
+        -------
+        >>> from mpi4py_fft import DistArray
+        >>> u = DistArray((8, 8), val=1)
+        >>> u.write('h5file.h5', 'u', 0)
+        >>> v = DistArray((8, 8))
+        >>> v.read('h5file.h5', 'u', 0)
+        >>> assert np.allclose(u, v)
+
+        """
+        if isinstance(filename, str):
+            writer = HDF5File if filename.endswith('.h5') else NCFile
+            f = writer(filename, u=self, mode='r')
+        elif isinstance(filename, FileBase):
+            f = filename
+        f.read(self, name, step=step)
+
 
 def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
     """Return a new :class:`.DistArray` object for provided :class:`.PFFT` object

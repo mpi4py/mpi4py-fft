@@ -1,33 +1,32 @@
 from mpi4py import MPI
 import numpy as np
 
+__all__ = ('FileBase',)
+
 comm = MPI.COMM_WORLD
 
 class FileBase(object):
-    """Base class for reading/writing structured arrays
+    """Base class for reading/writing structure arrays
 
     Parameters
     ----------
-    global
-    u : Distributed array, optional
-        Instance of :class:`.DistArray`
     domain : sequence, optional
-        The spatial domain. Sequence of either
+        An optional spatial mesh or domain to go with the data.
+        Sequence of either
 
             - 2-tuples, where each 2-tuple contains the (origin, length)
               of each dimension, e.g., (0, 2*pi).
             - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
               array per dimension.
     """
-    def __init__(self, global_shape=None, u=None, rank=None, domain=None, **kw):
+    def __init__(self, domain=None, **kw):
         self.f = None
         self.filename = None
-        if u is not None:
-            assert isinstance(u, DistArray)
-        self.global_shape = global_shape if global_shape is not None else u.global_shape
-        self.rank = rank if rank is not None else u.rank
-        self.dimensions = len(self.global_shape[self.rank:])
-        self.domain = domain if domain is not None else ((0, 2*np.pi),)*self.dimensions
+        self.domain = domain
+
+    def _check_domain(self, group, field):
+        """Write domain to file"""
+        raise NotImplementedError
 
     def write(self, step, fields, **kw):
         """Write snapshot ``step`` of ``fields`` to file
@@ -41,18 +40,39 @@ class FileBase(object):
             and either arrays or 2-tuples, respectively. The arrays are complete
             arrays to be stored, whereas 2-tuples are arrays with associated
             *global* slices.
+        as_scalar : boolean, optional
+            Whether to store rank > 0 arrays as scalars. Default is False.
         """
+        as_scalar = kw.get("as_scalar", False)
+
+        def _write(group, u, sl, step, kw, k=None):
+            if sl is None:
+                self._write_group(group, u, step, **kw)
+            else:
+                self._write_slice_step(group, step, sl, u, **kw)
+
         for group, list_of_fields in fields.items():
             assert isinstance(list_of_fields, (tuple, list))
             assert isinstance(group, str)
 
             for field in list_of_fields:
-                if isinstance(field, np.ndarray):
-                    self._write_group(group, field, step, **kw)
-                else:
-                    assert len(field) == 2
-                    u, sl = field
-                    self._write_slice_step(group, step, sl, u, **kw)
+                u = field[0] if isinstance(field, (tuple, list)) else field
+                sl = field[1] if isinstance(field, (tuple, list)) else None
+                if as_scalar is False or u.rank == 0:
+                    self._check_domain(group, u)
+                    _write(group, u, sl, step, kw)
+                else: # as_scalar is True and u.rank > 0
+                    if u.rank == 1:
+                        for k in range(u.shape[0]):
+                            g = group + str(k)
+                            self._check_domain(g, u[k])
+                            _write(g, u[k], sl, step, kw)
+                    elif u.rank == 2:
+                        for k in range(u.shape[0]):
+                            for l in range(u.shape[1]):
+                                g = group + str(k) + str(l)
+                                self._check_domain(g, u[k, l])
+                                _write(g, u[k, l], sl, step, kw)
 
     def read(self, u, name, **kw):
         """Read into array ``u``

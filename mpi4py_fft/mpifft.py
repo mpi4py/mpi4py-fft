@@ -389,6 +389,7 @@ class PFFT(object):
             return self._output_shape
         return self._input_shape
 
+    @property
     def dimensions(self):
         """The number of dimensions for transformed arrays"""
         return len(self.forward.input_array.shape)

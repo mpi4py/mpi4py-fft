@@ -9,43 +9,63 @@ comm = MPI.COMM_WORLD
 class HDF5File(FileBase):
     """Class for reading/writing data to HDF5 format
 
+    Note
+    ----
+    The keyword arguments ``global_shape`` and ``rank`` are only needed if the
+    distributed array ``u`` is not provided.
+
     Parameters
     ----------
     h5name : str
         Name of hdf5 file to be created.
-    T : PFFT
-        Instance of a :class:`PFFT` class.
-    domain : Sequence, optional
-        The spatial domain. Sequence of either
+    mode : str, optional
+        ``r``, ``w`` or ``a`` for read, write or append. Default is ``a``.
+    domain : sequence, optional
+        An optional spatial mesh or domain to go with the data.
+        Sequence of either
 
             - 2-tuples, where each 2-tuple contains the (origin, length)
               of each dimension, e.g., (0, 2*pi).
             - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
               array per dimension.
-    mode : str, optional
-        ``r``, ``w`` or ``a`` for read, write or append. Default is ``a``.
     """
-    def __init__(self, h5name, T, domain=None, mode='a', **kw):
-        FileBase.__init__(self, T, domain=domain, **kw)
+    def __init__(self, h5name, mode='a', domain=None, **kw):
+        FileBase.__init__(self, domain=domain, **kw)
         import h5py
         self.filename = h5name
-        self.f = f = h5py.File(h5name, mode, driver="mpio", comm=comm)
-        if mode in ('w', 'a'):
-            if isinstance(self.domain[0], np.ndarray):
-                f.require_group("mesh")
-            else:
-                f.require_group("domain")
-            for i in range(T.dimensions()):
-                d = self.domain[i]
-                if isinstance(d, np.ndarray):
-                    d0 = np.squeeze(d)
-                    f["mesh"].require_dataset("x{}".format(i), shape=d0.shape, dtype=d0.dtype, data=d0)
-                else:
-                    d0 = np.array([d[0], d[1]])
-                    f["domain"].require_dataset("x{}".format(i), shape=d0.shape, dtype=d0.dtype, data=d0)
-            f.attrs.create("ndim", T.dimensions())
-            f.attrs.create("shape", T.shape(False))
+        self.f = h5py.File(h5name, mode, driver="mpio", comm=comm)
         self.close()
+
+    def _check_domain(self, group, field):
+        """Check dimensions of domain and write to file"""
+        if self.domain is None:
+            self.domain = ((0, 2*np.pi),)*field.dimensions
+        assert len(self.domain) == field.dimensions
+        self.f.require_group(group)
+        if not "shape" in self.f[group].attrs:
+            self.f[group].attrs.create("shape", field._p0.shape)
+        if not "rank" in self.f[group].attrs:
+            self.f[group].attrs.create("rank", field.rank)
+        assert field.rank == self.f[group].attrs["rank"]
+        assert np.all(field._p0.shape == self.f[group].attrs["shape"])
+        if isinstance(self.domain[0], np.ndarray):
+            self.f[group].require_group("mesh")
+        else:
+            self.f[group].require_group("domain")
+        for i in range(field.dimensions):
+            d = self.domain[i]
+            if isinstance(d, np.ndarray):
+                d0 = np.squeeze(d)
+                self.f[group]["mesh"].require_dataset("x{}".format(i),
+                                                      shape=d0.shape,
+                                                      dtype=d0.dtype,
+                                                      data=d0)
+            else:
+                d0 = np.array([d[0], d[1]])
+                self.f[group]["domain"].require_dataset("x{}".format(i),
+                                                        shape=d0.shape,
+                                                        dtype=d0.dtype,
+                                                        data=d0)
 
     @staticmethod
     def backend():
@@ -67,9 +87,6 @@ class HDF5File(FileBase):
             and either arrays or 2-tuples, respectively. The arrays are complete
             arrays to be stored, whereas 2-tuples are arrays with associated
             *global* slices.
-        forward_output : bool, optional
-            Whether fields to be stored are shaped as the output of a
-            forward transform or not. Default is False.
 
         Example
         -------
@@ -79,7 +96,7 @@ class HDF5File(FileBase):
         >>> T = PFFT(comm, (15, 16, 17))
         >>> u = newDistArray(T, forward_output=False, val=1)
         >>> v = newDistArray(T, forward_output=False, val=2)
-        >>> f = HDF5File('h5filename.h5', T)
+        >>> f = HDF5File('h5filename.h5')
         >>> f.write(0, {'u': [u, (u, [slice(None), 4, slice(None)])],
         ...             'v': [v, (v, [slice(None), 5, 5])]})
         >>> f.write(1, {'u': [u, (u, [slice(None), 4, slice(None)])],
@@ -104,7 +121,7 @@ class HDF5File(FileBase):
         self.close()
 
     def read(self, u, name, **kw):
-        """Read into array ``u``
+        """Read from file ``self`` into array ``u``
 
         Parameters
         ----------
@@ -112,26 +129,23 @@ class HDF5File(FileBase):
             The array to read into.
         name : str
             Name of array to be read.
-        forward_output : bool, optional
-            Whether the array to be read is the output of a forward transform
-            or not. Default is False.
         step : int, optional
             Index of field to be read. Default is 0.
         """
-        forward_output = kw.get('forward_output', False)
         step = kw.get('step', 0)
         self.open()
-        s = self.T.local_slice(forward_output)
-        dset = "/".join((name, "{}D".format(u.ndim), str(step)))
+        s = u.local_slice()
+        dset = "/".join((name, "{}D".format(u.dimensions), str(step)))
         u[:] = self.f[dset][s]
         self.close()
 
     def _write_slice_step(self, name, step, slices, field, **kw):
-        forward_output = kw.get('forward_output', False)
+        rank = field.rank
+        slices = (slice(None),)*rank + tuple(slices)
         slices = list(slices)
-        ndims = slices.count(slice(None))
-        slname = self._get_slice_name(slices)
-        s = self.T.local_slice(forward_output)
+        ndims = slices[rank:].count(slice(None))
+        slname = self._get_slice_name(slices[rank:])
+        s = field.local_slice()
         slices, inside = self._get_local_slices(slices, s)
         sp = np.nonzero([isinstance(x, slice) for x in slices])[0]
         sf = tuple(np.take(s, sp))
@@ -139,16 +153,15 @@ class HDF5File(FileBase):
         group = "/".join((name, "{}D".format(ndims), slname))
         if group not in self.f:
             self.f.create_group(group)
-        N = self.T.global_shape(forward_output)
+        N = field.global_shape
         self.f[group].require_dataset(str(step), shape=tuple(np.take(N, sp)), dtype=field.dtype)
         if inside == 1:
             self.f["/".join((group, str(step)))][sf] = field[sl]
 
     def _write_group(self, name, u, step, **kw):
-        forward_output = kw.get('forward_output', False)
-        s = self.T.local_slice(forward_output)
-        group = "/".join((name, "{}D".format(self.T.dimensions())))
+        s = u.local_slice()
+        group = "/".join((name, "{}D".format(u.dimensions)))
         if group not in self.f:
             self.f.create_group(group)
-        self.f[group].require_dataset(str(step), shape=self.T.global_shape(forward_output), dtype=u.dtype)
+        self.f[group].require_dataset(str(step), shape=u.global_shape, dtype=u.dtype)
         self.f["/".join((group, str(step)))][s] = u

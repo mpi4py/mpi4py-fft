@@ -117,12 +117,13 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
     f = h5py.File(h5filename)
     keys = []
     f.visit(keys.append)
-    assert 'mesh' in keys or 'domain' in keys
     assert order.lower() in ('paraview', 'visit')
 
-    # Find unique groups of 2D and 3D datasets
+    # Find unique scalar groups of 2D and 3D datasets
     datasets = {2:{}, 3:{}}
     for key in keys:
+        if f[key.split('/')[0]].attrs['rank'] > 0:
+            continue
         if isinstance(f[key], h5py.Dataset):
             if not ('mesh' in key or 'domain' in key or 'Vector' in key):
                 tstep = int(key.split("/")[-1])
@@ -161,6 +162,7 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
         grid = {}
         NN = {}
         for name in dsets[timesteps[0]]:
+            group = name.split('/')[0]
             if 'slice' in name:
                 slices = name.split("/")[2]
             else:
@@ -178,7 +180,7 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
                         if 'slice' in sx:
                             ii.append(i)
                         else:
-                            if f.attrs.get('ndim') == 3:      # 2D slice in 3D domain
+                            if len(f[group].attrs.get('shape')) == 3:      # 2D slice in 3D domain
                                 kk = i
                                 sl = int(sx)
                                 N.insert(i, 1)
@@ -186,22 +188,22 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
                 else:
                     ii = list(range(ndim))
                 NN[slices] = N
-                if 'domain' in keys:
-                    if ndim == 2 and ('slice' not in slices or f.attrs.get('ndim') > 3):
+                if 'domain' in f[group].keys():
+                    if ndim == 2 and ('slice' not in slices or len(f[group].attrs.get('shape')) > 3):
                         geo = get_geometry(kind=0, dim=2)
                         assert len(ii) == 2
                         i, j = ii
                         if order.lower() == 'paraview':
-                            data = [f['domain/{}'.format(coor[i])][0],
-                                    f['domain/{}'.format(coor[j])][0],
-                                    f['domain/{}'.format(coor[i])][1]/(N[0]-per[i]),
-                                    f['domain/{}'.format(coor[j])][1]/(N[1]-per[j])]
+                            data = [f[group+'/domain/{}'.format(coor[i])][0],
+                                    f[group+'/domain/{}'.format(coor[j])][0],
+                                    f[group+'/domain/{}'.format(coor[i])][1]/(N[0]-per[i]),
+                                    f[group+'/domain/{}'.format(coor[j])][1]/(N[1]-per[j])]
                             geometry[slices] = geo.format(*data)
                         else:
-                            data = [f['domain/{}'.format(coor[j])][0],
-                                    f['domain/{}'.format(coor[i])][0],
-                                    f['domain/{}'.format(coor[j])][1]/(N[0]-per[j]),
-                                    f['domain/{}'.format(coor[i])][1]/(N[1]-per[i])]
+                            data = [f[group+'/domain/{}'.format(coor[j])][0],
+                                    f[group+'/domain/{}'.format(coor[i])][0],
+                                    f[group+'/domain/{}'.format(coor[j])][1]/(N[0]-per[j]),
+                                    f[group+'/domain/{}'.format(coor[i])][1]/(N[1]-per[i])]
                             geometry[slices] = geo.format(*data)
                     else:
                         if ndim == 2:
@@ -209,34 +211,34 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
                             per[kk] = 0
                         i, j, k = ii
                         geo = get_geometry(kind=0, dim=3)
-                        data = [f['domain/{}'.format(coor[i])][0],
-                                f['domain/{}'.format(coor[j])][0],
-                                f['domain/{}'.format(coor[k])][0],
-                                f['domain/{}'.format(coor[i])][1]/(N[0]-per[i]),
-                                f['domain/{}'.format(coor[j])][1]/(N[1]-per[j]),
-                                f['domain/{}'.format(coor[k])][1]/(N[2]-per[k])]
+                        data = [f[group+'/domain/{}'.format(coor[i])][0],
+                                f[group+'/domain/{}'.format(coor[j])][0],
+                                f[group+'/domain/{}'.format(coor[k])][0],
+                                f[group+'/domain/{}'.format(coor[i])][1]/(N[0]-per[i]),
+                                f[group+'/domain/{}'.format(coor[j])][1]/(N[1]-per[j]),
+                                f[group+'/domain/{}'.format(coor[k])][1]/(N[2]-per[k])]
                         if ndim == 2:
-                            origin, dx = f['domain/x{}'.format(kk)]
-                            M = f.attrs.get('shape')
+                            origin, dx = f[group+'/domain/x{}'.format(kk)]
+                            M = f[group].attrs.get('shape')
                             pos = origin+dx/(M[kk]-per[kk])*sl
                             data[kk] = pos
                             data[kk+3] = pos
                         geometry[slices] = geo.format(*data)
                     topology[slices] = get_topology(N, kind=0)
-                elif 'mesh' in keys:
-                    if ndim == 2 and ('slice' not in slices or f.attrs.get('ndim') > 3):
+                elif 'mesh' in f[group].keys():
+                    if ndim == 2 and ('slice' not in slices or len(f[group].attrs.get('shape')) > 3):
                         geo = get_geometry(kind=1, dim=2)
                     else:
                         geo = get_geometry(kind=1, dim=3)
 
-                    if ndim == 2 and ('slice' not in slices or f.attrs.get('ndim') > 3):
+                    if ndim == 2 and ('slice' not in slices or len(f[group].attrs.get('shape')) > 3):
                         if order.lower() == 'paraview':
                             sig = (prec, N[0], N[1], h5filename, cc[0], cc[1])
                         else:
                             sig = (prec, N[1], N[0], h5filename, cc[1], cc[0])
                     else:
                         if ndim == 2: # 2D slice in 3D domain
-                            pos = f["mesh/x{}".format(kk)][sl]
+                            pos = f[group+"/mesh/x{}".format(kk)][sl]
                             z = re.findall(r'<DataItem(.*?)</DataItem>', geo, re.DOTALL)
                             geo = geo.replace(z[2-kk], ' Format="XML" NumberType="Float" Precision="{0}" Dimensions="{%d}">\n           {%d}\n          '%(1+kk, 7-kk))
                             cc = list(cc)
