@@ -4,28 +4,56 @@ import os
 import sys
 import re
 import shutil
+import platform
+import sysconfig
 from distutils import ccompiler
 from setuptools import setup
 from setuptools.extension import Extension
-from numpy import get_include
+import numpy
 
 cwd = os.path.abspath(os.path.dirname(__file__))
 fftwdir = os.path.join(cwd, 'mpi4py_fft', 'fftw')
 prec_map = {'float': 'f', 'double': '', 'long double': 'l'}
+triplet = sysconfig.get_config_var('MULTIARCH') or ''
+bits = platform.architecture()[0][:-3]
 
-def get_library_dirs():
-    lib_dirs = [os.path.join(sys.prefix, 'lib')]
-    for f in ('FFTW_ROOT', 'FFTW_DIR'):
-        if f in os.environ:
-            lib_dirs.append(os.path.join(os.environ[f], 'lib'))
-    return lib_dirs
+def append(dirlist, *args):
+    entry = os.path.join(*args)
+    entry = os.path.normpath(entry)
+    if os.path.isdir(entry):
+        if entry not in dirlist:
+            dirlist.append(entry)
+
+def get_prefix_dirs():
+    dirs = []
+    for envvar in ('FFTW_ROOT', 'FFTW_DIR'):
+        if envvar in os.environ:
+            prefix = os.environ[envvar]
+            append(dirs, prefix)
+    append(dirs, sys.prefix)
+    return dirs
 
 def get_include_dirs():
-    inc_dirs = [get_include(), os.path.join(sys.prefix, 'include')]
-    for f in ('FFTW_ROOT', 'FFTW_DIR'):
-        if f in os.environ:
-            inc_dirs.append(os.path.join(os.environ[f], 'include'))
-    return inc_dirs
+    dirs = []
+    if 'FFTW_INCLUDE_DIR' in os.environ:
+        entry = os.environ['FFTW_INCLUDE_DIR']
+        append(dirs, entry)
+    for prefix in get_prefix_dirs():
+        append(dirs, prefix, 'include', triplet)
+        append(dirs, prefix, 'include')
+    dirs.append(numpy.get_include())
+    return dirs
+
+def get_library_dirs():
+    dirs = []
+    if 'FFTW_LIBRARY_DIR' in os.environ:
+        entry = os.environ['FFTW_LIBRARY_DIR']
+        append(dirs, entry)
+    for prefix in get_prefix_dirs():
+        append(dirs, prefix, 'lib' + bits)
+        append(dirs, prefix, 'lib', triplet)
+        append(dirs, prefix, 'lib')
+    return dirs
 
 def get_fftw_libs():
     """Return FFTW libraries"""
@@ -34,14 +62,14 @@ def get_fftw_libs():
     libs = {}
     for d in ('float', 'double', 'long double'):
         lib = 'fftw3'+prec_map[d]
+        tlib = lib+'_threads'
         if compiler.find_library_file(library_dirs, lib):
             libs[d] = [lib]
-            tlib = '_'.join((lib, 'threads'))
             if compiler.find_library_file(library_dirs, tlib):
                 libs[d].append(tlib)
-            if sys.platform in ('unix', 'darwin'):
+            if os.name == 'posix':
                 libs[d].append('m')
-    assert len(libs) > 0, "No FFTW libraries found in {} {}".format(library_dirs, sys.prefix)
+    assert len(libs) > 0, "No FFTW libraries found in {}".format(library_dirs)
     return libs
 
 def generate_extensions(fftwlibs):
