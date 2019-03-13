@@ -55,7 +55,7 @@ class DistArray(np.ndarray):
     """
     def __new__(cls, global_shape, subcomm=None, val=None, dtype=np.float,
                 buffer=None, alignment=None, rank=0):
-        if len(global_shape) < 2:
+        if len(global_shape[rank:]) < 2:
             obj = np.ndarray.__new__(cls, global_shape, dtype=dtype, buffer=buffer)
             if buffer is None and isinstance(val, Number):
                 obj.fill(val)
@@ -356,7 +356,7 @@ class DistArray(np.ndarray):
         return out
 
     def write(self, filename, name='darray', step=0, global_slice=None,
-              as_scalar=False):
+              domain=None, as_scalar=False):
         """Write snapshot ``step`` of ``self`` to file ``filename``
 
         Parameters
@@ -370,6 +370,14 @@ class DistArray(np.ndarray):
             Index used for snapshot in file.
         global_slice : sequence of slices or integers, optional
             Store only this global slice of ``self``
+        domain : sequence, optional
+            An optional spatial mesh or domain to go with the data.
+            Sequence of either
+
+                - 2-tuples, where each 2-tuple contains the (origin, length)
+                  of each dimension, e.g., (0, 2*pi).
+                - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
+                  array per dimension
         as_scalar : boolean, optional
             Whether to store rank > 0 arrays as scalars. Default is False.
 
@@ -382,7 +390,7 @@ class DistArray(np.ndarray):
         """
         if isinstance(filename, str):
             writer = HDF5File if filename.endswith('.h5') else NCFile
-            f = writer(filename, u=self, mode='a')
+            f = writer(filename, domain=domain, mode='a')
         elif isinstance(filename, FileBase):
             f = filename
         field = [self] if global_slice is None else [(self, global_slice)]

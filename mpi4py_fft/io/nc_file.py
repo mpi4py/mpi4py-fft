@@ -23,8 +23,6 @@ class NCFile(FileBase):
     ----------
     ncname : str
         Name of netcdf file to be created
-    mode : str
-        ``r``, ``w`` or ``a`` for read, write or append. Default is ``a``.
     domain : Sequence, optional
         An optional spatial mesh or domain to go with the data.
         Sequence of either
@@ -33,7 +31,10 @@ class NCFile(FileBase):
               of each dimension, e.g., (0, 2*pi).
             - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
               array per dimension.
+    mode : str
+        ``r``, ``w`` or ``a`` for read, write or append. Default is ``a``.
     clobber : bool, optional
+
     Note
     ----
     Each class instance creates one unique NetCDF4-file, with one step-counter.
@@ -42,7 +43,7 @@ class NCFile(FileBase):
     every 10th timestep and another every 20th timestep, then use two different
     class instances and as such two NetCDF4-files.
     """
-    def __init__(self, ncname, domain=None, clobber=True, mode='a', **kw):
+    def __init__(self, ncname, domain=None, mode='a', clobber=True, **kw):
         FileBase.__init__(self, domain=domain, **kw)
         from netCDF4 import Dataset
         self.filename = ncname
@@ -122,7 +123,7 @@ class NCFile(FileBase):
             it = np.argwhere(nc_t.__array__() == step)[0][0]
         else:
             nc_t[it] = step
-        FileBase.write(self, it, fields)
+        FileBase.write(self, it, fields, **kw)
         self.close()
 
     def read(self, u, name, **kw):

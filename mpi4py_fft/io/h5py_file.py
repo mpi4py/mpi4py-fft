@@ -18,8 +18,6 @@ class HDF5File(FileBase):
     ----------
     h5name : str
         Name of hdf5 file to be created.
-    mode : str, optional
-        ``r``, ``w`` or ``a`` for read, write or append. Default is ``a``.
     domain : sequence, optional
         An optional spatial mesh or domain to go with the data.
         Sequence of either
@@ -28,8 +26,10 @@ class HDF5File(FileBase):
               of each dimension, e.g., (0, 2*pi).
             - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
               array per dimension.
+    mode : str, optional
+        ``r``, ``w`` or ``a`` for read, write or append. Default is ``a``.
     """
-    def __init__(self, h5name, mode='a', domain=None, **kw):
+    def __init__(self, h5name, domain=None, mode='a', **kw):
         FileBase.__init__(self, domain=domain, **kw)
         import h5py
         self.filename = h5name

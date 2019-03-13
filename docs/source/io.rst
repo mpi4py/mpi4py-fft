@@ -24,18 +24,13 @@ reads data in parallel. A simple example of usage is::
     u[:] = np.random.random(u.shape)
     # Store by first creating output files
     fields = {'u': [u], 'v': [v]}
-    f0 = HDF5File('h5test.h5', global_shape=N, mode='w')
-    f1 = NCFile('nctest.nc', global_shape=N, mode='w')
+    f0 = HDF5File('h5test.h5', mode='w')
+    f1 = NCFile('nctest.nc', mode='w')
     f0.write(0, fields)
     f1.write(0, fields)
     v[:] = 3
     f0.write(1, fields)
     f1.write(1, fields)
-    # Alternatively, just use write method of each distributed array
-    u.write('h5test.h5', 'u', step=2)
-    v.write('h5test.h5', 'v', step=2)
-    u.write('nctest.nc', 'u', step=2)
-    v.write('nctest.nc', 'v', step=2)
 
 Note that we are here creating two datafiles ``h5test.h5`` and ``nctest.nc``,
 for storing in HDF5 or NetCDF4 formats respectively. Normally, one would be
@@ -43,7 +38,17 @@ satisfied using only one format, so this is only for illustration. We store
 the fields ``u`` and ``v`` on three different occasions,
 so the datafiles will contain three snapshots of each field ``u`` and ``v``.
 
-The stored dataarrays can be retrieved later on::
+Also note that an alternative and perhaps simpler approach is to just use
+the ``write`` method of each distributed array::
+
+    u.write('h5test.h5', 'u', step=2)
+    v.write('h5test.h5', 'v', step=2)
+    u.write('nctest.nc', 'u', step=2)
+    v.write('nctest.nc', 'v', step=2)
+
+The two different approaches can be used on the same output files.
+
+The stored dataarrays can also be retrieved later on::
 
     u0 = newDistArray(T, forward_output=False)
     u1 = newDistArray(T, forward_output=False)
@@ -53,14 +58,15 @@ The stored dataarrays can be retrieved later on::
     #u0.read('nctest.nc', 'u', 0)
     #u1.read('nctest.nc', 'u', 1)
 
-
 Note that one does not have to use the same number of processors when
 retrieving the data as when they were stored.
 
 It is also possible to store only parts of the, potentially large, arrays.
-Any chosen slice may be stored, using a *global* view of the arrays::
+Any chosen slice may be stored, using a *global* view of the arrays. It is
+possible to store both complete fields and slices in one single call by
+using the following appraoch::
 
-    f2 = HDF5File('variousfields.h5', global_shape=N, mode='w')
+    f2 = HDF5File('variousfields.h5', mode='w')
     fields = {'u': [u,
                     (u, [slice(None), slice(None), 4]),
                     (u, [5, 5, slice(None)])],
@@ -68,11 +74,17 @@ Any chosen slice may be stored, using a *global* view of the arrays::
                     (v, [slice(None), 6, slice(None)])]}
     f2.write(0, fields)
     f2.write(1, fields)
-    f2.write(2, fields)
-    # or, using write method of field, e.g.
-    #u.write('variousfields.h5', 'u', 0, [slice(None), slice(None), 4])
 
-This will lead to an hdf5-file with groups::
+Alternatively, one can use the write method of each field with the ``global_slice``
+keyword argument::
+
+    u.write('variousfields.h5', 'u', 2)
+    u.write('variousfields.h5', 'u', 2, global_slice=[slice(None), slice(None), 4])
+    u.write('variousfields.h5', 'u', 2, global_slice=[5, 5, slice(None)])
+    v.write('variousfields.h5', 'v', 2)
+    v.write('variousfields.h5', 'v', 2, global_slice=[slice(None), 6, slice(None)])
+
+In the end this will lead to an hdf5-file with groups::
 
     variousfields.h5/
     ├─ u/
@@ -86,41 +98,49 @@ This will lead to an hdf5-file with groups::
     |  |     ├─ 0
     |  |     ├─ 1
     |  |     └─ 2
-    |  └─ 3D/
-    |     ├─ 0
-    |     ├─ 1
-    |     └─ 2
-    ├─ v/
-    |  ├─ 2D/
-    |  |  └─ slice_6_slice/
-    |  |     ├─ 0
-    |  |     ├─ 1
-    |  |     └─ 2
-    |  └─ 3D/
-    |     ├─ 0
-    |     ├─ 1
-    |     └─ 2
-    └─ mesh/
-       ├─ x0
-       ├─ x1
-       └─ x2
+    |  ├─ 3D/
+    |  |   ├─ 0
+    |  |   ├─ 1
+    |  |   └─ 2
+    |  └─ mesh/
+    |      ├─ x0
+    |      ├─ x1
+    |      └─ x2
+    └─ v/
+       ├─ 2D/
+       |  └─ slice_6_slice/
+       |     ├─ 0
+       |     ├─ 1
+       |     └─ 2
+       ├─ 3D/
+       |  ├─ 0
+       |  ├─ 1
+       |  └─ 2
+       └─ mesh/
+          ├─ x0
+          ├─ x1
+          └─ x2
 
-Note that a mesh is stored along with all the data. This mesh can be given in
-two different ways when creating the datafiles:
+Note that a mesh is stored along with each group of data. This mesh can be
+given in two different ways when creating the datafiles:
 
     1) A sequence of 2-tuples, where each 2-tuple contains the (origin, length)
        of the domain along its dimension. For example, a uniform mesh that
        originates from the origin, with lengths :math:`\pi, 2\pi, 3\pi`, can be
-       given as::
+       given when creating the output file as::
 
-        f0 = HDF5File('filename.h5', global_shape=N, domain=((0, pi), (0, 2*np.pi), (0, 3*np.pi)))
+        f0 = HDF5File('filename.h5', domain=((0, pi), (0, 2*np.pi), (0, 3*np.pi)))
+
+        or, using the write method of the distributed array:
+
+        u.write('filename.h5', 'u', 0, domain=((0, pi), (0, 2*np.pi), (0, 3*np.pi)))
 
     2) A sequence of arrays giving the coordinates for each dimension. For example::
 
         d = (np.arange(N[0], dtype=np.float)*1*np.pi/N[0],
              np.arange(N[1], dtype=np.float)*2*np.pi/N[1],
              np.arange(N[2], dtype=np.float)*2*np.pi/N[2])
-        f0 = HDF5File('filename.h5', global_shape=N, domain=d)
+        f0 = HDF5File('filename.h5', domain=d)
 
 With NetCDF4 the layout is somewhat different. For ``variousfields`` above,
 if we were using :class:`.NCFile` instead of :class:`.HDF5File`,

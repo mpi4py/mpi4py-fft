@@ -5,6 +5,12 @@ from mpi4py_fft.pencil import Subcomm
 
 comm = MPI.COMM_WORLD
 
+def test_1Darray():
+    N = (8,)
+    z = DistArray(N, val=2)
+    assert z[0] == 2
+    assert z.shape == N
+
 def test_2Darray():
     N = (8, 8)
     for subcomm in ((0, 1), (1, 0), None, Subcomm(comm, (0, 1))):
@@ -114,6 +120,7 @@ def test_newDistArray():
                     assert a.base.rank == rank
 
 if __name__ == '__main__':
+    test_1Darray()
     test_2Darray()
     test_3Darray()
     test_newDistArray()
