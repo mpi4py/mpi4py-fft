@@ -56,6 +56,7 @@ def test_2D(backend, forward_output):
             u0.read(filename, 'u', 2)
             u0.read(read, 'u', 2)
             assert np.allclose(u0, u)
+    T.destroy()
 
 def test_3D(backend, forward_output):
     if backend == 'netcdf4':
@@ -118,6 +119,7 @@ def test_3D(backend, forward_output):
             assert np.allclose(u0, u)
             read.read(u0, 'v', step=0)
             assert np.allclose(u0, v)
+    T.destroy()
 
 def test_4D(backend, forward_output):
     if backend == 'netcdf4':
@@ -153,6 +155,7 @@ def test_4D(backend, forward_output):
             assert np.allclose(u0, u)
             read.read(u0, 'v', step=0)
             assert np.allclose(u0, v)
+    T.destroy()
 
 if __name__ == '__main__':
     #pylint: disable=unused-import

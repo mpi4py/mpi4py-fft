@@ -323,7 +323,8 @@ class PFFT(object):
             self.pencil[::-1])
 
     def destroy(self):
-        self.subcomm.destroy()
+        if isinstance(self.subcomm, Subcomm):
+            self.subcomm.destroy()
         for trans in self.transfer:
             trans.destroy()
 

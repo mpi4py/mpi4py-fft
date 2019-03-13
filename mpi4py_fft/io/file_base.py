@@ -6,7 +6,7 @@ __all__ = ('FileBase',)
 comm = MPI.COMM_WORLD
 
 class FileBase(object):
-    """Base class for reading/writing structure arrays
+    """Base class for reading/writing distributed arrays
 
     Parameters
     ----------

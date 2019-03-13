@@ -107,7 +107,7 @@ def test_newDistArray():
         for view in (True, False):
             for rank in (0, 1, 2):
                 a = newDistArray(pfft, forward_output=forward_output,
-                              rank=rank, view=view)
+                                 rank=rank, view=view)
                 if view is False:
                     assert isinstance(a, DistArray)
                     assert a.rank == rank
@@ -115,9 +115,14 @@ def test_newDistArray():
                         qfft = PFFT(MPI.COMM_WORLD, darray=a)
                     elif rank == 1:
                         qfft = PFFT(MPI.COMM_WORLD, darray=a[0])
+                    else:
+                        qfft = PFFT(MPI.COMM_WORLD, darray=a[0, 0])
+                    qfft.destroy()
+
                 else:
                     assert isinstance(a, np.ndarray)
                     assert a.base.rank == rank
+    pfft.destroy()
 
 if __name__ == '__main__':
     test_1Darray()
