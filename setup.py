@@ -3,7 +3,6 @@
 import os
 import sys
 import re
-import shutil
 import platform
 import sysconfig
 from distutils import ccompiler
@@ -78,12 +77,20 @@ def generate_extensions(fftwlibs):
         if d == 'double':
             continue
         p = 'fftw'+prec_map[d]+'_'
-        for fl in ('fftw_planxfftn.h', 'fftw_planxfftn.c', 'fftw_xfftn.pyx', 'fftw_xfftn.pxd'):
-            fp = fl.replace('fftw_', p)
-            shutil.copy(os.path.join(fftwdir, fl), os.path.join(fftwdir, fp))
-            sedcmd = "sed -i ''" if sys.platform == 'darwin' else "sed -i''"
-            os.system(sedcmd + " 's/fftw_/{0}/g' {1}".format(p, os.path.join(fftwdir, fp)))
-            os.system(sedcmd + " 's/double/{0}/g' {1}".format(d, os.path.join(fftwdir, fp)))
+        for fname in (
+                'fftw_planxfftn.h',
+                'fftw_planxfftn.c',
+                'fftw_xfftn.pyx',
+                'fftw_xfftn.pxd',
+        ):
+            src = os.path.join(fftwdir, fname)
+            dst = os.path.join(fftwdir, fname.replace('fftw_', p))
+            with open(src, 'r') as fin:
+                code = fin.read()
+                code = re.sub('fftw_', p, code)
+                code = re.sub('double', d, code)
+                with open(dst, 'w') as fout:
+                    fout.write(code)
 
 def get_extensions(fftwlibs):
     """Return list of extension modules"""
