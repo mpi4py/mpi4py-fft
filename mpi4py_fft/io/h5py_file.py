@@ -151,8 +151,7 @@ class HDF5File(FileBase):
         sf = tuple(np.take(s, sp))
         sl = tuple(slices)
         group = "/".join((name, "{}D".format(ndims), slname))
-        if group not in self.f:
-            self.f.create_group(group)
+        self.f.require_group(group)
         N = field.global_shape
         self.f[group].require_dataset(str(step), shape=tuple(np.take(N, sp)), dtype=field.dtype)
         if inside == 1:
@@ -161,7 +160,6 @@ class HDF5File(FileBase):
     def _write_group(self, name, u, step, **kw):
         s = u.local_slice()
         group = "/".join((name, "{}D".format(u.dimensions)))
-        if group not in self.f:
-            self.f.create_group(group)
+        self.f.require_group(group)
         self.f[group].require_dataset(str(step), shape=u.global_shape, dtype=u.dtype)
         self.f["/".join((group, str(step)))][s] = u

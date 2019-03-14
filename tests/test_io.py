@@ -44,7 +44,7 @@ def test_2D(backend, forward_output):
                 hfile.write(1, {'u': [u]}, as_scalar=True)
                 u.write(hfile, 'u', 2, as_scalar=True)
             u.write('t'+filename, 'u', 0)
-            u.write('t'+filename, 'u', 0, [slice(None), 3])
+            #u.write('t'+filename, 'u', 0, [slice(None), 3])
 
             if not forward_output and backend == 'hdf5' and comm.Get_rank() == 0:
                 generate_xdmf(filename)
