@@ -50,7 +50,7 @@ z = DistArray(N, dtype=float, alignment=0)
 z[:] = MPI.COMM_WORLD.Get_rank()
 g0 = z.get((0, slice(None), 0))
 z2 = z.redistribute(2)
-z = z2.redistribute(darray=z)
+z = z2.redistribute(out=z)
 g1 = z.get((0, slice(None), 0))
 assert np.all(g0 == g1)
 s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(z)**2)
@@ -69,14 +69,14 @@ s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(z0)**2)
 if MPI.COMM_WORLD.Get_rank() == 0:
     assert abs(s0-s1) < 1e-12
 
-z1 = z0.redistribute(darray=z1)
-z0 = z1.redistribute(darray=z0)
+z1 = z0.redistribute(out=z1)
+z0 = z1.redistribute(out=z0)
 
 N = (6, 6, 6, 6, 6)
 m0 = DistArray(N, dtype=float, alignment=2)
 m0[:] = MPI.COMM_WORLD.Get_rank()
 m1 = m0.redistribute(4)
-m0 = m1.redistribute(darray=m0)
+m0 = m1.redistribute(out=m0)
 s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(m0)**2)
 s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(m1)**2)
 if MPI.COMM_WORLD.Get_rank() == 0:
