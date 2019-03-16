@@ -9,11 +9,6 @@ comm = MPI.COMM_WORLD
 class HDF5File(FileBase):
     """Class for reading/writing data to HDF5 format
 
-    Note
-    ----
-    The keyword arguments ``global_shape`` and ``rank`` are only needed if the
-    distributed array ``u`` is not provided.
-
     Parameters
     ----------
     h5name : str

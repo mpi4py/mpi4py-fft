@@ -14,11 +14,6 @@ comm = MPI.COMM_WORLD
 class NCFile(FileBase):
     """Class for writing data to NetCDF4 format
 
-    Note
-    ----
-    The keyword arguments ``global_shape`` and ``rank`` are only needed if the
-    distributed array ``u`` is not provided.
-
     Parameters
     ----------
     ncname : str
