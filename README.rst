@@ -14,7 +14,7 @@ mpi4py-fft
 .. image:: https://readthedocs.org/projects/mpi4py-fft/badge/?version=latest
    :target: https://mpi4py-fft.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
-  
+
 .. image:: https://anaconda.org/conda-forge/mpi4py-fft/badges/downloads.svg
    :target: https://anaconda.org/conda-forge/mpi4py-fft
    :alt: Total downloads from conda-forge
@@ -28,8 +28,8 @@ that allows for any index set of a multidimensional array to be distributed. We
 can distribute just one index (a slab decomposition), two index sets (pencil
 decomposition) or even more for higher-dimensional arrays.
 
-In mpi4py-fft there is also included a Python interface to the
-`FFTW <http://www.fftw.org>`_ library. This interface can be used without MPI,
+mpi4py-fft comes with its own Python interface to the serial
+`FFTW <http://www.fftw.org>`_ library. This interface can be used
 much like `pyfftw <https://hgomersall.github.io/pyFFTW/>`_, and even for
 real-to-real transforms, like discrete cosine or sine transforms.
 
@@ -63,7 +63,7 @@ Note that mpi4py-fft depends on Python packages
     * numpy
     * cython
 
-and the C-library
+and the serial C-library
 
     * `FFTW <http://www.fftw.org>`_
 

@@ -4,7 +4,7 @@ Installation
 Mpi4py-fft has a few dependencies
 
     * `mpi4py`_
-    * `FFTW`_
+    * `FFTW`_ (serial)
     * `numpy`_
     * `cython`_ (build dependency)
     * `h5py`_ (runtime dependency, optional)
