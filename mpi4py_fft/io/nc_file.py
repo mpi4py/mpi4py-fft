@@ -1,3 +1,5 @@
+import os
+import copy
 import numpy as np
 from mpi4py import MPI
 from .file_base import FileBase
@@ -16,19 +18,18 @@ class NCFile(FileBase):
     ----------
     ncname : str
         Name of netcdf file to be created
-    T : PFFT
-        Instance of a :class:`.PFFT` class. Must be the same as the space
-        used for storing with :class:`NCWriter.write`
-    domain : Sequence
-        The spatial domain. Sequence of either
+    domain : Sequence, optional
+        An optional spatial mesh or domain to go with the data.
+        Sequence of either
 
             - 2-tuples, where each 2-tuple contains the (origin, length)
               of each dimension, e.g., (0, 2*pi).
             - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
               array per dimension.
-    clobber : bool, optional
     mode : str
-        ``r`` or ``w`` for read or write. Default is 'r'.
+        ``r``, ``w`` or ``a`` for read, write or append. Default is ``a``.
+    clobber : bool, optional
+
     Note
     ----
     Each class instance creates one unique NetCDF4-file, with one step-counter.
@@ -37,38 +38,55 @@ class NCFile(FileBase):
     every 10th timestep and another every 20th timestep, then use two different
     class instances and as such two NetCDF4-files.
     """
-    def __init__(self, ncname, T, domain=None, clobber=True, mode='r', **kw):
-        FileBase.__init__(self, T, domain=domain, **kw)
+    def __init__(self, ncname, domain=None, mode='a', clobber=True, **kw):
+        FileBase.__init__(self, domain=domain, **kw)
         from netCDF4 import Dataset
         self.filename = ncname
-        self.f = f = Dataset(ncname, mode=mode, clobber=clobber, parallel=True, comm=comm, **kw)
-        self.N = N = T.global_shape(False)[-T.dimensions():]
-        dtype = self.T.dtype(False)
-        assert dtype.char in 'fdg'
-        self._dtype = dtype
+        # netCDF4 does not seem to handle 'a' if the file does not already exist
+        if mode == 'a' and not os.path.exists(ncname):
+            mode = 'w'
+        self.f = Dataset(ncname, mode=mode, clobber=clobber, parallel=True,
+                         comm=comm, **kw)
+        self.dims = None
+        if not 'time' in self.f.variables:
+            self.f.createDimension('time', None)
+            self.f.createVariable('time', np.float, ('time'))
 
-        if mode == 'w':
-            f.createDimension('time', None)
-            f.createVariable('time', self._dtype, ('time'))
-            d = list(self.domain)
-            if not isinstance(self.domain[0], np.ndarray):
-                assert len(self.domain[0]) == 2
-                for i in range(T.dimensions()):
-                    d[i] = np.arange(N[i], dtype=np.float)*2*np.pi/N[i]
-            else:
-                for i in range(T.dimensions()):
-                    d[i] = np.squeeze(d[i])
-            self.domain = d
-            self.dims = ['time']
-            for i in range(T.dimensions()):
-                xyz = 'xyzrst'[i]
-                f.createDimension(xyz, N[i])
-                self.dims.append(xyz)
-                nc_xyz = f.createVariable(xyz, self._dtype, (xyz))
-                nc_xyz[:] = d[i]
-            f.setncatts({"ndim": T.dimensions(), "shape": T.global_shape(False)})
-            f.sync()
         self.close()
+
+    def _check_domain(self, write_domain, field):
+        """Check dimensions of domain and write to file if missing"""
+        N = field.global_shape[field.rank:]
+        if self.domain is None:
+            self.domain = []
+            for i in range(field.dimensions):
+                self.domain.append(np.linspace(0, 2*np.pi, N[i]))
+
+        assert len(self.domain) == field.dimensions
+        if len(self.domain[0]) == 2:
+            d = self.domain
+            self.domain = []
+            for i in range(field.dimensions):
+                self.domain.append(np.linspace(d[i][0], d[i][1], N[i]))
+
+        self.dims = ['time']
+        for i in range(field.rank):
+            ind = 'ijk'[i]
+            self.dims.append(ind)
+            if not ind in self.f.variables:
+                self.f.createDimension(ind, field.dimensions)
+                n = self.f.createVariable(ind, np.float, (ind))
+                n[:] = np.arange(field.dimensions)
+
+        for i in range(field.dimensions):
+            xyz = 'xyzrst'[i]
+            self.dims.append(xyz)
+            if not xyz in self.f.variables:
+                self.f.createDimension(xyz, N[i])
+                nc_xyz = self.f.createVariable(xyz, np.float, (xyz))
+                nc_xyz[:] = self.domain[i]
+
+        self.f.sync()
 
     @staticmethod
     def backend():
@@ -96,8 +114,11 @@ class NCFile(FileBase):
         nc_t = self.f.variables.get('time')
         nc_t.set_collective(True)
         it = nc_t.size
-        nc_t[it] = step
-        FileBase.write(self, it, fields)
+        if step in nc_t.__array__(): # If already stored at this step previously
+            it = np.argwhere(nc_t.__array__() == step)[0][0]
+        else:
+            nc_t[it] = step
+        FileBase.write(self, it, fields, **kw)
         self.close()
 
     def read(self, u, name, **kw):
@@ -114,23 +135,25 @@ class NCFile(FileBase):
         """
         step = kw.get('step', 0)
         self.open()
-        s = self.T.local_slice(False)
+        s = u.local_slice()
         s = (step,) + s
         u[:] = self.f[name][s]
         self.close()
 
     def _write_slice_step(self, name, step, slices, field, **kw):
+        assert name not in self.dims
+        rank = field.rank
+        slices = (slice(None),)*rank + tuple(slices)
         slices = list(slices)
-        slname = self._get_slice_name(slices)
-        s = self.T.local_slice(False)
-
+        slname = self._get_slice_name(slices[rank:])
+        s = field.local_slice()
         slices, inside = self._get_local_slices(slices, s)
         sp = np.nonzero([isinstance(x, slice) for x in slices])[0]
         sf = np.take(s, sp)
         sdims = ['time'] + list(np.take(self.dims, np.array(sp)+1))
         fname = "_".join((name, slname))
         if fname not in self.f.variables:
-            h = self.f.createVariable(fname, self._dtype, sdims)
+            h = self.f.createVariable(fname, field.dtype, sdims)
         else:
             h = self.f.variables[fname]
         h.set_collective(True)
@@ -145,9 +168,10 @@ class NCFile(FileBase):
         self.f.sync()
 
     def _write_group(self, name, u, step, **kw):
-        s = self.T.local_slice(False)
+        assert name not in self.dims
+        s = u.local_slice()
         if name not in self.f.variables:
-            h = self.f.createVariable(name, self._dtype, self.dims)
+            h = self.f.createVariable(name, u.dtype, self.dims)
         else:
             h = self.f.variables[name]
         h.set_collective(True)

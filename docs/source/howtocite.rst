@@ -10,7 +10,7 @@ Please cite mpi4py-fft using
         year = {{2019}},
         title = {{Fast parallel multidimensional FFT using advanced MPI}},
         journal = {{Journal of Parallel and Distributed Computing}},
-        volume = {{in press}}
+        doi = {10.1016/j.jpdc.2019.02.006}
     }
     @electronic{mpi4py-fft,
         author = {{Lisandro Dalcin and Mikael Mortensen}},

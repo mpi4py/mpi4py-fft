@@ -7,7 +7,7 @@ Subpackages
 .. toctree::
 
     mpi4py_fft.fftw
-    mpi4py_fft.utilities
+    mpi4py_fft.io
 
 
 Submodules

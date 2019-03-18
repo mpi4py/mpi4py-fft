@@ -323,7 +323,8 @@ class PFFT(object):
             self.pencil[::-1])
 
     def destroy(self):
-        self.subcomm.destroy()
+        if isinstance(self.subcomm, Subcomm):
+            self.subcomm.destroy()
         for trans in self.transfer:
             trans.destroy()
 
@@ -389,6 +390,7 @@ class PFFT(object):
             return self._output_shape
         return self._input_shape
 
+    @property
     def dimensions(self):
         """The number of dimensions for transformed arrays"""
         return len(self.forward.input_array.shape)

@@ -5,6 +5,12 @@ from mpi4py_fft.pencil import Subcomm
 
 comm = MPI.COMM_WORLD
 
+def test_1Darray():
+    N = (8,)
+    z = DistArray(N, val=2)
+    assert z[0] == 2
+    assert z.shape == N
+
 def test_2Darray():
     N = (8, 8)
     for subcomm in ((0, 1), (1, 0), None, Subcomm(comm, (0, 1))):
@@ -101,7 +107,7 @@ def test_newDistArray():
         for view in (True, False):
             for rank in (0, 1, 2):
                 a = newDistArray(pfft, forward_output=forward_output,
-                              rank=rank, view=view)
+                                 rank=rank, view=view)
                 if view is False:
                     assert isinstance(a, DistArray)
                     assert a.rank == rank
@@ -109,11 +115,17 @@ def test_newDistArray():
                         qfft = PFFT(MPI.COMM_WORLD, darray=a)
                     elif rank == 1:
                         qfft = PFFT(MPI.COMM_WORLD, darray=a[0])
+                    else:
+                        qfft = PFFT(MPI.COMM_WORLD, darray=a[0, 0])
+                    qfft.destroy()
+
                 else:
                     assert isinstance(a, np.ndarray)
                     assert a.base.rank == rank
+    pfft.destroy()
 
 if __name__ == '__main__':
+    test_1Darray()
     test_2Darray()
     test_3Darray()
     test_newDistArray()
