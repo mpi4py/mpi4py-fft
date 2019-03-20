@@ -92,6 +92,7 @@ class FileBase(object):
         raise NotImplementedError
 
     def close(self):
+        """Close the self.filename file"""
         self.f.close()
 
     def open(self, mode='r+'):

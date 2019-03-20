@@ -33,8 +33,8 @@ class NCFile(FileBase):
         existing file with the same name. If False, an exception will be
         raised if a file with the same name already exists.
     kw : dict, optional
-        Optional additional keyword arguments used when creating the backend
-        file.
+        Optional additional keyword arguments used when creating the file
+        used to store data.
 
     Note
     ----
