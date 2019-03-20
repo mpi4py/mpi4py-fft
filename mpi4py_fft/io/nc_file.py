@@ -29,6 +29,12 @@ class NCFile(FileBase):
     mode : str
         ``r``, ``w`` or ``a`` for read, write or append. Default is ``a``.
     clobber : bool, optional
+        If True (default), opening a file with mode='w' will clobber an
+        existing file with the same name. If False, an exception will be
+        raised if a file with the same name already exists.
+    kw : dict, optional
+        Optional additional keyword arguments used when creating the backend
+        file.
 
     Note
     ----
@@ -36,12 +42,11 @@ class NCFile(FileBase):
     It is possible to store multiple fields in each file, but all snapshots of
     the fields must be taken at the same time. If you want one field stored
     every 10th timestep and another every 20th timestep, then use two different
-    class instances and as such two NetCDF4-files.
+    class instances with two different filenames ``ncname``.
     """
     def __init__(self, ncname, domain=None, mode='a', clobber=True, **kw):
-        FileBase.__init__(self, domain=domain, **kw)
+        FileBase.__init__(self, ncname, domain=domain)
         from netCDF4 import Dataset
-        self.filename = ncname
         # netCDF4 does not seem to handle 'a' if the file does not already exist
         if mode == 'a' and not os.path.exists(ncname):
             mode = 'w'
@@ -51,11 +56,9 @@ class NCFile(FileBase):
         if not 'time' in self.f.variables:
             self.f.createDimension('time', None)
             self.f.createVariable('time', np.float, ('time'))
-
         self.close()
 
-    def _check_domain(self, write_domain, field):
-        """Check dimensions of domain and write to file if missing"""
+    def _check_domain(self, group, field):
         N = field.global_shape[field.rank:]
         if self.domain is None:
             self.domain = []
@@ -92,22 +95,59 @@ class NCFile(FileBase):
     def backend():
         return 'netcdf4'
 
-    def open(self):
+    def open(self, mode='r+'):
         from netCDF4 import Dataset
-        self.f = Dataset(self.filename, mode='r+', parallel=True, comm=comm)
+        self.f = Dataset(self.filename, mode=mode, parallel=True, comm=comm)
 
     def write(self, step, fields, **kw):
-        """Write snapshot step of ``fields`` to NetCDF4 file
+        """Write snapshot ``step`` of ``fields`` to NetCDF4 file
 
         Parameters
         ----------
         step : int
-            Index of snapshot
+            Index of snapshot.
         fields : dict
             The fields to be dumped to file. (key, value) pairs are group name
             and either arrays or 2-tuples, respectively. The arrays are complete
             arrays to be stored, whereas 2-tuples are arrays with associated
             *global* slices.
+        as_scalar : boolean, optional
+            Whether to store rank > 0 arrays as scalars. Default is False.
+
+        Example
+        -------
+        >>> from mpi4py import MPI
+        >>> from mpi4py_fft import PFFT, NCFile, newDistArray
+        >>> comm = MPI.COMM_WORLD
+        >>> T = PFFT(comm, (15, 16, 17))
+        >>> u = newDistArray(T, forward_output=False, val=1)
+        >>> v = newDistArray(T, forward_output=False, val=2)
+        >>> f = NCFile('ncfilename.nc', mode='w')
+        >>> f.write(0, {'u': [u, (u, [slice(None), 4, slice(None)])],
+        ...             'v': [v, (v, [slice(None), 5, 5])]})
+        >>> f.write(1, {'u': [u, (u, [slice(None), 4, slice(None)])],
+        ...             'v': [v, (v, [slice(None), 5, 5])]})
+        >>> f.close()
+
+        This stores the following datasets to the file ``ncfilename.nc``.
+        Using in a terminal 'ncdump -h ncfilename.nc', one gets::
+
+            netcdf ncfilename {
+            dimensions:
+                    time = UNLIMITED ; // (2 currently)
+                    x = 15 ;
+                    y = 16 ;
+                    z = 17 ;
+            variables:
+                    double time(time) ;
+                    double x(x) ;
+                    double y(y) ;
+                    double z(z) ;
+                    double u(time, x, y, z) ;
+                    double u_slice_4_slice(time, x, z) ;
+                    double v(time, x, y, z) ;
+                    double v_slice_5_5(time, x) ;
+            }
 
         """
         self.open()
@@ -122,17 +162,6 @@ class NCFile(FileBase):
         self.close()
 
     def read(self, u, name, **kw):
-        """Read into array ``u``
-
-        Parameters
-        ----------
-        u : array
-            The array to read into.
-        name : str
-            Name of array to be read.
-        step : int, optional
-            Index of field to be read. Default is 0.
-        """
         step = kw.get('step', 0)
         self.open()
         s = u.local_slice()
@@ -141,10 +170,9 @@ class NCFile(FileBase):
         self.close()
 
     def _write_slice_step(self, name, step, slices, field, **kw):
-        assert name not in self.dims
+        assert name not in self.dims # Crashes if user tries to name fields x, y, z, .
         rank = field.rank
-        slices = (slice(None),)*rank + tuple(slices)
-        slices = list(slices)
+        slices = list((slice(None),)*rank + tuple(slices))
         slname = self._get_slice_name(slices[rank:])
         s = field.local_slice()
         slices, inside = self._get_local_slices(slices, s)
@@ -168,7 +196,7 @@ class NCFile(FileBase):
         self.f.sync()
 
     def _write_group(self, name, u, step, **kw):
-        assert name not in self.dims
+        assert name not in self.dims # Crashes if user tries to name fields x, y, z, .
         s = u.local_slice()
         if name not in self.f.variables:
             h = self.f.createVariable(name, u.dtype, self.dims)

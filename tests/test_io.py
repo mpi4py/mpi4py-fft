@@ -51,7 +51,7 @@ def test_2D(backend, forward_output):
                 generate_xdmf(filename, order='visit')
 
             u0 = newDistArray(T, forward_output=forward_output, rank=rank)
-            read = reader[backend](filename, u=u0)
+            read = reader[backend](filename)
             read.read(u0, 'u', step=0)
             u0.read(filename, 'u', 2)
             u0.read(read, 'u', 2)
@@ -117,7 +117,7 @@ def test_3D(backend, forward_output):
                 generate_xdmf('v'+filename, order='visit')
 
             u0 = newDistArray(T, forward_output=forward_output, rank=rank)
-            read = reader[backend]('uv'+filename, u=u0)
+            read = reader[backend]('uv'+filename)
             read.read(u0, 'u', step=0)
             assert np.allclose(u0, u)
             read.read(u0, 'v', step=0)
@@ -153,7 +153,7 @@ def test_4D(backend, forward_output):
                 generate_xdmf('uv'+filename)
 
             u0 = newDistArray(T, forward_output=forward_output, rank=rank)
-            read = reader[backend]('uv'+filename, u=u0)
+            read = reader[backend]('uv'+filename)
             read.read(u0, 'u', step=0)
             assert np.allclose(u0, u)
             read.read(u0, 'v', step=0)

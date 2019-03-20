@@ -10,6 +10,8 @@ class FileBase(object):
 
     Parameters
     ----------
+    filename : str, optional
+        Name of backend file used to store data
     domain : sequence, optional
         An optional spatial mesh or domain to go with the data.
         Sequence of either
@@ -18,14 +20,15 @@ class FileBase(object):
               of each dimension, e.g., (0, 2*pi).
             - Arrays of coordinates, e.g., np.linspace(0, 2*pi, N). One
               array per dimension.
+
     """
-    def __init__(self, domain=None, **kw):
+    def __init__(self, filename=None, domain=None):
         self.f = None
-        self.filename = None
+        self.filename = filename
         self.domain = domain
 
     def _check_domain(self, group, field):
-        """Write domain to file"""
+        """Check dimensions and store (if missing) self.domain"""
         raise NotImplementedError
 
     def write(self, step, fields, **kw):
@@ -75,25 +78,35 @@ class FileBase(object):
                                 _write(g, u[k, l], sl, step, kw)
 
     def read(self, u, name, **kw):
-        """Read into array ``u``
+        """Read field ``name`` into distributed array ``u``
 
         Parameters
         ----------
         u : array
-            The array to read into.
+            The :class:`.DistArray` to read into.
         name : str
-            Name of array to be read.
+            Name of field to be read.
+        step : int, optional
+            Index of field to be read. Default is 0.
         """
         raise NotImplementedError
 
     def close(self):
         self.f.close()
 
-    def open(self):
+    def open(self, mode='r+'):
+        """Open the self.filename file for reading or writing
+
+        Parameters
+        ----------
+        mode : str
+           Open file in this mode. Default is 'r+'.
+        """
         raise NotImplementedError
 
     @staticmethod
     def backend():
+        """Return which backend is used to store data"""
         raise NotImplementedError
 
     def _write_slice_step(self, name, step, slices, field, **kwargs):

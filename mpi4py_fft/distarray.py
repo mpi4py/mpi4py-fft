@@ -397,7 +397,8 @@ class DistArray(np.ndarray):
         f.write(step, {name: field}, as_scalar=as_scalar)
 
     def read(self, filename, name='darray', step=0):
-        """Read from file ``filename`` into array ``self``
+        """Read data ``name`` at index ``step``from file ``filename`` into
+        ``self``
 
         Note
         ----
@@ -425,7 +426,7 @@ class DistArray(np.ndarray):
         """
         if isinstance(filename, str):
             writer = HDF5File if filename.endswith('.h5') else NCFile
-            f = writer(filename, u=self, mode='r')
+            f = writer(filename, mode='r')
         elif isinstance(filename, FileBase):
             f = filename
         f.read(self, name, step=step)
@@ -438,8 +439,8 @@ def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
     ----------
     pfft : :class:`.PFFT` object
     forward_output: boolean, optional
-        If False then create newDistArray of shape/type for input to
-        forward transform, otherwise create newDistArray of shape/type for
+        If False then create DistArray of shape/type for input to
+        forward transform, otherwise create DistArray of shape/type for
         output from forward transform.
     val : int or float, optional
         Value used to initialize array.

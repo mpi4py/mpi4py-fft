@@ -23,16 +23,17 @@ class HDF5File(FileBase):
               array per dimension.
     mode : str, optional
         ``r``, ``w`` or ``a`` for read, write or append. Default is ``a``.
+    kw : dict, optional
+        Optional additional keyword arguments used when creating the file
+        used to store data.
     """
     def __init__(self, h5name, domain=None, mode='a', **kw):
-        FileBase.__init__(self, domain=domain, **kw)
+        FileBase.__init__(self, h5name, domain=domain)
         import h5py
-        self.filename = h5name
-        self.f = h5py.File(h5name, mode, driver="mpio", comm=comm)
+        self.f = h5py.File(h5name, mode, driver="mpio", comm=comm, **kw)
         self.close()
 
     def _check_domain(self, group, field):
-        """Check dimensions of domain and write to file"""
         if self.domain is None:
             self.domain = ((0, 2*np.pi),)*field.dimensions
         assert len(self.domain) == field.dimensions
@@ -66,9 +67,9 @@ class HDF5File(FileBase):
     def backend():
         return 'hdf5'
 
-    def open(self):
+    def open(self, mode='r+'):
         import h5py
-        self.f = h5py.File(self.filename, 'r+', driver="mpio", comm=comm)
+        self.f = h5py.File(self.filename, mode, driver="mpio", comm=comm)
 
     def write(self, step, fields, **kw):
         """Write snapshot ``step`` of ``fields`` to HDF5 file
@@ -82,6 +83,8 @@ class HDF5File(FileBase):
             and either arrays or 2-tuples, respectively. The arrays are complete
             arrays to be stored, whereas 2-tuples are arrays with associated
             *global* slices.
+        as_scalar : boolean, optional
+            Whether to store rank > 0 arrays as scalars. Default is False.
 
         Example
         -------
@@ -116,17 +119,6 @@ class HDF5File(FileBase):
         self.close()
 
     def read(self, u, name, **kw):
-        """Read from file ``self`` into array ``u``
-
-        Parameters
-        ----------
-        u : array
-            The array to read into.
-        name : str
-            Name of array to be read.
-        step : int, optional
-            Index of field to be read. Default is 0.
-        """
         step = kw.get('step', 0)
         self.open()
         s = u.local_slice()
