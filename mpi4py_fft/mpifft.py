@@ -91,9 +91,9 @@ class PFFT(object):
         - int -> Just one axis to transform over
         - sequence of ints -> e.g., (0, 1, 2) or (0, 2, 1)
         - sequence of sequence of ints -> e.g., ((0,), (1,)) or ((0,), (1, 2))
-          For seq. of seq. of ints only the last inner sequence may be longer
-          than 1. This corresponds to collapsing axes, where serial FFTs are
-          performed for all collapsed axes in one single call
+          For seq. of seq. of ints all but the last transformed sequence
+          may be longer than 1. This corresponds to collapsing axes, where
+          serial FFTs are performed for all collapsed axes in one single call
     dtype : np.dtype, optional
         Type of input array
     slab : bool, optional
@@ -360,21 +360,6 @@ class PFFT(object):
             s = [slice(start, start+shape) for start, shape in zip(ip.substart,
                                                                    ip.subshape)]
         return tuple(s)
-
-    def local_shape(self, forward_output=False): #pragma: no cover
-        """The local (to each processor) shape of data
-
-        Parameters
-        ----------
-        forward_output : bool, optional
-            Return shape of output array (spectral space) if True, else return
-            shape of input array (physical space)
-        """
-        import warnings
-        warnings.warn("local_shape() is deprecated; use shape().", FutureWarning)
-        if forward_output is not True:
-            return self.forward.input_pencil.subshape
-        return self.backward.input_pencil.subshape
 
     def global_shape(self, forward_output=False):
         """Return global shape of associated tensors

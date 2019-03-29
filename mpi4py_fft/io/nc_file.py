@@ -53,7 +53,7 @@ class NCFile(FileBase):
         self.f = Dataset(ncname, mode=mode, clobber=clobber, parallel=True,
                          comm=comm, **kw)
         self.dims = None
-        if not 'time' in self.f.variables:
+        if 'time' not in self.f.variables:
             self.f.createDimension('time', None)
             self.f.createVariable('time', np.float, ('time'))
         self.close()

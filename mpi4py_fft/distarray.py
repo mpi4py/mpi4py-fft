@@ -1,5 +1,5 @@
 import os
-from numbers import Number
+from numbers import Number, Integral
 import numpy as np
 from mpi4py import MPI
 from .pencil import Pencil, Subcomm
@@ -24,12 +24,14 @@ class DistArray(np.ndarray):
     dtype : np.dtype, optional
         Type of array
     buffer : Numpy array, optional
-        Array of correct shape
+        Array of correct shape. The buffer owns the memory that is used for
+        this array.
     alignment : None or int, optional
         Make sure array is aligned in this direction. Note that alignment does
         not take rank into consideration.
     rank : int, optional
-        Rank of tensor (scalar is zero, vector one, matrix two)
+        Rank of tensor (number of free indices, a scalar is zero, vector one,
+        matrix two)
 
 
     For more information, see `numpy.ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_
@@ -55,11 +57,12 @@ class DistArray(np.ndarray):
     """
     def __new__(cls, global_shape, subcomm=None, val=None, dtype=np.float,
                 buffer=None, alignment=None, rank=0):
-        if len(global_shape[rank:]) < 2:
+        if len(global_shape[rank:]) < 2: # 1D case
             obj = np.ndarray.__new__(cls, global_shape, dtype=dtype, buffer=buffer)
             if buffer is None and isinstance(val, Number):
                 obj.fill(val)
             obj._rank = rank
+            obj._p0 = None
             return obj
 
         if isinstance(subcomm, Subcomm):
@@ -155,17 +158,20 @@ class DistArray(np.ndarray):
         if self.ndim == 1:
             return np.ndarray.__getitem__(self, i)
 
-        if isinstance(i, (int, slice)) and self.rank > 0:
+        if isinstance(i, (Integral, slice)) and self.rank > 0:
             v0 = np.ndarray.__getitem__(self, i)
             v0._rank = self.rank - (self.ndim - v0.ndim)
-            #if v0.ndim < self.ndim:
-            #    v0._rank -= 1
             return v0
 
-        if isinstance(i, tuple) and len(i) == 2 and self.rank == 2:
+        if isinstance(i, (Integral, slice)) and self.rank == 0:
+            return np.ndarray.__getitem__(self.v, i)
+
+        assert isinstance(i, tuple)
+        if len(i) <= self.rank:
             v0 = np.ndarray.__getitem__(self, i)
-            v0._rank = 0
+            v0._rank = self.rank - (self.ndim - v0.ndim)
             return v0
+
         return np.ndarray.__getitem__(self.v, i)
 
     @property
@@ -445,7 +451,7 @@ def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
     val : int or float, optional
         Value used to initialize array.
     rank: int, optional
-        Scalar has rank 0, vector 1 and matrix 2
+        Scalar has rank 0, vector 1 and matrix 2.
     view : bool, optional
         If True return view of the underlying Numpy array, i.e., return
         cls.view(np.ndarray). Note that the DistArray still will

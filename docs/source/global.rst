@@ -350,9 +350,9 @@ reverse ``backward`` method of the :class:`.Transfer` objects::
 
 A different approach is also possible with the high-level API::
 
-    a0.redistribute(darray=a1)
-    a1.redistribute(darray=a2)
-    a2.redistribute(darray=a3)
+    a0.redistribute(out=a1)
+    a1.redistribute(out=a2)
+    a2.redistribute(out=a3)
 
 which corresponds to the backward transfers. However, with the high-level
 API the transfer objects are created (and deleted on exit) during the call
