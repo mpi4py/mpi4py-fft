@@ -40,10 +40,10 @@ def get_geometry(kind=0, dim=2):
 
         return """<Geometry Type="VXVY">
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{1}">
-            {3}:/mesh/{4}
+            {3}:{6}/mesh/{4}
           </DataItem>
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{2}">
-            {3}:/mesh/{5}
+            {3}:{6}/mesh/{5}
           </DataItem>
         </Geometry>"""
 
@@ -60,13 +60,13 @@ def get_geometry(kind=0, dim=2):
 
         return """<Geometry Type="VXVYVZ">
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{3}">
-            {4}:/mesh/{5}
+            {4}:{8}/mesh/{5}
           </DataItem>
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{2}">
-            {4}:/mesh/{6}
+            {4}:{8}/mesh/{6}
           </DataItem>
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{1}">
-            {4}:/mesh/{7}
+            {4}:{8}/mesh/{7}
           </DataItem>
         </Geometry>"""
 
@@ -233,9 +233,9 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
 
                     if ndim == 2 and ('slice' not in slices or len(f[group].attrs.get('shape')) > 3):
                         if order.lower() == 'paraview':
-                            sig = (prec, N[0], N[1], h5filename, cc[0], cc[1])
+                            sig = (prec, N[0], N[1], h5filename, cc[0], cc[1], group)
                         else:
-                            sig = (prec, N[1], N[0], h5filename, cc[1], cc[0])
+                            sig = (prec, N[1], N[0], h5filename, cc[1], cc[0], group)
                     else:
                         if ndim == 2: # 2D slice in 3D domain
                             pos = f[group+"/mesh/x{}".format(kk)][sl]
@@ -243,7 +243,7 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
                             geo = geo.replace(z[2-kk], ' Format="XML" NumberType="Float" Precision="{0}" Dimensions="{%d}">\n           {%d}\n          '%(1+kk, 7-kk))
                             cc = list(cc)
                             cc.insert(kk, pos)
-                        sig = (prec, N[0], N[1], N[2], h5filename, cc[2], cc[1], cc[0])
+                        sig = (prec, N[0], N[1], N[2], h5filename, cc[2], cc[1], cc[0], group)
                     geometry[slices] = geo.format(*sig)
                     topology[slices] = get_topology(N, kind=1)
                 grid[slices] = ''

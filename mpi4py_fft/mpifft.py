@@ -288,8 +288,8 @@ class PFFT(object):
 
         axes = self.axes[-1]
         pencil = Pencil(self.subcomm, shape, axes[-1])
-        xfftn = FFT(pencil.subshape, axes, dtype, padding, use_pyfftw,
-                    transforms, **kw)
+        xfftn = FFT(pencil.subshape, axes, dtype, padding, use_pyfftw=use_pyfftw,
+                    transforms=transforms, **kw)
         self.xfftn.append(xfftn)
         self.pencil[0] = pencilA = pencil
         if not shape[axes[-1]] == xfftn.forward.output_array.shape[axes[-1]]:
@@ -300,8 +300,8 @@ class PFFT(object):
         for axes in reversed(self.axes[:-1]):
             pencilB = pencilA.pencil(axes[-1])
             transAB = pencilA.transfer(pencilB, dtype)
-            xfftn = FFT(pencilB.subshape, axes, dtype, padding, use_pyfftw,
-                        transforms, **kw)
+            xfftn = FFT(pencilB.subshape, axes, dtype, padding, use_pyfftw=use_pyfftw,
+                        transforms=transforms, **kw)
             self.xfftn.append(xfftn)
             self.transfer.append(transAB)
             pencilA = pencilB

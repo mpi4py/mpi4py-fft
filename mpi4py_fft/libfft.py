@@ -1,3 +1,4 @@
+import functools
 import numpy as np
 from . import fftw
 
@@ -371,28 +372,37 @@ class FFTNumPy(FFTBase): #pragma: no cover
 
     """
 
-    def __init__(self, shape, axes=None, dtype=float, padding=False, **kw):
+    def __init__(self, shape, axes=None, dtype=float, padding=False,
+                 transforms=None, **kw):
         FFTBase.__init__(self, shape, axes, dtype, padding)
         typecode = self.dtype.char
 
         self.sizes = list(np.take(self.shape, self.axes))
         arrayA = np.zeros(self.shape, self.dtype)
-        if self.real_transform:
-            axis = self.axes[-1]
-            self.shape[axis] = self.shape[axis]//2 + 1
-            arrayB = np.zeros(self.shape, typecode.upper())
-            fwd = np.fft.rfftn
-            bck = np.fft.irfftn
-        else:
-            arrayB = np.zeros(self.shape, typecode)
-            fwd = np.fft.fftn
-            bck = np.fft.ifftn
+        transforms = {} if transforms is None else transforms
+        if tuple(self.axes) in transforms:
+            fwd, bck = transforms[tuple(self.axes)]
+            arrayB = fwd(arrayA, axes=self.axes).astype(typecode)
+            self.fwd = functools.partial(fwd, shape=self.sizes)
+            self.bck = functools.partial(bck, shape=self.sizes)
 
-        fwd.input_array = arrayA
-        fwd.output_array = arrayB
-        bck.input_array = arrayB
-        bck.output_array = arrayA
-        self.fwd, self.bck = fwd, bck
+        else:
+            if self.real_transform:
+                fwd = np.fft.rfftn
+                bck = np.fft.irfftn
+                arrayB = fwd(arrayA, s=self.sizes, axes=self.axes).astype(typecode.upper())
+                self.shape = arrayB.shape
+            else:
+                fwd = np.fft.fftn
+                bck = np.fft.ifftn
+                arrayB = fwd(arrayA, s=self.sizes, axes=self.axes).astype(typecode)
+            self.fwd = functools.partial(fwd, s=self.sizes)
+            self.bck = functools.partial(bck, s=self.sizes)
+
+        self.fwd_input_array = arrayA
+        self.fwd_output_array = arrayB
+        self.bck_input_array = arrayB
+        self.bck_output_array = arrayA
 
         self.padding_factor = 1
         if padding is not False:
@@ -407,14 +417,14 @@ class FFTNumPy(FFTBase): #pragma: no cover
             self.backward = _Xfftn_wrap(self._backward, arrayB, arrayA)
 
     def _forward(self, **kw):
-        self.fwd.output_array[:] = self.fwd(self.fwd.input_array, s=self.sizes,
+        self.fwd_output_array[:] = self.fwd(self.fwd_input_array,
                                             axes=self.axes, **kw)
-        self._truncation_forward(self.fwd.output_array, self.forward.output_array)
+        self._truncation_forward(self.fwd_output_array, self.forward.output_array)
         return self.forward.output_array
 
     def _backward(self, **kw):
-        self._padding_backward(self.backward.input_array, self.bck.input_array)
-        self.backward.output_array[:] = self.bck(self.bck.input_array, s=self.sizes,
+        self._padding_backward(self.backward.input_array, self.bck_input_array)
+        self.backward.output_array[:] = self.bck(self.bck_input_array,
                                                  axes=self.axes, **kw)
         return self.backward.output_array
 

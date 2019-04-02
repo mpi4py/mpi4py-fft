@@ -10,7 +10,7 @@ try:
 except ImportError:
     has_pyfftw = False
 
-abstol = dict(f=5e-5, d=1e-14, g=1e-15)
+abstol = dict(f=5e-5, d=1e-14, g=1e-14)
 
 def allclose(a, b):
     atol = abstol[a.dtype.char.lower()]
@@ -91,7 +91,7 @@ def test_libfft():
 
                             B.fill(0)
                             B = fft.forward(A, B)
-                            assert allclose(B, X)
+                            assert allclose(B, X), np.linalg.norm(B-X)
 
 
 if __name__ == '__main__':
