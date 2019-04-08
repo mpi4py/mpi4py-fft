@@ -1,6 +1,7 @@
 from __future__ import print_function
 from time import time
 import importlib
+import functools
 import numpy as np
 from mpi4py_fft import fftw
 from mpi4py_fft.libfft import FFT
@@ -95,6 +96,47 @@ def test_libfft():
                             B.fill(0)
                             B = fft.forward(A, B)
                             assert allclose(B, X), np.linalg.norm(B-X)
+
+    for backend in ('pyfftw', 'mkl_fft', 'scipy', 'numpy', 'fftw'):
+        if has_backend[backend] is False:
+            continue
+
+        z = np.random.random((8, 8))
+        if backend == 'fftw':
+            dctn = functools.partial(fftw.dctn, type=3)
+            idctn = functools.partial(fftw.idctn, type=3)
+            transforms = {(1,): (dctn, idctn),
+                          (0, 1): (dctn, idctn)}
+        elif backend == 'pyfftw':
+            import pyfftw
+            transforms = {(1,): (pyfftw.builders.rfftn, pyfftw.builders.irfftn),
+                          (0, 1): (pyfftw.builders.rfftn, pyfftw.builders.irfftn)}
+        elif backend == 'numpy':
+            transforms = {(1,): (np.fft.rfftn, np.fft.irfftn),
+                          (0, 1): (np.fft.rfftn, np.fft.irfftn)}
+        elif backend == 'mkl_fft':
+            import mkl_fft
+            transforms = {(1,): (mkl_fft._numpy_fft.rfftn, mkl_fft._numpy_fft.irfftn),
+                          (0, 1): (mkl_fft._numpy_fft.rfftn, mkl_fft._numpy_fft.irfftn)}
+        elif backend == 'scipy':
+            from scipy.fftpack import fftn, ifftn
+            transforms = {(1,): (fftn, ifftn),
+                          (0, 1): (fftn, ifftn)}
+
+        for axis in ((1,), (0, 1)):
+            fft = FFT(shape, axis, backend=backend, transforms=transforms)
+            A = fft.forward.input_array
+            B = fft.forward.output_array
+
+            A[...] = np.random.random(A.shape)
+            X = A.copy()
+
+            B.fill(0)
+            B = fft.forward(A, B)
+            A.fill(0)
+            A = fft.backward(B, A)
+            assert allclose(A, X)
+
 
 
 if __name__ == '__main__':

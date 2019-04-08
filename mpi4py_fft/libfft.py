@@ -26,7 +26,6 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
             plan_bck = pyfftw.builders.ifftn
 
     s = tuple(np.take(shape, axes))
-
     U = pyfftw.empty_aligned(shape, dtype=dtype)
     xfftn_fwd = plan_fwd(U, s=s, axes=axes, **opts)
     U.fill(0)
@@ -35,7 +34,6 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
     V = xfftn_fwd.output_array
     xfftn_bck = plan_bck(V, s=s, axes=axes, **opts)
     V.fill(0)
-
     xfftn_fwd.update_arrays(U, V)
     xfftn_bck.update_arrays(V, U)
 
@@ -49,7 +47,7 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
 
     return (xfftn_fwd, wrapped_xfftn_bck)
 
-def _Xfftn_plan_mpi4py(shape, axes, dtype, transforms, options):
+def _Xfftn_plan_fftw(shape, axes, dtype, transforms, options):
 
     opts = dict(
         overwrite_input='FFTW_DESTROY_INPUT',
@@ -73,16 +71,13 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, transforms, options):
             plan_bck = fftw.ifftn
 
     s = tuple(np.take(shape, axes))
-
     U = fftw.aligned(shape, dtype=dtype)
     xfftn_fwd = plan_fwd(U, s=s, axes=axes, threads=threads, flags=flags)
     U.fill(0)
     V = xfftn_fwd.output_array
     if np.issubdtype(dtype, np.floating):
         flags = (fftw.flag_dict[opts['planner_effort']],)
-
     xfftn_bck = plan_bck(V, s=s, axes=axes, threads=threads, flags=flags, output_array=U)
-
     return (xfftn_fwd, xfftn_bck)
 
 def _Xfftn_plan_numpy(shape, axes, dtype, transforms, options):
@@ -171,14 +166,10 @@ class _Yfftn_wrap(object):
     def opt(self):
         return object.__getattribute__(self, '_opt')
 
-    def __call__(self, input_array=None, output_array=None, **options):
-        self.opt.update(options)
-        if input_array is not None:
-            self.input_array[...] = input_array
-        if output_array is None:
-            output_array = self.output_array
-        output_array[...] = self.xfftn(self.input_array, **self.opt)
-        return output_array
+    def __call__(self, *args, **kwargs):
+        self.opt.update(kwargs)
+        self.output_array[...] = self.xfftn(self.input_array, **self.opt)
+        return self.output_array
 
 class _Xfftn_wrap(object):
 
@@ -322,9 +313,9 @@ class FFT(FFTBase):
         If False, then no padding. If number, then apply this number as padding
         factor for all axes. If list of numbers, then each number gives the
         padding for each axis. Must be same length as axes.
-    use_pyfftw : bool, optional
-        Whether to use pyfftw instead of local :mod:`.fftw` module. Default is
-        False.
+    backend : str, optional
+        Choose backend for serial transforms (``fftw``, ``pyfftw``, ``numpy``,
+        ``scipy``, ``mkl_fft``). Default is ``fftw``
     transforms : None or dict, optional
         Dictionary of axes to serial transforms (forward and backward) along
         those axes. For example::
@@ -374,7 +365,7 @@ class FFT(FFTBase):
         FFTBase.__init__(self, shape, axes, dtype, padding)
         plan = {
             'pyfftw': _Xfftn_plan_pyfftw,
-            'fftw': _Xfftn_plan_mpi4py,
+            'fftw': _Xfftn_plan_fftw,
             'numpy': _Xfftn_plan_numpy,
             'mkl_fft': _Xfftn_plan_mkl,
             'scipy': _Xfftn_plan_scipy,

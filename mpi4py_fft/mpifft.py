@@ -104,8 +104,9 @@ class PFFT(object):
         padding for each axis. Must be same length as axes.
     collapse : bool, optional
         If True try to collapse several serial transforms into one
-    use_pyfftw : bool, optional
-        Use pyfftw for serial transforms instead of local wrappers
+    backend : str, optional
+        Choose backend for serial transforms (``fftw``, ``pyfftw``, ``numpy``,
+        ``scipy``, ``mkl_fft``). Default is ``fftw``
     transforms : None or dict, optional
         Dictionary of axes to serial transforms (forward and backward) along
         those axes. For example::
@@ -186,7 +187,7 @@ class PFFT(object):
 
     """
     def __init__(self, comm, shape=None, axes=None, dtype=float, slab=False,
-                 padding=False, collapse=False, use_pyfftw=False,
+                 padding=False, collapse=False, backend='fftw',
                  transforms=None, darray=None, **kw):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
@@ -288,7 +289,7 @@ class PFFT(object):
 
         axes = self.axes[-1]
         pencil = Pencil(self.subcomm, shape, axes[-1])
-        xfftn = FFT(pencil.subshape, axes, dtype, padding, use_pyfftw=use_pyfftw,
+        xfftn = FFT(pencil.subshape, axes, dtype, padding, backend=backend,
                     transforms=transforms, **kw)
         self.xfftn.append(xfftn)
         self.pencil[0] = pencilA = pencil
@@ -300,7 +301,7 @@ class PFFT(object):
         for axes in reversed(self.axes[:-1]):
             pencilB = pencilA.pencil(axes[-1])
             transAB = pencilA.transfer(pencilB, dtype)
-            xfftn = FFT(pencilB.subshape, axes, dtype, padding, use_pyfftw=use_pyfftw,
+            xfftn = FFT(pencilB.subshape, axes, dtype, padding, backend=backend,
                         transforms=transforms, **kw)
             self.xfftn.append(xfftn)
             self.transfer.append(transAB)
