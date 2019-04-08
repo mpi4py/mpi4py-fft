@@ -78,7 +78,7 @@ def test_libfft():
                             shape = list(shape)
                             shape[axis] = int(shape[axis]*padding)
 
-                            #print(shape, axis, typecode)
+                            #print(shape, axis, typecode, backend)
                             fft = FFT(shape, axis, dtype=typecode, backend=backend,
                                       padding=padding, planner_effort='FFTW_ESTIMATE')
                             A = fft.forward.input_array
@@ -136,8 +136,6 @@ def test_libfft():
             A.fill(0)
             A = fft.backward(B, A)
             assert allclose(A, X)
-
-
 
 if __name__ == '__main__':
     test_libfft()

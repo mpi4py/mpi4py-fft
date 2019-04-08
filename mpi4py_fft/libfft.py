@@ -95,7 +95,7 @@ def _Xfftn_plan_numpy(shape, axes, dtype, transforms, options):
 
     s = tuple(np.take(shape, axes))
     U = np.zeros(shape, dtype=dtype)
-    V = plan_fwd(U, s=s, axes=axes)
+    V = plan_fwd(U, s=s, axes=axes).astype(dtype.char.upper()) # Numpy returns complex double if input single precision
 
     return (_Yfftn_wrap(plan_fwd, U, V, {'s': s, 'axes': axes}),
             _Yfftn_wrap(plan_bck, V, U, {'s': s, 'axes': axes}))
