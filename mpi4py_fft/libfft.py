@@ -41,8 +41,7 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
     functools.update_wrapper(wrapped_xfftn_bck, xfftn_bck,
                              assigned=['input_array',
                                        'output_array',
-                                       '__doc__',
-                                       '__module__'])
+                                       '__doc__'])
 
     return (xfftn_fwd, wrapped_xfftn_bck)
 
