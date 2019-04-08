@@ -11,7 +11,7 @@ for backend in ('pyfftw', 'mkl_fft', 'scipy', 'numpy'):
     has_backend[backend] = True
     try:
         importlib.import_module(backend)
-    except ModuleNotFoundError:
+    except ImportError:
         has_backend[backend] = False
 
 abstol = dict(f=5e-5, d=1e-14, g=1e-14)
