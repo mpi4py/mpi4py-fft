@@ -1,14 +1,17 @@
 from __future__ import print_function
 from time import time
+import importlib
 import numpy as np
 from mpi4py_fft import fftw
 from mpi4py_fft.libfft import FFT
 
-has_pyfftw = True
-try:
-    import pyfftw
-except ImportError:
-    has_pyfftw = False
+has_backend = {'fftw': True}
+for backend in ('pyfftw', 'mkl_fft', 'scipy', 'numpy'):
+    has_backend[backend] = True
+    try:
+        importlib.import_module(backend)
+    except ModuleNotFoundError:
+        has_backend[backend] = False
 
 abstol = dict(f=5e-5, d=1e-14, g=1e-14)
 
@@ -22,12 +25,12 @@ def test_libfft():
     dims = (1, 2, 3)
     sizes = (7, 8, 9)
     types = ''
-    for t in 'fdg':
+    for t in 'fd':
         if fftw.get_fftw_lib(t):
             types += t+t.upper()
 
-    for use_pyfftw in (False, True):
-        if has_pyfftw is False and use_pyfftw is True:
+    for backend in ('pyfftw', 'mkl_fft', 'scipy', 'numpy', 'fftw'):
+        if has_backend[backend] is False:
             continue
         t0 = 0
         for typecode in types:
@@ -38,8 +41,8 @@ def test_libfft():
                         for j in range(i+1, dim):
                             for axes in (None, allaxes[i:j]):
                                 #print(shape, axes, typecode)
-                                fft = FFT(shape, axes, dtype=typecode,
-                                          use_pyfftw=use_pyfftw, planner_effort='FFTW_ESTIMATE')
+                                fft = FFT(shape, axes, dtype=typecode, backend=backend,
+                                          planner_effort='FFTW_ESTIMATE')
                                 A = fft.forward.input_array
                                 B = fft.forward.output_array
 
@@ -56,12 +59,12 @@ def test_libfft():
                                 A = fft.backward(B, A)
                                 t0 += time()
                                 assert allclose(A, X)
-        print('use_pyfftw: ', use_pyfftw, t0)
+        print('backend: ', backend, t0)
     # Padding is different because the physical space is padded and as such
     # difficult to initialize. We solve this problem by making one extra
     # transform
-    for use_pyfftw in (True, False):
-        if has_pyfftw is False and use_pyfftw is True:
+    for backend in ('pyfftw', 'mkl_fft', 'scipy', 'numpy', 'fftw'):
+        if has_backend[backend] is False:
             continue
         for padding in (1.5, 2.0):
             for typecode in types:
@@ -75,8 +78,8 @@ def test_libfft():
                             shape[axis] = int(shape[axis]*padding)
 
                             #print(shape, axis, typecode)
-                            fft = FFT(shape, axis, dtype=typecode,
-                                      padding=padding, use_pyfftw=use_pyfftw, planner_effort='FFTW_ESTIMATE')
+                            fft = FFT(shape, axis, dtype=typecode, backend=backend,
+                                      padding=padding, planner_effort='FFTW_ESTIMATE')
                             A = fft.forward.input_array
                             B = fft.forward.output_array
 
