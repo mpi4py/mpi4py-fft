@@ -3,19 +3,7 @@ import numpy as np
 from . import fftw
 
 def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
-    """Plan serial transforms using pyfftw
 
-    Parameters
-    ----------
-    shape : list of ints
-        shape of input array planned for
-    axes : list of ints
-        axes to transform over
-    dtype : np.dtype
-        type of input array
-    options : dict
-        arguments for planning serial transforms
-    """
     import pyfftw
     opts = dict(
         avoid_copy=True,
@@ -38,7 +26,6 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
             plan_bck = pyfftw.builders.ifftn
 
     s = tuple(np.take(shape, axes))
-
     U = pyfftw.empty_aligned(shape, dtype=dtype)
     xfftn_fwd = plan_fwd(U, s=s, axes=axes, **opts)
     U.fill(0)
@@ -47,26 +34,19 @@ def _Xfftn_plan_pyfftw(shape, axes, dtype, transforms, options):
     V = xfftn_fwd.output_array
     xfftn_bck = plan_bck(V, s=s, axes=axes, **opts)
     V.fill(0)
-
     xfftn_fwd.update_arrays(U, V)
     xfftn_bck.update_arrays(V, U)
 
-    return (xfftn_fwd, xfftn_bck)
+    wrapped_xfftn_bck = functools.partial(xfftn_bck, normalise_idft=False)
+    functools.update_wrapper(wrapped_xfftn_bck, xfftn_bck,
+                             assigned=['input_array',
+                                       'output_array',
+                                       '__doc__'])
 
-def _Xfftn_plan_mpi4py(shape, axes, dtype, transforms, options):
-    """Plan serial transforms using local wrapper
+    return (xfftn_fwd, wrapped_xfftn_bck)
 
-    Parameters
-    ----------
-    shape : list of ints
-        shape of input array planned for
-    axes : list of ints
-        axes to transform over
-    dtype : np.dtype
-        type of input array
-    options : dict
-        arguments for planning serial transforms
-    """
+def _Xfftn_plan_fftw(shape, axes, dtype, transforms, options):
+
     opts = dict(
         overwrite_input='FFTW_DESTROY_INPUT',
         planner_effort='FFTW_MEASURE',
@@ -89,21 +69,118 @@ def _Xfftn_plan_mpi4py(shape, axes, dtype, transforms, options):
             plan_bck = fftw.ifftn
 
     s = tuple(np.take(shape, axes))
-
     U = fftw.aligned(shape, dtype=dtype)
     xfftn_fwd = plan_fwd(U, s=s, axes=axes, threads=threads, flags=flags)
     U.fill(0)
     V = xfftn_fwd.output_array
     if np.issubdtype(dtype, np.floating):
         flags = (fftw.flag_dict[opts['planner_effort']],)
-
     xfftn_bck = plan_bck(V, s=s, axes=axes, threads=threads, flags=flags, output_array=U)
-
     return (xfftn_fwd, xfftn_bck)
 
+def _Xfftn_plan_numpy(shape, axes, dtype, transforms, options):
+
+    transforms = {} if transforms is None else transforms
+    if tuple(axes) in transforms:
+        plan_fwd, plan_bck = transforms[tuple(axes)]
+    else:
+        if np.issubdtype(dtype, np.floating):
+            plan_fwd = np.fft.rfftn
+            plan_bck = np.fft.irfftn
+        else:
+            plan_fwd = np.fft.fftn
+            plan_bck = np.fft.ifftn
+
+    s = tuple(np.take(shape, axes))
+    U = np.zeros(shape, dtype=dtype)
+    V = plan_fwd(U, s=s, axes=axes).astype(dtype.char.upper()) # Numpy returns complex double if input single precision
+    M = np.prod(s)
+
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
+            _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}))
+
+def _Xfftn_plan_mkl(shape, axes, dtype, transforms, options): #pragma: no cover
+
+    import mkl_fft
+    transforms = {} if transforms is None else transforms
+    if tuple(axes) in transforms:
+        plan_fwd, plan_bck = transforms[tuple(axes)]
+    else:
+        if np.issubdtype(dtype, np.floating):
+            plan_fwd = mkl_fft._numpy_fft.rfftn
+            plan_bck = mkl_fft._numpy_fft.irfftn
+        else:
+            plan_fwd = mkl_fft._numpy_fft.fftn
+            plan_bck = mkl_fft._numpy_fft.ifftn
+
+    s = tuple(np.take(shape, axes))
+    U = np.zeros(shape, dtype=dtype)
+    V = plan_fwd(U, s=s, axes=axes)
+    M = np.prod(s)
+
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
+            _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}))
+
+def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
+
+    transforms = {} if transforms is None else transforms
+    if tuple(axes) in transforms:
+        plan_fwd, plan_bck = transforms[tuple(axes)]
+    else:
+        from scipy.fftpack import fftn, ifftn # No rfftn/irfftn methods
+        plan_fwd = fftn
+        plan_bck = ifftn
+
+    s = tuple(np.take(shape, axes))
+    U = np.zeros(shape, dtype=dtype)
+    V = plan_fwd(U, shape=s, axes=axes)
+    M = np.prod(s)
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'shape': s, 'axes': axes}),
+            _Yfftn_wrap(plan_bck, V, U, M, {'shape': s, 'axes': axes}))
+
+class _Yfftn_wrap(object):
+    #Wraps numpy/scipy/mkl transforms to FFTW style
+    # pylint: disable=too-few-public-methods
+
+    __slots__ = ('_xfftn', '_M', '_opt', '__doc__', '_input_array', '_output_array')
+
+    def __init__(self, xfftn_obj, input_array, output_array, M, opt):
+        object.__setattr__(self, '_xfftn', xfftn_obj)
+        object.__setattr__(self, '_opt', opt)
+        object.__setattr__(self, '_M', M)
+        object.__setattr__(self, '_input_array', input_array)
+        object.__setattr__(self, '_output_array', output_array)
+        object.__setattr__(self, '__doc__', xfftn_obj.__doc__)
+
+    @property
+    def input_array(self):
+        return object.__getattribute__(self, '_input_array')
+
+    @property
+    def output_array(self):
+        return object.__getattribute__(self, '_output_array')
+
+    @property
+    def xfftn(self):
+        return object.__getattribute__(self, '_xfftn')
+
+    @property
+    def opt(self):
+        return object.__getattribute__(self, '_opt')
+
+    @property
+    def M(self):
+        return object.__getattribute__(self, '_M')
+
+    def __call__(self, *args, **kwargs):
+        self.opt.update(kwargs)
+        self.output_array[...] = self.xfftn(self.input_array, **self.opt)
+        if abs(self.M-1) > 1e-8:
+            self._output_array *= self.M
+        return self.output_array
 
 class _Xfftn_wrap(object):
-
+    #Common interface for all serial transforms
     # pylint: disable=too-few-public-methods
 
     __slots__ = ('_xfftn', '__doc__', '_input_array', '_output_array')
@@ -244,6 +321,19 @@ class FFT(FFTBase):
         If False, then no padding. If number, then apply this number as padding
         factor for all axes. If list of numbers, then each number gives the
         padding for each axis. Must be same length as axes.
+    backend : str, optional
+        Choose backend for serial transforms (``fftw``, ``pyfftw``, ``numpy``,
+        ``scipy``, ``mkl_fft``). Default is ``fftw``
+    transforms : None or dict, optional
+        Dictionary of axes to serial transforms (forward and backward) along
+        those axes. For example::
+
+            {(0, 1): (dctn, idctn), (2, 3): (dstn, idstn)}
+
+        If missing the default is to use rfftn/irfftn for real input arrays and
+        fftn/ifftn for complex input arrays. Real-to-real transforms can be
+        configured using this dictionary and real-to-real transforms from the
+        :mod:`.fftw.xfftn` module.
     kw : dict
         Parameters passed to serial transform object
 
@@ -279,15 +369,25 @@ class FFT(FFTBase):
 
     """
     def __init__(self, shape, axes=None, dtype=float, padding=False,
-                 use_pyfftw=False, transforms=None, **kw):
+                 backend='fftw', transforms=None, **kw):
         FFTBase.__init__(self, shape, axes, dtype, padding)
-        plan = _Xfftn_plan_pyfftw if use_pyfftw is True else _Xfftn_plan_mpi4py
+        plan = {
+            'pyfftw': _Xfftn_plan_pyfftw,
+            'fftw': _Xfftn_plan_fftw,
+            'numpy': _Xfftn_plan_numpy,
+            'mkl_fft': _Xfftn_plan_mkl,
+            'scipy': _Xfftn_plan_scipy,
+        }[backend]
+        self.backend = backend
         self.fwd, self.bck = plan(self.shape, self.axes, self.dtype, transforms, kw)
         U, V = self.fwd.input_array, self.fwd.output_array
-        if use_pyfftw:
+        self.M = 1
+        if not backend == 'fftw':
             self.M = 1./np.prod(np.take(self.shape, self.axes))
-        else:
+        elif backend == 'fftw':
             self.M = self.fwd.get_normalization()
+        if backend == 'scipy':
+            self.real_transform = False # No rfftn/irfftn methods
         self.padding_factor = 1.0
         if padding is not False:
             self.padding_factor = padding[self.axes[-1]] if np.ndim(padding) else padding
@@ -308,7 +408,7 @@ class FFT(FFTBase):
 
     def _backward(self, **kw):
         self._padding_backward(self.backward.input_array, self.bck.input_array)
-        self.bck(None, None, normalise_idft=False, **kw)
+        self.bck(None, None, **kw)
         return self.backward.output_array
 
     def _get_truncarray(self, shape, dtype):
@@ -322,122 +422,3 @@ class FFT(FFTBase):
         shape[axis] = int(np.round(shape[axis] / self.padding_factor))
         shape[axis] = shape[axis]//2 + 1
         return fftw.aligned(shape, dtype=dtype)
-
-
-class FFTNumPy(FFTBase): #pragma: no cover
-    """Class for serial FFT transforms using Numpy FFT
-
-    Parameters
-    ----------
-    shape : list or tuple of ints
-        shape of input array planned for
-    axes : None, int or tuple of ints, optional
-        axes to transform over. If None transform over all axes
-    dtype : np.dtype, optional
-        Type of input array
-    padding : bool, number or list of numbers
-        If False, then no padding. If number, then apply this number as padding
-        factor for all axes. If list of numbers, then each number gives the
-        padding for each axis. Must be same length as axes.
-    kw : dict
-        Parameters passed to serial transform object
-
-    forward(input_array=None, output_array=None, **options)
-        Generic serial forward transform
-
-        Parameters
-        ----------
-        input_array : array, optional
-        output_array : array, optional
-        options : dict
-            parameters to serial transforms
-
-        Returns
-        -------
-        output_array : array
-
-    backward(input_array=None, output_array=None, **options)
-        Generic serial backward transform
-
-        Parameters
-        ----------
-        input_array : array, optional
-        output_array : array, optional
-        options : dict
-            parameters to serial transforms
-
-        Returns
-        -------
-        output_array : array
-
-    """
-
-    def __init__(self, shape, axes=None, dtype=float, padding=False,
-                 transforms=None, **kw):
-        FFTBase.__init__(self, shape, axes, dtype, padding)
-        typecode = self.dtype.char
-
-        self.sizes = list(np.take(self.shape, self.axes))
-        arrayA = np.zeros(self.shape, self.dtype)
-        transforms = {} if transforms is None else transforms
-        if tuple(self.axes) in transforms:
-            fwd, bck = transforms[tuple(self.axes)]
-            arrayB = fwd(arrayA, axes=self.axes).astype(typecode)
-            self.fwd = functools.partial(fwd, shape=self.sizes)
-            self.bck = functools.partial(bck, shape=self.sizes)
-
-        else:
-            if self.real_transform:
-                fwd = np.fft.rfftn
-                bck = np.fft.irfftn
-                arrayB = fwd(arrayA, s=self.sizes, axes=self.axes).astype(typecode.upper())
-                self.shape = arrayB.shape
-            else:
-                fwd = np.fft.fftn
-                bck = np.fft.ifftn
-                arrayB = fwd(arrayA, s=self.sizes, axes=self.axes).astype(typecode)
-            self.fwd = functools.partial(fwd, s=self.sizes)
-            self.bck = functools.partial(bck, s=self.sizes)
-
-        self.fwd_input_array = arrayA
-        self.fwd_output_array = arrayB
-        self.bck_input_array = arrayB
-        self.bck_output_array = arrayA
-
-        self.padding_factor = 1
-        if padding is not False:
-            assert len(self.axes) == 1
-            self.axis = self.axes[-1]
-            self.padding_factor = padding[axes[-1]] if np.ndim(padding) else padding
-            trunc_array = self._get_truncarray(shape, arrayB.dtype)
-            self.forward = _Xfftn_wrap(self._forward, arrayA, trunc_array)
-            self.backward = _Xfftn_wrap(self._backward, trunc_array, arrayA)
-        else:
-            self.forward = _Xfftn_wrap(self._forward, arrayA, arrayB)
-            self.backward = _Xfftn_wrap(self._backward, arrayB, arrayA)
-
-    def _forward(self, **kw):
-        self.fwd_output_array[:] = self.fwd(self.fwd_input_array,
-                                            axes=self.axes, **kw)
-        self._truncation_forward(self.fwd_output_array, self.forward.output_array)
-        return self.forward.output_array
-
-    def _backward(self, **kw):
-        self._padding_backward(self.backward.input_array, self.bck_input_array)
-        self.backward.output_array[:] = self.bck(self.bck_input_array,
-                                                 axes=self.axes, **kw)
-        return self.backward.output_array
-
-    def _get_truncarray(self, shape, dtype):
-        axis = self.axes[-1]
-        if not self.real_transform:
-            shape = list(shape)
-            shape[axis] = int(np.round(shape[axis] / self.padding_factor))
-            return np.zeros(shape, dtype=dtype)
-
-        shape = list(shape)
-        shape[axis] = int(np.round(shape[axis] / self.padding_factor))
-        shape[axis] = shape[axis]//2 + 1
-        return np.zeros(shape, dtype=dtype)
-
-#FFT = FFTNumPy

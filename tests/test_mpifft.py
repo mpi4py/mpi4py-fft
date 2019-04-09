@@ -7,11 +7,12 @@ from mpi4py_fft.pencil import Subcomm
 from mpi4py_fft.distarray import DistArray, newDistArray
 from mpi4py_fft import fftw
 
-has_pyfftw = True
+backends = ['fftw']
 try:
     import pyfftw
+    backends.append('pyfftw')
 except ImportError:
-    has_pyfftw = False
+    pass
 
 abstol = dict(f=0.1, d=2e-10, g=1e-10)
 
@@ -71,9 +72,7 @@ def test_mpifft():
                 for slab in (True, False):
                     padding = False
                     for collapse in (True, False):
-                        for use_pyfftw in (False, True):
-                            if has_pyfftw is False and use_pyfftw is True:
-                                continue
+                        for backend in backends:
                             transforms = None
                             if dim < 3:
                                 allaxes = [None, (-1,), (-2,),
@@ -91,7 +90,7 @@ def test_mpifft():
                                 idctn = functools.partial(fftw.idctn, type=3)
 
                                 if not typecode in 'FDG':
-                                    if use_pyfftw:
+                                    if backend == 'pyfftw':
                                         transforms = {(3,): (pyfftw.builders.rfftn, pyfftw.builders.irfftn),
                                                       (2, 3): (pyfftw.builders.rfftn, pyfftw.builders.irfftn),
                                                       (1, 2, 3): (pyfftw.builders.rfftn, pyfftw.builders.irfftn),
@@ -125,12 +124,12 @@ def test_mpifft():
                                 #print(typecode, shape, axes, collapse)
                                 fft = PFFT(_comm, shape, axes=axes, dtype=typecode,
                                            padding=padding, slab=_slab, collapse=collapse,
-                                           use_pyfftw=use_pyfftw, transforms=transforms)
+                                           backend=backend, transforms=transforms)
 
                                 #if comm.rank == 0:
                                 #    grid = [c.size for c in fft.subcomm]
-                                #    print('grid:{} shape:{} typecode:{} use_pyfftw:{} axes:{}'
-                                #          .format(grid, shape, typecode, use_pyfftw, axes))
+                                #    print('grid:{} shape:{} typecode:{} backend:{} axes:{}'
+                                #          .format(grid, shape, typecode, backend, axes))
                                 assert fft.dtype(True) == fft.forward.output_array.dtype
                                 assert fft.dtype(False) == fft.forward.input_array.dtype
                                 assert len(fft.axes) == len(fft.xfftn)
@@ -169,9 +168,7 @@ def test_mpifft():
                                 fft.destroy()
 
                     padding = [1.5]*len(shape)
-                    for use_pyfftw in (True, False):
-                        if has_pyfftw is False and use_pyfftw is True:
-                            continue
+                    for backend in backends:
                         if dim < 3:
                             allaxes = [None, (-1,), (-2,),
                                        (-1, -2,), (-2, -1),
@@ -187,12 +184,12 @@ def test_mpifft():
                         for axes in allaxes:
 
                             fft = PFFT(comm, shape, axes=axes, dtype=typecode,
-                                       padding=padding, slab=slab, use_pyfftw=use_pyfftw)
+                                       padding=padding, slab=slab, backend=backend)
 
                             #if comm.rank == 0:
                             #    grid = [c.size for c in fft.subcomm]
-                            #    print('grid:{} shape:{} typecode:{} use_pyfftw:{} axes:{}'
-                            #          .format(grid, shape, typecode, use_pyfftw, axes))
+                            #    print('grid:{} shape:{} typecode:{} backend:{} axes:{}'
+                            #          .format(grid, shape, typecode, backend, axes))
 
                             assert len(fft.axes) == len(fft.xfftn)
                             assert len(fft.axes) == len(fft.transfer) + 1
