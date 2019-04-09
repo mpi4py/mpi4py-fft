@@ -94,9 +94,10 @@ def _Xfftn_plan_numpy(shape, axes, dtype, transforms, options):
     s = tuple(np.take(shape, axes))
     U = np.zeros(shape, dtype=dtype)
     V = plan_fwd(U, s=s, axes=axes).astype(dtype.char.upper()) # Numpy returns complex double if input single precision
+    M = np.prod(s)
 
-    return (_Yfftn_wrap(plan_fwd, U, V, {'s': s, 'axes': axes}),
-            _Yfftn_wrap(plan_bck, V, U, {'s': s, 'axes': axes}))
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
+            _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}))
 
 def _Xfftn_plan_mkl(shape, axes, dtype, transforms, options):
     import mkl_fft
@@ -114,9 +115,10 @@ def _Xfftn_plan_mkl(shape, axes, dtype, transforms, options):
     s = tuple(np.take(shape, axes))
     U = np.zeros(shape, dtype=dtype)
     V = plan_fwd(U, s=s, axes=axes)
+    M = np.prod(s)
 
-    return (_Yfftn_wrap(plan_fwd, U, V, {'s': s, 'axes': axes}),
-            _Yfftn_wrap(plan_bck, V, U, {'s': s, 'axes': axes}))
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
+            _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}))
 
 def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
 
@@ -131,19 +133,20 @@ def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
     s = tuple(np.take(shape, axes))
     U = np.zeros(shape, dtype=dtype)
     V = plan_fwd(U, shape=s, axes=axes)
-
-    return (_Yfftn_wrap(plan_fwd, U, V, {'shape': s, 'axes': axes}),
-            _Yfftn_wrap(plan_bck, V, U, {'shape': s, 'axes': axes}))
+    M = np.prod(s)
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'shape': s, 'axes': axes}),
+            _Yfftn_wrap(plan_bck, V, U, M, {'shape': s, 'axes': axes}))
 
 class _Yfftn_wrap(object):
 
     # pylint: disable=too-few-public-methods
 
-    __slots__ = ('_xfftn', '_opt', '__doc__', '_input_array', '_output_array')
+    __slots__ = ('_xfftn', '_M', '_opt', '__doc__', '_input_array', '_output_array')
 
-    def __init__(self, xfftn_obj, input_array, output_array, opt):
+    def __init__(self, xfftn_obj, input_array, output_array, M, opt):
         object.__setattr__(self, '_xfftn', xfftn_obj)
         object.__setattr__(self, '_opt', opt)
+        object.__setattr__(self, '_M', M)
         object.__setattr__(self, '_input_array', input_array)
         object.__setattr__(self, '_output_array', output_array)
         object.__setattr__(self, '__doc__', xfftn_obj.__doc__)
@@ -164,9 +167,15 @@ class _Yfftn_wrap(object):
     def opt(self):
         return object.__getattribute__(self, '_opt')
 
+    @property
+    def M(self):
+        return object.__getattribute__(self, '_M')
+
     def __call__(self, *args, **kwargs):
         self.opt.update(kwargs)
         self.output_array[...] = self.xfftn(self.input_array, **self.opt)
+        if abs(self.M-1) > 1e-8:
+            self._output_array *= self.M
         return self.output_array
 
 class _Xfftn_wrap(object):
@@ -368,14 +377,15 @@ class FFT(FFTBase):
             'mkl_fft': _Xfftn_plan_mkl,
             'scipy': _Xfftn_plan_scipy,
         }[backend]
+        self.backend = backend
         self.fwd, self.bck = plan(self.shape, self.axes, self.dtype, transforms, kw)
         U, V = self.fwd.input_array, self.fwd.output_array
         self.M = 1
-        if backend == 'pyfftw':
+        if not backend == 'fftw':
             self.M = 1./np.prod(np.take(self.shape, self.axes))
         elif backend == 'fftw':
             self.M = self.fwd.get_normalization()
-        elif backend == 'scipy':
+        if backend == 'scipy':
             self.real_transform = False # No rfftn/irfftn methods
         self.padding_factor = 1.0
         if padding is not False:
