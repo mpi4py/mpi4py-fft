@@ -138,6 +138,7 @@ def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
             _Yfftn_wrap(plan_bck, V, U, M, {'shape': s, 'axes': axes}))
 
 class _Yfftn_wrap(object):
+    """Wraps numpy/scipy/mkl transforms to FFTW style"""
 
     # pylint: disable=too-few-public-methods
 
@@ -179,6 +180,7 @@ class _Yfftn_wrap(object):
         return self.output_array
 
 class _Xfftn_wrap(object):
+    """Common interface for all serial transforms"""
 
     # pylint: disable=too-few-public-methods
 
