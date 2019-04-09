@@ -99,7 +99,8 @@ def _Xfftn_plan_numpy(shape, axes, dtype, transforms, options):
     return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
             _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}))
 
-def _Xfftn_plan_mkl(shape, axes, dtype, transforms, options):
+def _Xfftn_plan_mkl(shape, axes, dtype, transforms, options): #pragma: no cover
+
     import mkl_fft
     transforms = {} if transforms is None else transforms
     if tuple(axes) in transforms:
@@ -139,7 +140,6 @@ def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
 
 class _Yfftn_wrap(object):
     #Wraps numpy/scipy/mkl transforms to FFTW style
-
     # pylint: disable=too-few-public-methods
 
     __slots__ = ('_xfftn', '_M', '_opt', '__doc__', '_input_array', '_output_array')

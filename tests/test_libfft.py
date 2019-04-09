@@ -101,7 +101,6 @@ def test_libfft():
         if has_backend[backend] is False:
             continue
 
-        z = np.random.random((8, 8))
         if backend == 'fftw':
             dctn = functools.partial(fftw.dctn, type=3)
             idctn = functools.partial(fftw.idctn, type=3)
@@ -127,10 +126,8 @@ def test_libfft():
             fft = FFT(shape, axis, backend=backend, transforms=transforms)
             A = fft.forward.input_array
             B = fft.forward.output_array
-
             A[...] = np.random.random(A.shape)
             X = A.copy()
-
             B.fill(0)
             B = fft.forward(A, B)
             A.fill(0)
