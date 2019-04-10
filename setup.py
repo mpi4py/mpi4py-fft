@@ -30,7 +30,8 @@ def get_prefix_dirs():
             prefix = os.environ[envvar]
             append(dirs, prefix)
     append(dirs, sys.prefix)
-    #append(dirs, '/usr')
+    if 'CONDA_BUILD' not in os.environ:
+        append(dirs, '/usr')
     return dirs
 
 def get_include_dirs():
