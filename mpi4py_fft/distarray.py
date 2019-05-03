@@ -359,6 +359,7 @@ class DistArray(np.ndarray):
                 for j in range(self.shape[1]):
                     transfer.forward(self[i, j], out[i, j])
 
+        transfer.destroy()
         return out
 
     def write(self, filename, name='darray', step=0, global_slice=None,
