@@ -98,15 +98,14 @@ and axis 1 will be transformed first, such that the global output array
 will be of shape (128, 65, 128). The distributed input and output arrays
 will now have shape::
 
-    0 (64, 128, 128)
-    1 (64, 128, 128)
+    0 (128, 128, 64)
+    1 (128, 128, 64)
 
-    0 (128, 33, 128)
-    1 (128, 32, 128)
+    0 (64, 65, 128)
+    1 (64, 65, 128)
 
-Note that the input array will still be distributed in axis 0 and the
-output in axis 1. However, the size of the two output arrays are no longer
-equal because 65 is an odd number.
+Note that the input array will be distributed in axis 2 and the
+output in axis 0.
 
 Another way to tweak the distribution is to use the :class:`.Subcomm`
 class directly::
