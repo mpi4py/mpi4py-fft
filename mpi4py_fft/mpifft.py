@@ -52,6 +52,9 @@ class Transform(object):
         output_array : array, optional
         kw : dict
             parameters to serial transforms
+            Note in particular that the keyword 'normalize'=True/False can be
+            used to turn normalization on or off. Default is to enable
+            normalization for forward transforms and disable it for backward.
 
         Note
         ----

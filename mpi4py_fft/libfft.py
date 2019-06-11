@@ -92,30 +92,34 @@ def _Xfftn_plan_numpy(shape, axes, dtype, transforms, options):
             plan_bck = np.fft.ifftn
 
     s = tuple(np.take(shape, axes))
-    U = np.zeros(shape, dtype=dtype)
+    U = fftw.aligned(shape, dtype=dtype)
     V = plan_fwd(U, s=s, axes=axes).astype(dtype.char.upper()) # Numpy returns complex double if input single precision
+    V = fftw.aligned_like(V)
     M = np.prod(s)
 
+    # Numpy has forward transform unscaled and backward scaled with 1/N
     return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
             _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}))
 
 def _Xfftn_plan_mkl(shape, axes, dtype, transforms, options): #pragma: no cover
 
-    import mkl_fft
     transforms = {} if transforms is None else transforms
     if tuple(axes) in transforms:
         plan_fwd, plan_bck = transforms[tuple(axes)]
     else:
         if np.issubdtype(dtype, np.floating):
-            plan_fwd = mkl_fft._numpy_fft.rfftn
-            plan_bck = mkl_fft._numpy_fft.irfftn
+            from mkl_fft._numpy_fft import rfftn, irfftn
+            plan_fwd = rfftn
+            plan_bck = irfftn
         else:
-            plan_fwd = mkl_fft._numpy_fft.fftn
-            plan_bck = mkl_fft._numpy_fft.ifftn
+            from mkl_fft._numpy_fft import fftn, ifftn
+            plan_fwd = fftn
+            plan_bck = ifftn
 
     s = tuple(np.take(shape, axes))
-    U = np.zeros(shape, dtype=dtype)
+    U = fftw.aligned(shape, dtype=dtype)
     V = plan_fwd(U, s=s, axes=axes)
+    V = fftw.aligned_like(V)
     M = np.prod(s)
 
     return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
@@ -132,8 +136,9 @@ def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
         plan_bck = ifftn
 
     s = tuple(np.take(shape, axes))
-    U = np.zeros(shape, dtype=dtype)
+    U = fftw.aligned(shape, dtype=dtype)
     V = plan_fwd(U, shape=s, axes=axes)
+    V = fftw.aligned_like(V)
     M = np.prod(s)
     return (_Yfftn_wrap(plan_fwd, U, V, 1, {'shape': s, 'axes': axes}),
             _Yfftn_wrap(plan_bck, V, U, M, {'shape': s, 'axes': axes}))
@@ -401,14 +406,19 @@ class FFT(FFTBase):
             self.backward = _Xfftn_wrap(self._backward, V, U)
 
     def _forward(self, **kw):
+        normalize = kw.pop('normalize', True)
         self.fwd(None, None, **kw)
         self._truncation_forward(self.fwd.output_array, self.forward.output_array)
-        self.forward._output_array *= self.M
+        if normalize:
+            self.forward._output_array *= self.M
         return self.forward.output_array
 
     def _backward(self, **kw):
+        normalize = kw.pop('normalize', False)
         self._padding_backward(self.backward.input_array, self.bck.input_array)
         self.bck(None, None, **kw)
+        if normalize:
+            self.backward._output_array *= self.M
         return self.backward.output_array
 
     def _get_truncarray(self, shape, dtype):
