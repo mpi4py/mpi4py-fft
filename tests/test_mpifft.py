@@ -53,7 +53,7 @@ def test_mpifft():
 
     comm = MPI.COMM_WORLD
     dims = (2, 3, 4,)
-    sizes = (16, 17)
+    sizes = (12, 13)
     types = ''
     for t in 'fdg':
         if fftw.get_fftw_lib(t):
@@ -220,6 +220,13 @@ def test_mpifft():
                                 fft.backward.input_array[...] = F
                                 fft.backward()
                                 fft.forward()
+                                V = fft.forward.output_array
+                                assert allclose(F, V)
+
+                                # Test normalization on backward transform instead of default
+                                fft.backward.input_array[...] = F
+                                fft.backward(normalize=True)
+                                fft.forward(normalize=False)
                                 V = fft.forward.output_array
                                 assert allclose(F, V)
 

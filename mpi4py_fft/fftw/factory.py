@@ -48,7 +48,7 @@ for t in 'fdg':
 comm = MPI.COMM_WORLD
 
 def get_planned_FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD,
-                    threads=1, flags=(FFTW_MEASURE,), normalize=1):
+                    threads=1, flags=(FFTW_MEASURE,), normalization=1.0):
     """Return instance of transform class
 
     Parameters
@@ -89,7 +89,7 @@ def get_planned_FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD,
             - FFTW_PATIENT (32)
             - FFTW_ESTIMATE (64)
             - FFTW_WISDOM_ONLY (2097152)
-    normalization : int, optional
+    normalization : float, optional
         Normalization factor
 
     Returns
@@ -102,7 +102,7 @@ def get_planned_FFT(input_array, output_array, axes=(-1,), kind=FFTW_FORWARD,
     assert dtype.upper() in fftlib
     _fft = fftlib[dtype.upper()]
     return _fft.FFT(input_array, output_array, axes, kind, threads, flags,
-                    normalize)
+                    normalization)
 
 def export_wisdom(filename):
     """Export FFTW wisdom
