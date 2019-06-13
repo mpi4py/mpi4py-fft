@@ -22,6 +22,8 @@ using algorithms termed Fast Fourier Transforms, known in short as FFTs.
     :math:`[0, 1, \ldots, N-1]`, but :math:`\textbf{k}=[-N/2, -N/2-1, \ldots, N/2-1]`
     for even :math:`N` and :math:`\textbf{k}=[-(N-1)/2, -(N-1)/2+1, \ldots, (N-1)/2]`
     for odd :math:`N`. See `numpy.fft.fftfreq <https://docs.scipy.org/doc/numpy-1.13.0/reference/generated/numpy.fft.fftfreq.html#numpy.fft.fftfreq>`_.
+    Also note that it is possible to tweak the default normalization used above when
+    calling either forward or backward transforms.
 
 A more compact notation is commonly used for the DFTs, where the 1D
 forward and backward transforms are written as

@@ -49,7 +49,7 @@ Assume now that all the code in this section is stored to a file named
 
     u = newDistArray(fft, False)
     u[:] = np.random.random(u.shape).astype(u.dtype)
-    u_hat = fft.forward(u)
+    u_hat = fft.forward(u, normalize=True) # Note that normalize=True is default and can be omitted
     uj = np.zeros_like(u)
     uj = fft.backward(u_hat, uj)
     assert np.allclose(uj, u)
