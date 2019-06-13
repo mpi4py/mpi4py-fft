@@ -92,7 +92,7 @@ cdef class FFT:
             - FFTW_PATIENT (32)
             - FFTW_ESTIMATE (64)
             - FFTW_WISDOM_ONLY (2097152)
-    normalization : int, optional
+    normalization : float, optional
         Normalization factor
 
     """
@@ -190,11 +190,11 @@ cdef class FFT:
         return self._M
 
     def __call__(self, input_array=None, output_array=None, implicit=True,
-                 normalize=False, normalize_idft=False, **kw):
+                 normalize=False, **kw):
         """
         Signature::
 
-            __call__(input_array=None, output_array=None, implicit=True, normalize=False, normalize_idft=False, **kw)
+            __call__(input_array=None, output_array=None, implicit=True, normalize=False, **kw)
 
         Compute transform and return output array
 
@@ -215,9 +215,7 @@ cdef class FFT:
             input_array may be destroyed during computation. So use with care!
         normalize : bool, optional
             If True, normalize transform with internally stored normalization
-            factor. For compatibility with pyfftw we also normalize if a keyword
-            argument normalize_idft is set to True and the transform is of
-            inverse kind. The internally set normalization factor is possible to
+            factor. The internally set normalization factor is possible to
             obtain through :func:`FFT.get_normalization`
         kw : dict, optional
 
@@ -229,11 +227,9 @@ cdef class FFT:
         method may cause the input_array to be overwritten during computation.
 
         """
-        norm = normalize or (kw.get('normalize_idft', False) and
-                             self.kind in (FFTW_BACKWARD, C2R)) # For compatibility with pyfftw
         if implicit:
-            return self._apply_implicit(input_array, output_array, norm, **kw)
-        return self._apply_explicit(input_array, output_array, norm, **kw)
+            return self._apply_implicit(input_array, output_array, normalize, **kw)
+        return self._apply_explicit(input_array, output_array, normalize, **kw)
 
     def _apply_explicit(self, input_array, output_array, normalize, **kw):
         """Apply plan with explicit (and safe) update of work arrays"""
