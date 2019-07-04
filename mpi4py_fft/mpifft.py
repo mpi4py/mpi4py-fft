@@ -276,7 +276,7 @@ class PFFT(object):
                     dims = [0] * len(shape)
                     for ax in axes[-1]:
                         dims[ax] = 1
-                else:
+                else: #pragma: no cover
                     if slab is True:
                         axis = (axes[-1][-1] + 1) % len(shape)
                     else:
