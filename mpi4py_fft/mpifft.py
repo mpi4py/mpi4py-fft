@@ -99,8 +99,16 @@ class PFFT(object):
           serial FFTs are performed for all collapsed axes in one single call
     dtype : np.dtype, optional
         Type of input array
-    slab : bool, optional
-        If True then distribute only one index of the global array
+    grid : sequence of ints, optional
+        Define processor grid sizes. Non positive values act as wildcards to
+        allow MPI compute optimal decompositions. The sequence is padded with
+        ones to match the global transform dimension.
+        Use ``(-1,)`` to get a slab decomposition on the first axis.
+        Use ``(1, -1)`` to get a slab decomposition  on the second axis.
+        Use ``(P, Q)`` or ``(P, Q, 1)`` to get a 3D transform with 2D-pencil
+        decomposition on a PxQ processor grid with the last axis non distributed.
+        Use ``(P, 1, Q)`` to get a 3D transform with 2D-pencil decomposition on
+        a PxQ processor grid with the second to last axis non distributed.
     padding : bool, number or sequence of numbers, optional
         If False, then no padding. If number, then apply this number as padding
         factor for all axes. If sequence of numbers, then each number gives the
@@ -126,6 +134,8 @@ class PFFT(object):
     darray : DistArray object, optional
         Create PFFT using information contained in ``darray``, neglecting most
         optional Parameters above
+    slab : bool or int, optional
+        DEPRECATED. If True then distribute only one axis of the global array.
 
     Methods
     -------
@@ -189,7 +199,7 @@ class PFFT(object):
     >>> assert np.allclose(uj, u)
 
     """
-    def __init__(self, comm, shape=None, axes=None, dtype=float, slab=False,
+    def __init__(self, comm, shape=None, axes=None, dtype=float, grid=None,
                  padding=False, collapse=False, backend='fftw',
                  transforms=None, darray=None, **kw):
         # pylint: disable=too-many-locals
@@ -246,6 +256,16 @@ class PFFT(object):
             assert len(shape) > 0
             assert min(shape) > 0
 
+            slab = kw.pop('slab', False)
+
+            if grid is not None:
+                assert not isinstance(comm, Subcomm)
+                assert slab is False
+                grid = tuple(grid)
+                assert len(grid) <= len(shape)
+                dims = list(grid) + [1] * (len(shape) - len(grid))
+                comm = Subcomm(comm, dims)
+
             if isinstance(comm, Subcomm):
                 assert slab is False
                 assert len(comm) == len(shape)
@@ -256,7 +276,7 @@ class PFFT(object):
                     dims = [0] * len(shape)
                     for ax in axes[-1]:
                         dims[ax] = 1
-                else:
+                else: #pragma: no cover
                     if slab is True:
                         axis = (axes[-1][-1] + 1) % len(shape)
                     else:

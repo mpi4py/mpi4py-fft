@@ -127,7 +127,6 @@ class NCFile(FileBase):
         ...             'v': [v, (v, [slice(None), 5, 5])]})
         >>> f.write(1, {'u': [u, (u, [slice(None), 4, slice(None)])],
         ...             'v': [v, (v, [slice(None), 5, 5])]})
-        >>> f.close()
 
         This stores the following datasets to the file ``ncfilename.nc``.
         Using in a terminal 'ncdump -h ncfilename.nc', one gets::
