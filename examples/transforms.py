@@ -12,8 +12,8 @@ idct = functools.partial(idctn, type=3)
 
 transforms = {(1, 2): (dct, idct)}
 
-fft = PFFT(MPI.COMM_WORLD, N, axes=None, collapse=True, slab=True, transforms=transforms)
-pfft = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2)), slab=True, padding=[1.5, 1.0, 1.0], transforms=transforms)
+fft = PFFT(MPI.COMM_WORLD, N, axes=None, collapse=True, grid=(-1,), transforms=transforms)
+pfft = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2)), grid=(-1,), padding=[1.5, 1.0, 1.0], transforms=transforms)
 
 assert fft.axes == pfft.axes
 

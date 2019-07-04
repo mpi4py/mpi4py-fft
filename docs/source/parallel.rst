@@ -20,10 +20,11 @@ the following code snippet::
     from mpi4py import MPI
     from mpi4py_fft import PFFT, newDistArray
     N = np.array([128, 128, 128], dtype=int)
-    fft = PFFT(MPI.COMM_WORLD, N, axes=(0, 1, 2), dtype=np.float, slab=True)
+    fft = PFFT(MPI.COMM_WORLD, N, axes=(0, 1, 2), dtype=np.float, grid=(-1,))
 
-Here the signature ``N, axes=(0, 1, 2), dtype=np.float, slab=True`` tells us
-that the created ``fft`` instance is *planned* such as to slab distribute and
+Here the signature ``N, axes=(0, 1, 2), dtype=np.float, grid=(-1,)`` tells us
+that the created ``fft`` instance is *planned* such as to slab distribute
+(along first axis) and
 transform any 3D array of shape ``N`` and type ``np.float``. Furthermore, we
 plan to transform axis 2 first, and then 1 and 0, which is exactly the reverse
 order of ``axes=(0, 1, 2)``. Mathematically, the planned transform corresponds
@@ -110,6 +111,7 @@ output in axis 0.
 Another way to tweak the distribution is to use the :class:`.Subcomm`
 class directly::
 
+    from mpi4py_fft.pencil import Subcomm
     subcomms = Subcomm(MPI.COMM_WORLD, [1, 0, 1])
     fft = PFFT(subcomms, N, axes=(0, 1, 2), dtype=np.float)
 
@@ -166,7 +168,7 @@ A parallel transform object can be created and tested as::
     idctn = functools.partial(fftw.idctn, type=3)
     dstn = functools.partial(fftw.dstn, type=3)
     idstn = functools.partial(fftw.idstn, type=3)
-    fft = PFFT(MPI.COMM_WORLD, N, ((0,), (1, 2), (3, 4)), slab=True,
+    fft = PFFT(MPI.COMM_WORLD, N, ((0,), (1, 2), (3, 4)), grid=(-1,),
                transforms={(1, 2): (dctn, idctn), (3, 4): (dstn, idstn)})
 
     A = newDistArray(fft, False)
@@ -184,7 +186,7 @@ A pencil decomposition uses two groups of processors. Each group then is
 responsible for distributing one index set each of a multidimensional array.
 We can perform a pencil decomposition simply by running the first example
 from the previous section, but now with 4 processors. To remind you, we
-put this in ``pfft_example.py``, where now ``slab=True`` has been removed
+put this in ``pfft_example.py``, where now ``grid=(-1,)`` has been removed
 in the PFFT calling::
 
     import numpy as np
