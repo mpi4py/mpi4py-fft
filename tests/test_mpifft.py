@@ -34,11 +34,12 @@ def random_true_or_false(comm):
 
 def test_r2r():
     N = (5, 6, 7, 8, 9)
+    assert MPI.COMM_WORLD.Get_size() < 6
     dctn = functools.partial(fftw.dctn, type=3)
     idctn = functools.partial(fftw.idctn, type=3)
     dstn = functools.partial(fftw.dstn, type=3)
     idstn = functools.partial(fftw.idstn, type=3)
-    fft = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2), (3, 4)), slab=True,
+    fft = PFFT(MPI.COMM_WORLD, N, axes=((0,), (1, 2), (3, 4)), grid=(-1,),
                transforms={(1, 2): (dctn, idctn), (3, 4): (dstn, idstn)})
 
     A = newDistArray(fft, forward_output=False)
@@ -54,10 +55,16 @@ def test_mpifft():
     comm = MPI.COMM_WORLD
     dims = (2, 3, 4,)
     sizes = (12, 13)
+    assert MPI.COMM_WORLD.Get_size() < 8, "due to sizes"
     types = ''
     for t in 'fdg':
         if fftw.get_fftw_lib(t):
             types += t+t.upper()
+
+    grids = {2: (None,),
+             3: ((-1,), None),
+             4: ((-1,), None)}
+
     for typecode in types:
         for dim in dims:
             for shape in product(*([sizes]*dim)):
@@ -69,7 +76,7 @@ def test_mpifft():
                         n += 1
                     if n < comm.size:
                         continue
-                for slab in (True, False):
+                for grid in grids[dim]:
                     padding = False
                     for collapse in (True, False):
                         for backend in backends:
@@ -101,17 +108,19 @@ def test_mpifft():
                                                       (1, 2, 3): (dctn, idctn),
                                                       (0, 1, 2, 3): (dctn, idctn)}
                             for axes in allaxes:
-                                _slab = slab
                                 # Test also the slab is number interface
-                                if slab is True and axes is not None:
-                                    ax = axes[-1] if isinstance(axes[-1], int) else axes[-1][-1]
+                                _grid = grid
+                                if grid is not None:
+                                    ax = -1
+                                    if axes is not None:
+                                        ax = axes[-1] if isinstance(axes[-1], int) else axes[-1][-1]
                                     _slab = (ax+1) % len(shape)
-                                    if random_true_or_false(comm) == 1:
-                                        _slab -= len(shape) # Test neg axes interface
+                                    _grid = [1]*(_slab+1)
+                                    _grid[_slab] = 0
                                 _comm = comm
                                 # Test also the comm is Subcomm interfaces
                                 # For PFFT the Subcomm needs to be as long as shape
-                                if len(shape) > 2 and axes is None and slab is False:
+                                if len(shape) > 2 and axes is None and grid is None:
                                     _dims = [0] * len(shape)
                                     _dims[-1] = 1 # distribute all but last axis (axes is None)
                                     _comm = comm
@@ -121,15 +130,16 @@ def test_mpifft():
                                         _comm = comm.Create_cart(_dims)
                                         _dims = None
                                     _comm = Subcomm(_comm, _dims)
-                                #print(typecode, shape, axes, collapse)
+                                #print(typecode, shape, axes, collapse, _grid)
                                 fft = PFFT(_comm, shape, axes=axes, dtype=typecode,
-                                           padding=padding, slab=_slab, collapse=collapse,
+                                           padding=padding, grid=_grid, collapse=collapse,
                                            backend=backend, transforms=transforms)
 
                                 #if comm.rank == 0:
-                                #    grid = [c.size for c in fft.subcomm]
+                                #    grid_ = [c.size for c in fft.subcomm]
                                 #    print('grid:{} shape:{} typecode:{} backend:{} axes:{}'
-                                #          .format(grid, shape, typecode, backend, axes))
+                                #          .format(grid_, shape, typecode, backend, axes))
+
                                 assert fft.dtype(True) == fft.forward.output_array.dtype
                                 assert fft.dtype(False) == fft.forward.input_array.dtype
                                 assert len(fft.axes) == len(fft.xfftn)
@@ -183,8 +193,17 @@ def test_mpifft():
 
                         for axes in allaxes:
 
+                            _grid = grid
+                            if grid is not None:
+                                ax = -1
+                                if axes is not None:
+                                    ax = axes[-1] if isinstance(axes[-1], int) else axes[-1][-1]
+                                _slab = (ax+1) % len(shape)
+                                _grid = [1]*(_slab+1)
+                                _grid[_slab] = 0
+
                             fft = PFFT(comm, shape, axes=axes, dtype=typecode,
-                                       padding=padding, slab=slab, backend=backend)
+                                       padding=padding, grid=_grid, backend=backend)
 
                             #if comm.rank == 0:
                             #    grid = [c.size for c in fft.subcomm]
