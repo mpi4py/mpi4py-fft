@@ -74,8 +74,10 @@ def get_fftw_libs():
     assert len(libs) > 0, "No FFTW libraries found in {}".format(library_dirs)
     return libs
 
-def generate_extensions(fftwlibs):
+def generate_extensions(fftwlibs, force=True):
     """Generate files with float and long double"""
+    from distutils.dep_util import newer_group
+
     for d in fftwlibs:
         if d == 'double':
             continue
@@ -88,12 +90,13 @@ def generate_extensions(fftwlibs):
         ):
             src = os.path.join(fftwdir, fname)
             dst = os.path.join(fftwdir, fname.replace('fftw_', p))
-            with open(src, 'r') as fin:
-                code = fin.read()
-                code = re.sub('fftw_', p, code)
-                code = re.sub('double', d, code)
-                with open(dst, 'w') as fout:
-                    fout.write(code)
+            if force or newer_group([src], dst, 'newer'):
+                with open(src, 'r') as fin:
+                    code = fin.read()
+                    code = re.sub('fftw_', p, code)
+                    code = re.sub('double', d, code)
+                    with open(dst, 'w') as fout:
+                        fout.write(code)
 
 def remove_extensions(fftwlibs):
     """Remove generated files"""
@@ -156,7 +159,7 @@ class Dist(Distribution):
             class build_ext(_build_ext):
                 def run(self):
                     fftw_libs = get_fftw_libs()
-                    generate_extensions(fftw_libs)
+                    generate_extensions(fftw_libs, self.force)
                     _build_ext.run(self)
 
             self.cmdclass['build_ext'] = build_ext
