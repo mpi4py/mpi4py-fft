@@ -7,6 +7,7 @@ import platform
 import sysconfig
 from distutils import ccompiler
 from setuptools import setup
+from setuptools.dist import Distribution
 from setuptools.extension import Extension
 import numpy
 
@@ -73,8 +74,10 @@ def get_fftw_libs():
     assert len(libs) > 0, "No FFTW libraries found in {}".format(library_dirs)
     return libs
 
-def generate_extensions(fftwlibs):
+def generate_extensions(fftwlibs, force=True):
     """Generate files with float and long double"""
+    from distutils.dep_util import newer_group
+
     for d in fftwlibs:
         if d == 'double':
             continue
@@ -87,14 +90,44 @@ def generate_extensions(fftwlibs):
         ):
             src = os.path.join(fftwdir, fname)
             dst = os.path.join(fftwdir, fname.replace('fftw_', p))
-            with open(src, 'r') as fin:
-                code = fin.read()
-                code = re.sub('fftw_', p, code)
-                code = re.sub('double', d, code)
-                with open(dst, 'w') as fout:
-                    fout.write(code)
+            if force or newer_group([src], dst, 'newer'):
+                with open(src, 'r') as fin:
+                    code = fin.read()
+                    code = re.sub('fftw_', p, code)
+                    code = re.sub('double', d, code)
+                    with open(dst, 'w') as fout:
+                        fout.write(code)
 
-def get_extensions(fftwlibs):
+def remove_extensions(fftwlibs):
+    """Remove generated files"""
+    for fname in (
+            'utilities.c',
+            'fftw_xfftn.c',
+            'fftwf_xfftn.c',
+            'fftwl_xfftn.c',
+    ):
+        dst = os.path.join(fftwdir, fname)
+        try:
+            os.remove(dst)
+        except OSError:
+            pass
+    for d in fftwlibs:
+        if d == 'double':
+            continue
+        p = 'fftw'+prec_map[d]+'_'
+        for fname in (
+                'fftw_planxfftn.h',
+                'fftw_planxfftn.c',
+                'fftw_xfftn.pyx',
+                'fftw_xfftn.pxd',
+        ):
+            dst = os.path.join(fftwdir, fname.replace('fftw_', p))
+            try:
+                os.remove(dst)
+            except OSError:
+                pass
+
+def get_extensions():
     """Return list of extension modules"""
     include_dirs = get_include_dirs()
     library_dirs = get_library_dirs()
@@ -102,6 +135,7 @@ def get_extensions(fftwlibs):
                      sources=[os.path.join(fftwdir, "utilities.pyx")],
                      include_dirs=include_dirs)]
 
+    fftwlibs = get_fftw_libs()
     for d, libs in fftwlibs.items():
         p = 'fftw'+prec_map[d]+'_'
         ext.append(Extension("mpi4py_fft.fftw.{}xfftn".format(p),
@@ -113,6 +147,37 @@ def get_extensions(fftwlibs):
                              library_dirs=library_dirs))
     return ext
 
+
+class Dist(Distribution):
+
+    def get_command_class(self, command):
+        get_command_class = Distribution.get_command_class
+
+        if 'build_ext' not in self.cmdclass:
+            _build_ext = get_command_class(self, 'build_ext')
+
+            class build_ext(_build_ext):
+                def run(self):
+                    fftw_libs = get_fftw_libs()
+                    generate_extensions(fftw_libs, self.force)
+                    _build_ext.run(self)
+
+            self.cmdclass['build_ext'] = build_ext
+
+        if 'clean' not in self.cmdclass:
+            _clean = get_command_class(self, 'clean')
+
+            class clean(_clean):
+                def run(self):
+                    fftw_libs = get_fftw_libs()
+                    remove_extensions(fftw_libs)
+                    _clean.run(self)
+
+            self.cmdclass['clean'] = clean
+
+        return get_command_class(self, command)
+
+
 def version():
     srcdir = os.path.join(cwd, 'mpi4py_fft')
     with open(os.path.join(srcdir, '__init__.py')) as f:
@@ -123,8 +188,6 @@ with open("README.rst", "r") as fh:
     long_description = fh.read()
 
 if __name__ == '__main__':
-    fftw_libs = get_fftw_libs()
-    generate_extensions(fftw_libs)
     setup(name="mpi4py-fft",
           version=version(),
           description="mpi4py-fft -- Parallel Fast Fourier Transforms (FFTs) using MPI for Python",
@@ -147,7 +210,8 @@ if __name__ == '__main__':
               'Topic :: Scientific/Engineering :: Mathematics',
               'Topic :: Software Development :: Libraries :: Python Modules',
               ],
-          ext_modules=get_extensions(fftw_libs),
+          distclass=Dist,
+          ext_modules=get_extensions(),
           install_requires=["mpi4py", "numpy"],
           setup_requires=["setuptools>=18.0", "cython>=0.25"],
           keywords=['Python', 'FFTW', 'FFT', 'DCT', 'DST', 'MPI']
