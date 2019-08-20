@@ -22,10 +22,10 @@ def test_2Darray():
             a = DistArray(M, subcomm=subcomm, val=1, rank=rank, alignment=alignment)
             assert a.rank == rank
             assert a.global_shape == M
-            s = a.substart
+            _ = a.substart
             c = a.subcomm
             z = a.commsizes
-            p = a.pencil
+            _ = a.pencil
             assert np.prod(np.array(z)) == comm.Get_size()
             if rank > 0:
                 a0 = a[0]
@@ -41,9 +41,9 @@ def test_2Darray():
             if comm.Get_rank() == 0:
                 assert len(k) == N[0]
                 assert np.sum(k) == N[0]
-            ls = a.local_slice()
+            _ = a.local_slice()
             newaxis = (a.alignment+1)%2
-            p0, t = a.get_pencil_and_transfer(newaxis)
+            _ = a.get_pencil_and_transfer(newaxis)
             a[:] = MPI.COMM_WORLD.Get_rank()
             b = a.redistribute(newaxis)
             a = b.redistribute(out=a)
@@ -66,10 +66,10 @@ def test_3Darray():
             a = DistArray(M, subcomm=subcomm, val=1, rank=rank, alignment=alignment)
             assert a.rank == rank
             assert a.global_shape == M
-            s = a.substart
-            c = a.subcomm
+            _ = a.substart
+            _ = a.subcomm
             z = a.commsizes
-            p = a.pencil
+            _ = a.pencil
             assert np.prod(np.array(z)) == comm.Get_size()
             if rank > 0:
                 a0 = a[0]
@@ -89,9 +89,9 @@ def test_3Darray():
             if comm.Get_rank() == 0:
                 assert len(k) == N[0]
                 assert np.sum(k) == N[0]
-            ls = a.local_slice()
+            _ = a.local_slice()
             newaxis = (a.alignment+1)%3
-            p0, t = a.get_pencil_and_transfer(newaxis)
+            _ = a.get_pencil_and_transfer(newaxis)
             a[:] = MPI.COMM_WORLD.Get_rank()
             b = a.redistribute(newaxis)
             a = b.redistribute(out=a)

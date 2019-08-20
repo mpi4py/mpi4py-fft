@@ -1,7 +1,6 @@
 import numpy as np
 from mpi4py import MPI
-from mpi4py_fft.pencil import Subcomm
-from mpi4py_fft.distarray import DistArray, newDistArray, Function
+from mpi4py_fft.distarray import DistArray, newDistArray
 from mpi4py_fft.mpifft import PFFT
 
 # Test DistArray. Start with alignment in axis 0, then tranfer to 2 and

@@ -58,7 +58,7 @@ def test_2D(backend, forward_output):
             assert np.allclose(u0, u)
             if backend == 'netcdf4': # Test opening file in mode 'a' when not existing
                 remove_if_exists('nctesta.nc')
-                ncfile = NCFile('nctesta.nc', domain=domain, mode='a')
+                _ = NCFile('nctesta.nc', domain=domain, mode='a')
     T.destroy()
 
 def test_3D(backend, forward_output):

@@ -4,7 +4,7 @@ import numpy as np
 from mpi4py import MPI
 from mpi4py_fft.mpifft import PFFT
 from mpi4py_fft.pencil import Subcomm
-from mpi4py_fft.distarray import DistArray, newDistArray
+from mpi4py_fft.distarray import newDistArray
 from mpi4py_fft import fftw
 
 backends = ['fftw']
