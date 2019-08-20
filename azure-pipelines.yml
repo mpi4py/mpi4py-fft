@@ -62,18 +62,6 @@ jobs:
       cd tests && ./runtests.sh
     displayName: Build and test
 
-  - task: PublishTestResults@2
-    condition: succeededOrFailed()
-    inputs:
-      testResultsFiles: '**/coverage.xml'
-      testRunTitle: 'Publish test results for Python $(python.version)'
-
-  - task: PublishCodeCoverageResults@1
-    inputs:
-      codeCoverageTool: Cobertura
-      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
-      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
-
   - bash: |
       if [ $PYTHON_VERSION == 3.7 ]; then
         source activate mpi4py_fft_env
