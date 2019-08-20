@@ -77,6 +77,7 @@ jobs:
   - bash: |
       if [ $PYTHON_VERSION == 3.7 ]; then
         source activate mpi4py_fft_env
+        cd tests
         codecov -t $(CODECOV_TOKEN)
         python-codacy-coverage -r coverage.xml -t $(CODACY_PROJECT_TOKEN)
       fi
