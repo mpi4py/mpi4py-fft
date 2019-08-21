@@ -57,7 +57,7 @@ def test_2Darray():
 
 def test_3Darray():
     N = (8, 8, 8)
-    for subcomm in ((0, 0, 1), (0, 1, 0),  (1, 0, 0), (0, 1, 1), (1, 0, 1), (1, 1, 0), None, Subcomm(comm, (0, 0, 1))):
+    for subcomm in ((0, 0, 1), (0, 1, 0), (1, 0, 0), (0, 1, 1), (1, 0, 1), (1, 1, 0), None, Subcomm(comm, (0, 0, 1))):
         for rank in (0, 1, 2):
             M = (3,)*rank + N
             alignment = None

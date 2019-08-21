@@ -133,7 +133,7 @@ def test_4D(backend, forward_output):
           np.arange(N[1], dtype=np.float)*2*np.pi/N[1],
           np.arange(N[2], dtype=np.float)*3*np.pi/N[2],
           np.arange(N[3], dtype=np.float)*4*np.pi/N[3]
-          )
+         )
     for i, domain in enumerate([None, d0, d1]):
         for rank in range(3):
             filename = "".join(('h5test4_{}{}{}'.format(ex[i == 0], ex[forward_output], rank),

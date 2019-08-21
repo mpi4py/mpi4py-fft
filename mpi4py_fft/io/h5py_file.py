@@ -39,11 +39,11 @@ class HDF5File(FileBase):
         assert len(self.domain) == field.dimensions
         self.f.require_group(group)
         if not "shape" in self.f[group].attrs:
-            self.f[group].attrs.create("shape", field._p0.shape)
+            self.f[group].attrs.create("shape", field.pencil.shape)
         if not "rank" in self.f[group].attrs:
             self.f[group].attrs.create("rank", field.rank)
         assert field.rank == self.f[group].attrs["rank"]
-        assert np.all(field._p0.shape == self.f[group].attrs["shape"])
+        assert np.all(field.pencil.shape == self.f[group].attrs["shape"])
         if isinstance(self.domain[0], np.ndarray):
             self.f[group].require_group("mesh")
         else:

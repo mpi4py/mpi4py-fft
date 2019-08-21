@@ -38,6 +38,8 @@ def get_fftw_lib(dtype):
             return fftwf_xfftn
         except ImportError: #pragma: no cover
             return None
+    else: #pragma: no cover
+        return None
 
 fftlib = {}
 for t in 'fdg':

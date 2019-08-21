@@ -323,7 +323,7 @@ class DistArray(np.ndarray):
         # axis of pencil (both axes are undivided) and return
         if axis is not None:
             if self.commsizes[self.rank+axis] == 1:
-                self._p0.axis = axis
+                self.pencil.axis = axis
                 return self
 
         if out is not None:
@@ -337,9 +337,9 @@ class DistArray(np.ndarray):
 
             # Check that arrays are compatible
             for i in range(len(self._p0.shape)):
-                if i != self._p0.axis and i != out._p0.axis:
-                    assert self._p0.subcomm[i] == out._p0.subcomm[i]
-                    assert self._p0.subshape[i] == out._p0.subshape[i]
+                if i not in (self.alignment, out.alignment):
+                    assert self.pencil.subcomm[i] == out.pencil.subcomm[i]
+                    assert self.pencil.subshape[i] == out.pencil.subshape[i]
 
         p1, transfer = self.get_pencil_and_transfer(axis)
         if out is None:

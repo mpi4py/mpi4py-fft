@@ -208,7 +208,7 @@ class PFFT(object):
 
         if shape is None:
             assert darray is not None
-            shape = darray._p0.shape
+            shape = darray.pencil.shape
 
         if axes is not None:
             axes = list(axes) if np.ndim(axes) else [axes]

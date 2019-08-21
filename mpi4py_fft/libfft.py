@@ -387,9 +387,9 @@ class FFT(FFTBase):
         self.fwd, self.bck = plan(self.shape, self.axes, self.dtype, transforms, kw)
         U, V = self.fwd.input_array, self.fwd.output_array
         self.M = 1
-        if not backend == 'fftw':
+        if backend != 'fftw':
             self.M = 1./np.prod(np.take(self.shape, self.axes))
-        elif backend == 'fftw':
+        else:
             self.M = self.fwd.get_normalization()
         if backend == 'scipy':
             self.real_transform = False # No rfftn/irfftn methods

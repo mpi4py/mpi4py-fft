@@ -96,7 +96,7 @@ def test_fftw():
                             # r2r
                             input_array = fftw.aligned(shape, dtype=typecode)
                             output_array = fftw.aligned_like(input_array)
-                            oa = output_array if typecode=='d' else None
+                            oa = output_array if typecode =='d' else None
                             for type in (1, 2, 3, 4):
                                 dct = fftw.dctn(input_array, None, axes, type, threads, fflags, output_array=oa)
                                 B = dct(A).copy()
