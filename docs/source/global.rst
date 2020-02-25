@@ -101,7 +101,7 @@ We note that a low-level approach to creating such a distributed array would
 be::
 
     import numpy as np
-    from mpi4py_fft import Pencil, Subcomm
+    from mpi4py_fft.pencil import Pencil, Subcomm
     from mpi4py import MPI
     comm = MPI.COMM_WORLD
     N = (8, 8)

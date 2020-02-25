@@ -99,14 +99,16 @@ and axis 1 will be transformed first, such that the global output array
 will be of shape (128, 65, 128). The distributed input and output arrays
 will now have shape::
 
-    0 (128, 128, 64)
-    1 (128, 128, 64)
+    0 (64, 128, 128)
+    1 (64, 128, 128)
 
-    0 (64, 65, 128)
-    1 (64, 65, 128)
+    0 (128, 33, 128)
+    1 (128, 32, 128)
 
-Note that the input array will be distributed in axis 2 and the
-output in axis 0.
+Note that the input array will still be distributed in axis 0 and the
+output in axis 1. This order of distribution can be tweaked using the 
+`grid` keyword. Setting `grid=(1, 1, -1)` will force the last axis 
+to be distributed on the input array.
 
 Another way to tweak the distribution is to use the :class:`.Subcomm`
 class directly::
