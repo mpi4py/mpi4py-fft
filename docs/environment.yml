@@ -5,11 +5,9 @@ channels:
   - defaults
 
 dependencies:
-  - python=3.6
   - cython
   - fftw
   - numpy
-  - nomkl
   - scipy
   - mpi4py
   - pip
