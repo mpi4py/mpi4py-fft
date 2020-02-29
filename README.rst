@@ -81,13 +81,7 @@ will not help you with MPI or FFTW.
 
 For IO you need to install either `h5py <https://www.h5py.org>`_ or
 `netCDF4 <http://unidata.github.io/netcdf4-python/>`_ with support for
-MPI. The first one is available from the coda-forge channel through::
+MPI. Both are available from the coda-forge channel through::
 
-    conda install -c conda-forge h5py=*=mpi_mpich_*
+    conda install -c conda-forge h5py=*=mpi* netcdf4=*=mpi*
 
-NetCDF4, on the other hand, is not available with MPI on the conda-forge
-channel. The library is available, though, for both OSX and
-linux from the `spectralDNS <https://anaconda.org/spectralDNS>`_ channel
-on anaconda cloud::
-
-    conda install -c spectralDNS netcdf4-parallel
