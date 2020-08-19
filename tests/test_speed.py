@@ -12,7 +12,7 @@ except AssertionError:
 N = (64, 64, 64)
 loops = 50
 axis = 1
-threads = 1
+threads = 4
 implicit = True
 flags = (fftw.FFTW_PATIENT, fftw.FFTW_DESTROY_INPUT)
 
@@ -73,7 +73,7 @@ for axis in ((1, 2), 0, 1, 2):
     ifft = fftw.ifftn(output_array, None, axes, threads, flags)
     t0 = time()
     for i in range(loops):
-        B2 = ifft(C, normalize_idft=True, implicit=implicit)
+        B2 = ifft(C, normalize=True, implicit=implicit)
     ftime[1].append(time()-t0)
     assert np.allclose(B, B2), np.linalg.norm(B-B2)
 
@@ -140,7 +140,7 @@ for axis in ((1, 2), 0, 1, 2):
     t0 = time()
     for i in range(loops):
         C2[:] = C
-        D2 = irfft(C2, normalize_idft=True, implicit=implicit)
+        D2 = irfft(C2, normalize=True, implicit=implicit)
     ftime[1].append(time()-t0)
     assert np.allclose(D, D2), np.linalg.norm(D-D2)
 

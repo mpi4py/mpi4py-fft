@@ -481,7 +481,7 @@ def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
         dtype = pfft.forward.input_array.dtype
     global_shape = (len(global_shape),)*rank + global_shape
     z = DistArray(global_shape, subcomm=p0.subcomm, val=val, dtype=dtype,
-                  rank=rank)
+                  alignment=p0.axis, rank=rank)
     return z.v if view else z
 
 def Function(*args, **kwargs): #pragma: no cover

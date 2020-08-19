@@ -114,7 +114,7 @@ def generate_xdmf(h5filename, periodic=True, order='paraview'):
         order here.
     """
     import h5py
-    f = h5py.File(h5filename)
+    f = h5py.File(h5filename, 'a')
     keys = []
     f.visit(keys.append)
     assert order.lower() in ('paraview', 'visit')
