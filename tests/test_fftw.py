@@ -103,7 +103,7 @@ def test_fftw():
                                 idct = fftw.idctn(input_array, None, axes, type, threads, iflags, output_array=oa)
                                 A2 = idct(B, implicit=True, normalize=True)
                                 assert allclose(A, A2), np.linalg.norm(A-A2)
-                                if typecode is not 'g' and not type is 4:
+                                if typecode != 'g' and type != 4:
                                     B2 = scipy_dctn(A, axes=axes, type=type)
                                     assert allclose(B, B2), np.linalg.norm(B-B2)
 
@@ -112,7 +112,7 @@ def test_fftw():
                                 idst = fftw.idstn(input_array, None, axes, type, threads, iflags, output_array=oa)
                                 A2 = idst(B, implicit=True, normalize=True)
                                 assert allclose(A, A2), np.linalg.norm(A-A2)
-                                if typecode is not 'g' and not type is 4:
+                                if typecode != 'g' and type != 4:
                                     B2 = scipy_dstn(A, axes=axes, type=type)
                                     assert allclose(B, B2), np.linalg.norm(B-B2)
 
@@ -132,7 +132,7 @@ def test_fftw():
                             M = fftw.get_normalization(kds, input_array.shape, axes)
                             assert allclose(C2*M, A)
                             # Test vs scipy for transforms available in scipy
-                            if typecode is not 'g' and not any(f in kds for f in (fftw.FFTW_RODFT11, fftw.FFTW_REDFT11)):
+                            if typecode != 'g' and not any(f in kds for f in (fftw.FFTW_RODFT11, fftw.FFTW_REDFT11)):
                                 for m, ts in enumerate(tsf):
                                     A = eval('scipy.fftpack.'+ts[:-1])(A, axis=axes[m], type=int(ts[-1]))
                                 assert allclose(C, A), np.linalg.norm(C-A)
