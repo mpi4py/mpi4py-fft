@@ -149,6 +149,8 @@ cdef class FFT:
             knd[i] = kind[i]
         self._plan = fftw_planxfftn(ndims, sz_in, _in, sz_out, _out, naxes,
                                     axs, knd, allflags)
+        if self._plan == NULL:
+            raise RuntimeError("Failure creating FFTW plan")
         free(sz_in)
         free(sz_out)
         free(axs)
@@ -169,6 +171,7 @@ cdef class FFT:
         return self._output_array
 
     def print_plan(self):
+        assert self._plan != NULL
         fftw_print_plan(<fftw_plan>self._plan)
 
     def update_arrays(self, input_array, output_array):
@@ -235,6 +238,7 @@ cdef class FFT:
         """Apply plan with explicit (and safe) update of work arrays"""
         if input_array is not None:
             self._input_array[...] = input_array
+        assert self._plan != NULL
         with nogil:
             fftw_execute(<fftw_plan>self._plan)
         if normalize:
@@ -283,6 +287,7 @@ cdef class FFT:
 
         _in = <void *>np.PyArray_DATA(input_array)
         _out = <void *>np.PyArray_DATA(output_array)
+        assert self._plan != NULL
         with nogil:
             apply_plan(<fftw_plan>self._plan, _in, _out)
         if normalize:
