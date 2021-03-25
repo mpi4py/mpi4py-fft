@@ -138,8 +138,8 @@ class Transfer(object):
     ... axis = 2
     ... p0 = Pencil(subcomms, N, axis)
     ... p1 = p0.pencil(0)
-    ... transfer = p0.transfer(p1, np.float)
-    ... a0 = np.zeros(p0.subshape, dtype=np.float)
+    ... transfer = p0.transfer(p1, float)
+    ... a0 = np.zeros(p0.subshape, dtype=float)
     ... a1 = np.zeros(p1.subshape)
     ... a0[:] = np.random.random(a0.shape)
     ... transfer.forward(a0, a1)

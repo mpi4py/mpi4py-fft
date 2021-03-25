@@ -26,8 +26,8 @@ def test_2D(backend, forward_output):
         assert forward_output is False
     T = PFFT(comm, (N[0], N[1]))
     for i, domain in enumerate([None, ((0, np.pi), (0, 2*np.pi)),
-                                (np.arange(N[0], dtype=np.float)*1*np.pi/N[0],
-                                 np.arange(N[1], dtype=np.float)*2*np.pi/N[1])]):
+                                (np.arange(N[0], dtype=float)*1*np.pi/N[0],
+                                 np.arange(N[1], dtype=float)*2*np.pi/N[1])]):
         for rank in range(3):
             filename = "".join(('test2D_{}{}{}'.format(ex[i == 0], ex[forward_output], rank),
                                 ending[backend]))
@@ -66,9 +66,9 @@ def test_3D(backend, forward_output):
         assert forward_output is False
     T = PFFT(comm, (N[0], N[1], N[2]))
     d0 = ((0, np.pi), (0, 2*np.pi), (0, 3*np.pi))
-    d1 = (np.arange(N[0], dtype=np.float)*1*np.pi/N[0],
-          np.arange(N[1], dtype=np.float)*2*np.pi/N[1],
-          np.arange(N[2], dtype=np.float)*3*np.pi/N[2])
+    d1 = (np.arange(N[0], dtype=float)*1*np.pi/N[0],
+          np.arange(N[1], dtype=float)*2*np.pi/N[1],
+          np.arange(N[2], dtype=float)*3*np.pi/N[2])
     for i, domain in enumerate([None, d0, d1]):
         for rank in range(3):
             filename = ''.join(('test_{}{}{}'.format(ex[i == 0], ex[forward_output], rank),
@@ -129,10 +129,10 @@ def test_4D(backend, forward_output):
         assert forward_output is False
     T = PFFT(comm, (N[0], N[1], N[2], N[3]))
     d0 = ((0, np.pi), (0, 2*np.pi), (0, 3*np.pi), (0, 4*np.pi))
-    d1 = (np.arange(N[0], dtype=np.float)*1*np.pi/N[0],
-          np.arange(N[1], dtype=np.float)*2*np.pi/N[1],
-          np.arange(N[2], dtype=np.float)*3*np.pi/N[2],
-          np.arange(N[3], dtype=np.float)*4*np.pi/N[3]
+    d1 = (np.arange(N[0], dtype=float)*1*np.pi/N[0],
+          np.arange(N[1], dtype=float)*2*np.pi/N[1],
+          np.arange(N[2], dtype=float)*3*np.pi/N[2],
+          np.arange(N[3], dtype=float)*4*np.pi/N[3]
          )
     for i, domain in enumerate([None, d0, d1]):
         for rank in range(3):

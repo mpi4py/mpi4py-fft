@@ -248,7 +248,7 @@ class PFFT(object):
                 assert len(padding) == len(shape)
                 for ax in axes:
                     if len(ax) == 1 and padding[ax[0]] > 1.0+1e-6:
-                        old = np.float(shape[ax[0]])
+                        old = float(shape[ax[0]])
                         shape[ax[0]] = int(np.floor(shape[ax[0]]*padding[ax[0]]))
                         padding[ax[0]] = shape[ax[0]] / old
 

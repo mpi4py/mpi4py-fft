@@ -54,7 +54,7 @@ class NCFile(FileBase):
         self.dims = None
         if 'time' not in self.f.variables:
             self.f.createDimension('time', None)
-            self.f.createVariable('time', np.float, ('time'))
+            self.f.createVariable('time', float, ('time'))
         self.close()
 
     def _check_domain(self, group, field):
@@ -77,7 +77,7 @@ class NCFile(FileBase):
             self.dims.append(ind)
             if not ind in self.f.variables:
                 self.f.createDimension(ind, field.dimensions)
-                n = self.f.createVariable(ind, np.float, (ind))
+                n = self.f.createVariable(ind, float, (ind))
                 n[:] = np.arange(field.dimensions)
 
         for i in range(field.dimensions):
@@ -85,7 +85,7 @@ class NCFile(FileBase):
             self.dims.append(xyz)
             if not xyz in self.f.variables:
                 self.f.createDimension(xyz, N[i])
-                nc_xyz = self.f.createVariable(xyz, np.float, (xyz))
+                nc_xyz = self.f.createVariable(xyz, float, (xyz))
                 nc_xyz[:] = self.domain[i]
 
         self.f.sync()

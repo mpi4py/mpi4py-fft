@@ -6,7 +6,7 @@ from mpi4py_fft.mpifft import PFFT
 # Test DistArray. Start with alignment in axis 0, then tranfer to 2 and
 # finally to 1
 N = (16, 14, 12)
-z0 = DistArray(N, dtype=np.float, alignment=0)
+z0 = DistArray(N, dtype=float, alignment=0)
 z0[:] = np.random.randint(0, 10, z0.shape)
 s0 = MPI.COMM_WORLD.allreduce(np.sum(z0))
 z1 = z0.redistribute(2)

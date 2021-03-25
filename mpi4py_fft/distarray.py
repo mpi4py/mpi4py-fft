@@ -55,7 +55,7 @@ class DistArray(np.ndarray):
     axis will be aligned, also when rank>0.
 
     """
-    def __new__(cls, global_shape, subcomm=None, val=None, dtype=np.float,
+    def __new__(cls, global_shape, subcomm=None, val=None, dtype=float,
                 buffer=None, alignment=None, rank=0):
         if len(global_shape[rank:]) < 2: # 1D case
             obj = np.ndarray.__new__(cls, global_shape, dtype=dtype, buffer=buffer)
