@@ -5,14 +5,14 @@ jobs:
     vmImage: 'macOS-10.14'
   strategy:
     matrix:
-      Python27:
-        python.version: '2.7'
       Python36:
         python.version: '3.6'
       Python37:
         python.version: '3.7'
       Python38:
         python.version: '3.8'
+      Python39:
+        python.version: '3.9'
 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
@@ -23,9 +23,8 @@ jobs:
 
   - bash: |
       conda config --add channels conda-forge
-      conda config --add channels spectralDNS
       conda config --set always_yes yes
-      conda install -n root conda-build=3.17
+      conda install -n root conda-build
     displayName: Set up Anaconda
 
   - bash: |
@@ -38,12 +37,14 @@ jobs:
     vmImage: 'ubuntu-16.04'
   strategy:
     matrix:
-      Python27:
-        python.version: '2.7'
       Python36:
         python.version: '3.6'
       Python37:
         python.version: '3.7'
+      Python38:
+        python.version: '3.8'
+      Python39:
+        python.version: '3.9'
 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
@@ -51,9 +52,8 @@ jobs:
 
   - bash: |
       conda config --add channels conda-forge
-      conda config --add channels spectralDNS
       conda config --set always_yes yes
-      conda install -n root conda-build=3.17
+      conda install -n root conda-build
     displayName: Set up Anaconda
 
   - bash: |
