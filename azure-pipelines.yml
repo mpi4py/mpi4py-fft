@@ -60,7 +60,7 @@ jobs:
       conda build --no-test --python $PYTHON_VERSION ./conf
       conda create --name mpi4py_fft_env mpi4py_fft_test coverage scipy pyfftw python=$PYTHON_VERSION --use-local
       source activate mpi4py_fft_env
-      pip install codecov codacy-coverage
+      pip install codecov
       cd tests && ./runtests.sh
     displayName: Build and test
 
@@ -75,7 +75,7 @@ jobs:
         source activate mpi4py_fft_env
         cd tests
         bash <(curl -s https://codecov.io/bash)
-        bash <(curl -Ls https://coverage.codacy.com/get.sh) -t $(CODACY_PROJECT_TOKEN) report -r coverage.xml
+        bash <(curl -Ls https://coverage.codacy.com/get.sh) report -t $(CODACY_PROJECT_TOKEN) -r coverage.xml
       fi
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     displayName: Upload to Codecov
