@@ -33,14 +33,17 @@ def test_2Darray():
                 assert a0.rank == rank-1
             aa = a.v
             assert isinstance(aa, np.ndarray)
-            k = a.get((0,)*rank+(0, slice(None)))
-            if comm.Get_rank() == 0:
-                assert len(k) == N[1]
-                assert np.sum(k) == N[1]
-            k = a.get((0,)*rank+(slice(None), 0))
-            if comm.Get_rank() == 0:
-                assert len(k) == N[0]
-                assert np.sum(k) == N[0]
+            try:
+                k = a.get((0,)*rank+(0, slice(None)))
+                if comm.Get_rank() == 0:
+                    assert len(k) == N[1]
+                    assert np.sum(k) == N[1]
+                k = a.get((0,)*rank+(slice(None), 0))
+                if comm.Get_rank() == 0:
+                    assert len(k) == N[0]
+                    assert np.sum(k) == N[0]
+            except ModuleNotFoundError:
+                pass
             _ = a.local_slice()
             newaxis = (a.alignment+1)%2
             _ = a.get_pencil_and_transfer(newaxis)

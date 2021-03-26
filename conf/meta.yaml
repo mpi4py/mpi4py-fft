@@ -28,7 +28,7 @@ requirements:
     - fftw
     - hdf5 * mpi_*  # [py>36]
     - h5py * mpi_*  # [py>36]
-    - netcdf4 * mpi_*
+    - netcdf4 * mpi_* # [py>36]
 
 test:
   requires:
