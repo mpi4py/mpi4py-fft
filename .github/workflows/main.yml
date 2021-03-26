@@ -24,7 +24,6 @@ jobs:
     - run: conda --version
     - run: which python
     - run: |
-        conda config --add channels conda-forge
         conda config --set always_yes yes
-        conda install -n root conda-build numpy
+        conda install -n root conda-build numpy fftw
         conda build ./conf
