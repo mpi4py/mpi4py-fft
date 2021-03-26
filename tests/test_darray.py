@@ -84,14 +84,17 @@ def test_3Darray():
                 assert a0.rank == 0
             aa = a.v
             assert isinstance(aa, np.ndarray)
-            k = a.get((0,)*rank+(0, 0, slice(None)))
-            if comm.Get_rank() == 0:
-                assert len(k) == N[2]
-                assert np.sum(k) == N[2]
-            k = a.get((0,)*rank+(slice(None), 0, 0))
-            if comm.Get_rank() == 0:
-                assert len(k) == N[0]
-                assert np.sum(k) == N[0]
+            try:
+                k = a.get((0,)*rank+(0, 0, slice(None)))
+                if comm.Get_rank() == 0:
+                    assert len(k) == N[2]
+                    assert np.sum(k) == N[2]
+                k = a.get((0,)*rank+(slice(None), 0, 0))
+                if comm.Get_rank() == 0:
+                    assert len(k) == N[0]
+                    assert np.sum(k) == N[0]
+            except ModuleNotFoundError:
+                pass
             _ = a.local_slice()
             newaxis = (a.alignment+1)%3
             _ = a.get_pencil_and_transfer(newaxis)
