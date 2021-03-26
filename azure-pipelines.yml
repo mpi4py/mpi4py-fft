@@ -13,8 +13,6 @@ jobs:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
-        numpy:
-        - '1.19'
 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
