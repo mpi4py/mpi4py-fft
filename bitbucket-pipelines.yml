@@ -6,5 +6,5 @@ pipelines:
         script:
           - conda config --set always_yes yes
           - conda config --add channels conda-forge
-          - conda install -n root conda-build
+          - conda install -n root conda-build numpy fftw
           - conda build conf/
