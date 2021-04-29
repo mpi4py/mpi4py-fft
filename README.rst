@@ -2,9 +2,6 @@ mpi4py-fft
 ----------
 
 
-.. image:: https://circleci.com/bb/mpi4py/mpi4py-fft.svg?style=svg
-    :target: https://circleci.com/bb/mpi4py/mpi4py-fft
-
 .. image:: https://dev.azure.com/mpi4py/mpi4py-fft/_apis/build/status/mpi4py.mpi4py-fft?branchName=master
     :target: https://dev.azure.com/mpi4py/mpi4py-fft
 
