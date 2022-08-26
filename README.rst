@@ -42,9 +42,9 @@ The mpi4py-fft package can be installed using::
 
     pip install mpi4py-fft
 
-or, to get the latest version from bitbucket::
+or, to get the latest version from GitHub::
 
-    pip install git+https://bitbucket.org/mpi4py/mpi4py-fft@master
+    pip install git+https://github.com/mpi4py/mpi4py-fft@master
 
 Install with conda from the coda-forge channel::
 
