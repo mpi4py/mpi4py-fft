@@ -80,7 +80,7 @@ It is for multidimensional arrays that it starts to become
 interesting for the current software. Multidimensional arrays are a bit tedious
 with notation, though, especially when the number of dimensions grow. We will
 stick with the `index notation <https://en.wikipedia.org/wiki/Index_notation>`_
-because it is most stright forward in comparison with implementation.
+because it is most straightforward in comparison with implementation.
 
 We denote the entries of a two-dimensional array as :math:`u_{j_0, j_1}`,
 which corresponds to a row-major matrix
