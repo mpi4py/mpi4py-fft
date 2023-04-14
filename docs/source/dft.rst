@@ -136,7 +136,7 @@ along axis :math:`i` is denoted as
 .. math::
     :label: partial_dft
 
-    \tilde{u}_{j_0, \ldots, k_i, \ldots, j_{d-1}} = \mathcal{F}_i(u_{j_0, \ldots, j_i, \ldots, j_d})
+    \tilde{u}_{j_0, \ldots, k_i, \ldots, j_{d-1}} = \mathcal{F}_i(u_{j_0, \ldots, j_i, \ldots, j_{d-1}})
 
 We get the complete multidimensional transforms on short form still as :eq:`dft_short`, and
 with partial transforms as
