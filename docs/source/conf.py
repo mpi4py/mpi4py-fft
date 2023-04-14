@@ -114,6 +114,13 @@ html_static_path = ['_static']
 #
 # html_sidebars = {}
 
+html_context = {
+    'display_github': True,
+    'github_user': 'mpi4py',
+    'github_repo': 'mpi4py-fft',
+    'github_version': 'master',
+    'conf_py_path': '/docs/source/'
+}
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
