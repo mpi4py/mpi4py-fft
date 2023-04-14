@@ -21,6 +21,12 @@ def remove_if_exists(filename):
     except OSError:
         pass
 
+def cleanup():
+    import glob
+    files = glob.glob('*.h5')+glob.glob('*.xdmf')+glob.glob('*.nc')
+    for f in files:
+        remove_if_exists(f)
+
 def test_2D(backend, forward_output):
     if backend == 'netcdf4':
         assert forward_output is False
@@ -162,6 +168,7 @@ def test_4D(backend, forward_output):
 
 if __name__ == '__main__':
     #pylint: disable=unused-import
+    cleanup()
     skip = {'hdf5': False, 'netcdf4': False}
     try:
         import h5py
@@ -181,3 +188,4 @@ if __name__ == '__main__':
                 test_2D(bnd, kind)
                 if bnd == 'hdf5':
                     test_4D(bnd, kind)
+    cleanup()

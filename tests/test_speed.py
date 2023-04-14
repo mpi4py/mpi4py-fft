@@ -3,11 +3,14 @@ import numpy as np
 import pyfftw
 import scipy.fftpack as sp
 from mpi4py_fft import fftw
+import pickle
 
 try:
-    fftw.import_wisdom('wisdom.dat')
-except AssertionError:
-    pass
+    #fftw.import_wisdom('wisdom.dat')
+    pyfftw.import_wisdom(pickle.load(open('pyfftw.wisdom', 'rb')))
+    print('Wisdom imported')
+except:
+    print('Wisdom not imported')
 
 N = (64, 64, 64)
 loops = 50

@@ -38,12 +38,15 @@ def get_geometry(kind=0, dim=2):
           </DataItem>
         </Geometry>"""
 
-        return """<Geometry Type="VXVY">
+        return """<Geometry Type="VXVYVZ">
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{1}">
             {3}:{6}/mesh/{4}
           </DataItem>
           <DataItem Format="HDF" NumberType="Float" Precision="{0}" Dimensions="{2}">
             {3}:{6}/mesh/{5}
+          </DataItem>
+          <DataItem Format="XML" NumberType="Float" Precision="8" Dimensions="1">
+            0
           </DataItem>
         </Geometry>"""
 
@@ -74,7 +77,7 @@ def get_topology(dims, kind=0):
     assert len(dims) in (2, 3)
     co = 'Co' if kind == 0 else ''
     if len(dims) == 2:
-        return """<Topology Dimensions="{0} {1}" Type="2D{2}RectMesh"/>""".format(dims[0], dims[1], co)
+        return """<Topology Dimensions="1 {0} {1}" Type="3D{2}RectMesh"/>""".format(dims[0], dims[1], co)
     if len(dims) == 3:
         return """<Topology Dimensions="{0} {1} {2}" Type="3D{3}RectMesh"/>""".format(dims[0], dims[1], dims[2], co)
 
@@ -83,7 +86,7 @@ def get_attribute(attr, h5filename, dims, prec):
     assert len(dims) in (2, 3)
     if len(dims) == 2:
         return """<Attribute Name="{0}" Center="Node">
-          <DataItem Format="HDF" NumberType="Float" Precision="{5}" Dimensions="{1} {2}">
+          <DataItem Format="HDF" NumberType="Float" Precision="{5}" Dimensions="1 {1} {2}">
             {3}:/{4}
           </DataItem>
         </Attribute>
@@ -96,7 +99,7 @@ def get_attribute(attr, h5filename, dims, prec):
         </Attribute>
         """.format(name, dims[0], dims[1], dims[2], h5filename, attr, prec)
 
-def generate_xdmf(h5filename, periodic=True, order='paraview'):
+def generate_xdmf(h5filename, periodic=True, order='visit'):
     """Generate XDMF-files
 
     Parameters

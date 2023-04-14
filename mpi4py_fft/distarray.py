@@ -56,9 +56,9 @@ class DistArray(np.ndarray):
 
     """
     def __new__(cls, global_shape, subcomm=None, val=None, dtype=float,
-                buffer=None, alignment=None, rank=0):
+                buffer=None, strides=None, alignment=None, rank=0):
         if len(global_shape[rank:]) < 2: # 1D case
-            obj = np.ndarray.__new__(cls, global_shape, dtype=dtype, buffer=buffer)
+            obj = np.ndarray.__new__(cls, global_shape, dtype=dtype, buffer=buffer, strides=strides)
             if buffer is None and isinstance(val, Number):
                 obj.fill(val)
             obj._rank = rank

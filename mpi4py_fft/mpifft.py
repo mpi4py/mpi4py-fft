@@ -363,7 +363,7 @@ class PFFT(object):
         """
         if forward_output is not True:
             return self.forward.input_pencil.subshape
-        return self.backward.input_pencil.subshape
+        return self.forward.output_array.shape
 
     def local_slice(self, forward_output=True):
         """The local view into the global data
