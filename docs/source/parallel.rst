@@ -358,4 +358,4 @@ of the :class:`.PFFT` class::
     The padded instance of the :class:`.PFFT` class is often used in addition
     to a regular non-padded class. The padded version is then used to handle
     non-linearities, whereas the non-padded takes care of the rest, see `demo
-    <https://bitbucket.org/mpi4py/mpi4py-fft/src/master/examples/spectral_dns_solver.py>`_.
+    <https://github.com/mpi4py/mpi4py-fft/blob/master/examples/spectral_dns_solver.py>`_.
