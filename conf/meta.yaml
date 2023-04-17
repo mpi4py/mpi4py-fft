@@ -37,7 +37,7 @@ test:
     - coverage
     - codecov
     - scipy >=1.0.0
-    - pyfftw
+    #- pyfftw
 
   source_files:
     - tests

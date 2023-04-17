@@ -1,18 +1,18 @@
 jobs:
 - job: macOS
-  displayName: macOS-10.15
+  displayName: macos-latest
   pool:
-    vmImage: 'macOS-10.15'
+    vmImage: 'macos-latest'
   strategy:
     matrix:
-      Python36:
-        python.version: '3.6'
       Python37:
         python.version: '3.7'
       Python38:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
+      Python310:
+        python.version: '3.10'
 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
@@ -34,17 +34,17 @@ jobs:
 - job: Ubuntu
   displayName: Ubuntu
   pool:
-    vmImage: 'ubuntu-16.04'
+    vmImage: 'ubuntu-latest'
   strategy:
     matrix:
-      Python36:
-        python.version: '3.6'
       Python37:
         python.version: '3.7'
       Python38:
         python.version: '3.8'
       Python39:
         python.version: '3.9'
+      Python310:
+        python.version: '3.10'
 
   steps:
   - bash: echo "##vso[task.prependpath]$CONDA/bin"
@@ -65,7 +65,7 @@ jobs:
     displayName: Build and test
 
   - bash: |
-      if [ $PYTHON_VERSION == 3.7 ]; then
+      if [ $PYTHON_VERSION == 3.8 ]; then
         source activate mpi4py_fft_env
         cd tests
         bash <(curl -s https://codecov.io/bash)
