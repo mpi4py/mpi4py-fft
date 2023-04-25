@@ -68,8 +68,9 @@ jobs:
       if [ $PYTHON_VERSION == 3.8 ]; then
         source activate mpi4py_fft_env
         cd tests
-        bash <(curl -s https://codecov.io/bash)
-        bash <(curl -Ls https://coverage.codacy.com/get.sh) report -t $(CODACY_PROJECT_TOKEN) -r coverage.xml
+        curl -Os https://uploader.codecov.io/latest/linux/codecov
+        chmod +x codecov
+        ./codecov -f coverage.xml
       fi
     condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/master'))
     displayName: Upload to Codecov
