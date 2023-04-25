@@ -25,7 +25,7 @@ requirements:
   run:
     - python
     - mpi4py
-    - mpich
+    - mpich 4.0.*
     - {{ pin_compatible('numpy') }}
     - fftw
     - hdf5 * mpi_*
@@ -36,7 +36,7 @@ test:
   requires:
     - coverage
     - codecov
-    - scipy >=1.0.0
+    - scipy
     #- pyfftw
 
   source_files:

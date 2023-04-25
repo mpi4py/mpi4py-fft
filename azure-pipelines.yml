@@ -58,7 +58,7 @@ jobs:
 
   - bash: |
       conda build --no-test --python $PYTHON_VERSION ./conf
-      conda create --name mpi4py_fft_env mpi4py_fft_test coverage scipy pyfftw python=$PYTHON_VERSION --use-local
+      conda create --name mpi4py_fft_env mpi4py_fft_test coverage scipy python=$PYTHON_VERSION --use-local
       source activate mpi4py_fft_env
       pip install codecov
       cd tests && ./runtests.sh
