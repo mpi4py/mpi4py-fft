@@ -64,9 +64,16 @@ jobs:
       cd tests && ./runtests.sh
     displayName: Build and test
 
+  - task: PublishCodeCoverageResults@1
+    inputs:
+      codeCoverageTool: Cobertura
+      summaryFileLocation: '$(System.DefaultWorkingDirectory)/**/coverage.xml'
+      reportDirectory: '$(System.DefaultWorkingDirectory)/**/htmlcov'
+
   - bash: |
       if [ $PYTHON_VERSION == 3.8 ]; then
         source activate mpi4py_fft_env
+        pip install codecov
         cd tests
         curl -Os https://uploader.codecov.io/latest/linux/codecov
         chmod +x codecov
