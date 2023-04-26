@@ -73,8 +73,8 @@ jobs:
   - bash: |
       if [ $PYTHON_VERSION == 3.8 ]; then
         source activate mpi4py_fft_env
-        pip install codecov
         cd tests
+        coverage xml -o ./coverage.xml
         curl -Os https://uploader.codecov.io/latest/linux/codecov
         chmod +x codecov
         ./codecov -f coverage.xml
