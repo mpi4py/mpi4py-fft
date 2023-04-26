@@ -5,9 +5,6 @@ mpi4py-fft
 .. image:: https://dev.azure.com/mpi4py/mpi4py-fft/_apis/build/status/mpi4py.mpi4py-fft?branchName=master
     :target: https://dev.azure.com/mpi4py/mpi4py-fft
 
-.. image:: https://api.codacy.com/project/badge/Grade/7e236bbdc44e4a68b8f6dfc3d3170cf0    
-    :target: https://www.codacy.com/app/mpi4py/mpi4py-fft?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=mpi4py/mpi4py-fft&amp;utm_campaign=Badge_Grade
-
 .. image:: https://codecov.io/bb/mpi4py/mpi4py-fft/branch/master/graph/badge.svg
   :target: https://codecov.io/bb/mpi4py/mpi4py-fft
 
