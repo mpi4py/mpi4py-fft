@@ -99,7 +99,7 @@ def get_attribute(attr, h5filename, dims, prec):
         </Attribute>
         """.format(name, dims[0], dims[1], dims[2], h5filename, attr, prec)
 
-def generate_xdmf(h5filename, periodic=True, order='visit'):
+def generate_xdmf(h5filename, periodic=True, order='paraview'):
     """Generate XDMF-files
 
     Parameters
