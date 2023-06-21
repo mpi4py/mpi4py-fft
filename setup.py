@@ -193,7 +193,7 @@ if __name__ == '__main__':
           description="mpi4py-fft -- Parallel Fast Fourier Transforms (FFTs) using MPI for Python",
           long_description=long_description,
           author="Lisandro Dalcin and Mikael Mortensen",
-          url='https://bitbucket.org/mpi4py/mpi4py-fft',
+          url='https://github.com/mpi4py/mpi4py-fft',
           packages=["mpi4py_fft",
                     "mpi4py_fft.fftw",
                     "mpi4py_fft.io"],

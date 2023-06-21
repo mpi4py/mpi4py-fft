@@ -15,5 +15,5 @@ Please cite mpi4py-fft using
     @electronic{mpi4py-fft,
         author = {{Lisandro Dalcin and Mikael Mortensen}},
         title = {{mpi4py-fft}},
-        url = {{https://bitbucket.org/mpi4py/mpi4py-fft}}
+        url = {{https://github.com/mpi4py/mpi4py-fft}}
     }

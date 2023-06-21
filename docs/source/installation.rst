@@ -30,7 +30,7 @@ can be achieved with
     conda activate mpi4py-fft
 
 Note that this gives you mpi4py-fft with default settings. This means that
-you will probably get the openmpi backend. To make a specific choice of 
+you will probably get the openmpi backend. To make a specific choice of
 backend just specify which, like this
 
 ::
@@ -45,13 +45,11 @@ any version of mpi4py-fft hosted on `pypi`_ using `pip`_
 
     pip install mpi4py-fft
 
-whereas either one of the following will install the latest version
-from github
+whereas the following will install the latest version from github
 
 ::
 
-    pip install git+https://bitbucket.org/mpi4py/mpi4py-fft@master
-    pip install https://bitbucket.org/mpi4py/mpi4py-fft/get/master.zip
+    pip install git+https://github.com/mpi4py/mpi4py-fft@master
 
 You can also build mpi4py-fft yourselves from the top directory,
 after cloning or forking
@@ -74,7 +72,7 @@ Additional dependencies
 
 For storing and retrieving data you need either `HDF5`_ or `netCDF4`_, compiled
 with support for MPI. Both are available
-with parallel support on `conda-forge`_ and can be installed into the 
+with parallel support on `conda-forge`_ and can be installed into the
 current conda environment as
 
 ::
@@ -100,14 +98,12 @@ located in the ``tests`` folder. A range of tests may be run using the
 
 This test-suit is run automatically on every commit to github, see, e.g.,
 
-.. image:: https://circleci.com/bb/mpi4py/mpi4py-fft.svg?style=svg
-    :target: https://circleci.com/bb/mpi4py/mpi4py-fft
+.. image:: https://dev.azure.com/mpi4py/mpi4py-fft/_apis/build/status/mpi4py.mpi4py-fft?branchName=master
+    :target: https://dev.azure.com/mpi4py/mpi4py-fft
 
-
-.. _mpi4py-fft: https://bitbucket.org/mpi4py/mpi4py-fft
-.. _mpi4py: https://bitbucket.org/mpi4py/mpi4py
+.. _mpi4py-fft: https://github.com/mpi4py/mpi4py-fft
+.. _mpi4py: https://github.com/mpi4py/mpi4py
 .. _cython: http://cython.org
-.. _spectralDNS channel: https://anaconda.org/spectralDNS
 .. _conda: https://conda.io/docs/
 .. _conda-forge: https://conda-forge.org
 .. _FFTW: http://www.fftw.org

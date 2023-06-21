@@ -40,7 +40,7 @@ internal energy, chemical species, and momentum.  The
 FFT has been named *the most important numerical algorithm of our
 time* by Professor Gilbert Strang [@strang94].
 
-``mpi4py-fft`` (https://bitbucket.org/mpi4py/mpi4py-fft) is an
+``mpi4py-fft`` (https://github.com/mpi4py/mpi4py-fft) is an
 open-source Python package for computing (in parallel) FFTs of
 possibly very large and distributed multidimensional arrays. A
 multidimensional FFT is computed in sequence, over all axes, one axis
