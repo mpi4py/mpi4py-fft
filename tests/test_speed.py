@@ -1,9 +1,14 @@
 from time import time
 import numpy as np
-import pyfftw
 import scipy.fftpack as sp
 from mpi4py_fft import fftw
 import pickle
+
+try:
+    import pyfftw
+except ImportError:
+    print('pyFFTW not available')
+    raise SystemExit(0)
 
 try:
     #fftw.import_wisdom('wisdom.dat')

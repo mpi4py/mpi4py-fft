@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+"""mpi4py-fft -- Parallel Fast Fourier Transforms (FFTs) using MPI for Python"""
 
 import os
 import sys
@@ -101,10 +102,10 @@ def generate_extensions(fftwlibs, force=True):
 def remove_extensions(fftwlibs):
     """Remove generated files"""
     for fname in (
-            'utilities.c',
-            'fftw_xfftn.c',
-            'fftwf_xfftn.c',
-            'fftwl_xfftn.c',
+        'utilities.c',
+        'fftw_xfftn.c',
+        'fftwf_xfftn.c',
+        'fftwl_xfftn.c',
     ):
         dst = os.path.join(fftwdir, fname)
         try:
@@ -116,10 +117,10 @@ def remove_extensions(fftwlibs):
             continue
         p = 'fftw'+prec_map[d]+'_'
         for fname in (
-                'fftw_planxfftn.h',
-                'fftw_planxfftn.c',
-                'fftw_xfftn.pyx',
-                'fftw_xfftn.pxd',
+            'fftw_planxfftn.h',
+            'fftw_planxfftn.c',
+            'fftw_xfftn.pyx',
+            'fftw_xfftn.pxd',
         ):
             dst = os.path.join(fftwdir, fname.replace('fftw_', p))
             try:
@@ -131,20 +132,31 @@ def get_extensions():
     """Return list of extension modules"""
     include_dirs = get_include_dirs()
     library_dirs = get_library_dirs()
-    ext = [Extension("mpi4py_fft.fftw.utilities",
-                     sources=[os.path.join(fftwdir, "utilities.pyx")],
-                     include_dirs=include_dirs)]
+    ext = [
+        Extension(
+            "mpi4py_fft.fftw.utilities",
+            sources=[os.path.join(fftwdir, "utilities.pyx")],
+            define_macros=[('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
+            include_dirs=include_dirs,
+        ),
+    ]
 
     fftwlibs = get_fftw_libs()
     for d, libs in fftwlibs.items():
-        p = 'fftw'+prec_map[d]+'_'
-        ext.append(Extension("mpi4py_fft.fftw.{}xfftn".format(p),
-                             sources=[os.path.join(fftwdir, "{}xfftn.pyx".format(p)),
-                                      os.path.join(fftwdir, "{}planxfftn.c".format(p))],
-                             #define_macros=[('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
-                             libraries=libs,
-                             include_dirs=include_dirs,
-                             library_dirs=library_dirs))
+        p = 'fftw' + prec_map[d] + '_'
+        ext.append(
+            Extension(
+                "mpi4py_fft.fftw.{}xfftn".format(p),
+                sources=[
+                    os.path.join(fftwdir, "{}xfftn.pyx".format(p)),
+                    os.path.join(fftwdir, "{}planxfftn.c".format(p)),
+                ],
+                define_macros=[('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
+                libraries=libs,
+                include_dirs=include_dirs,
+                library_dirs=library_dirs,
+            )
+        )
     return ext
 
 
@@ -190,14 +202,19 @@ with open("README.rst", "r") as fh:
 if __name__ == '__main__':
     setup(name="mpi4py-fft",
           version=version(),
-          description="mpi4py-fft -- Parallel Fast Fourier Transforms (FFTs) using MPI for Python",
+          description=__doc__.strip(),
           long_description=long_description,
+          long_description_content_type='text/x-rst',
           author="Lisandro Dalcin and Mikael Mortensen",
-          url='https://github.com/mpi4py/mpi4py-fft',
-          packages=["mpi4py_fft",
-                    "mpi4py_fft.fftw",
-                    "mpi4py_fft.io"],
-          package_dir={"mpi4py_fft": "mpi4py_fft"},
+          url="https://github.com/mpi4py/mpi4py-fft",
+          packages=[
+              "mpi4py_fft",
+              "mpi4py_fft.fftw",
+              "mpi4py_fft.io",
+          ],
+          package_dir={
+              "mpi4py_fft": "mpi4py_fft",
+          },
           classifiers=[
               'Development Status :: 4 - Beta',
               'Environment :: Console',
@@ -209,10 +226,9 @@ if __name__ == '__main__':
               'License :: OSI Approved :: BSD License',
               'Topic :: Scientific/Engineering :: Mathematics',
               'Topic :: Software Development :: Libraries :: Python Modules',
-              ],
+          ],
+          keywords=['Python', 'FFTW', 'FFT', 'DCT', 'DST', 'MPI'],
           distclass=Dist,
           ext_modules=get_extensions(),
           install_requires=["mpi4py", "numpy"],
-          setup_requires=["setuptools>=18.0", "cython>=0.25"],
-          keywords=['Python', 'FFTW', 'FFT', 'DCT', 'DST', 'MPI']
          )
