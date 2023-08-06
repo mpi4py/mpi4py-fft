@@ -25,7 +25,7 @@ requirements:
   run:
     - python
     - mpi4py
-    - mpich 4.0.2
+    - mpich
     - {{ pin_compatible('numpy') }}
     - fftw
     - hdf5 * mpi_*
