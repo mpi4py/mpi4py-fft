@@ -44,4 +44,4 @@ for real-to-real transforms. Through the interface in :mod:`.fftw` we can do
 here, in Python, pretty much everything that you can do in the original
 FFTW library.
 
-.. _`mpi4py-fft`: https://bitbucket.org/mpi4py/mpi4py-fft
+.. _`mpi4py-fft`: https://github.com/mpi4py/mpi4py-fft
