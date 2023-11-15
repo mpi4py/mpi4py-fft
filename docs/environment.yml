@@ -12,3 +12,5 @@ dependencies:
   - mpi4py
   - pip
   - setuptools
+  - pip:
+    - sphinx-rtd-theme
