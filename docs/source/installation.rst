@@ -19,7 +19,7 @@ mpi4py-fft, with all the above dependencies, is
 
 ::
 
-    conda install -c conda-forge mpifpy-fft h5py=*=mpi*
+    conda install -c conda-forge mpi4py-fft h5py=*=mpi*
 
 You probably want to install into a fresh environment, though, which
 can be achieved with
