@@ -5,12 +5,6 @@ from mpi4py import MPI
 from .pencil import Pencil, Subcomm
 from .io import HDF5File, NCFile, FileBase
 
-try:
-    import cupy as cp
-except ImportError:
-    # TODO: move cupy stuff to seperate file as to avoid confusion!
-    import numpy as cp
-
 comm = MPI.COMM_WORLD
 
 
@@ -20,6 +14,24 @@ class DistArrayBase:
 
     Attributes:
         - xp: Numerical library, a.k.a. numpy or cupy as class attribute
+
+    Note
+    ----
+    Tensors of rank higher than 0 are not distributed in the first ``rank``
+    indices. For example,
+
+    >>> from mpi4py_fft import DistArray
+    >>> a = DistArray((3, 8, 8, 8), rank=1)
+    >>> print(a.pencil.shape)
+    (8, 8, 8)
+
+    The array ``a`` cannot be distributed in the first axis of length 3 since
+    rank is 1 and this first index represent the vector component. The ``pencil``
+    attribute of ``a`` thus only considers the last three axes.
+
+    Also note that the ``alignment`` keyword does not take rank into
+    consideration. Setting alignment=2 for the array above means that the last
+    axis will be aligned, also when rank>0.
     """
 
     xp = None
@@ -70,11 +82,6 @@ class DistArrayBase:
         """Return dimensions of array not including rank"""
         return len(self._p0.shape)
 
-    @property
-    def v(self):
-        """Return local ``self`` array as an ``ndarray`` object"""
-        return self.__array__()
-
     @staticmethod
     def getSubcomm(subcomm, global_shape, rank, alignment):
         if isinstance(subcomm, Subcomm):
@@ -104,14 +111,13 @@ class DistArrayBase:
             assert sizes[alignment] == 1
         else:
             # Decide that alignment is the last axis with size 1
-            alignment = cls.xp.flatnonzero(cls.xp.array(sizes) == 1)[-1]
+            alignment = np.flatnonzero(np.array(sizes) == 1)[-1]
 
         p0 = Pencil(subcomm, global_shape[rank:], axis=alignment)
 
+        subshape = p0.subshape
         if rank > 0:
             subshape = global_shape[:rank] + subshape
-        else:
-            subshape = p0.subshape
 
         return p0, subshape
 
@@ -180,16 +186,17 @@ class DistArrayBase:
         # MPI and only on rank 0.
         import h5py
 
+        # TODO: can we use h5py to communicate the data without copying to cpu first when using cupy?
         f = h5py.File("tmp.h5", "w", driver="mpio", comm=comm)
         s = self.local_slice()
-        sp = self.xp.nonzero([isinstance(x, slice) for x in gslice])[0]
-        sf = tuple(self.xp.take(s, sp))
+        sp = np.nonzero([isinstance(x, slice) for x in gslice])[0]
+        sf = tuple(np.take(s, sp))
         f.require_dataset(
-            "data", shape=tuple(self.xp.take(self.global_shape, sp)), dtype=self.dtype
+            "data", shape=tuple(np.take(self.global_shape, sp)), dtype=self.dtype
         )
         gslice = list(gslice)
         # We are required to check if the indices in si are on this processor
-        si = self.xp.nonzero(
+        si = np.nonzero(
             [isinstance(x, int) and not z == slice(None) for x, z in zip(gslice, s)]
         )[0]
         on_this_proc = True
@@ -199,7 +206,8 @@ class DistArrayBase:
             else:
                 on_this_proc = False
         if on_this_proc:
-            f["data"][sf] = self[tuple(gslice)]
+            data = self.asnumpy
+            f["data"][sf] = data[tuple(gslice)]
         f.close()
         c = None
         if comm.Get_rank() == 0:
@@ -280,7 +288,7 @@ class DistArrayBase:
                 return self
 
         if out is not None:
-            assert isinstance(out, DistArray)
+            assert issubclass(type(out), DistArrayBase)
             assert self.global_shape == out.global_shape
             axis = out.alignment
             if self.commsizes == out.commsizes:
@@ -448,24 +456,6 @@ class DistArray(DistArrayBase, np.ndarray):
 
     For more information, see `numpy.ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_
 
-    Note
-    ----
-    Tensors of rank higher than 0 are not distributed in the first ``rank``
-    indices. For example,
-
-    >>> from mpi4py_fft import DistArray
-    >>> a = DistArray((3, 8, 8, 8), rank=1)
-    >>> print(a.pencil.shape)
-    (8, 8, 8)
-
-    The array ``a`` cannot be distributed in the first axis of length 3 since
-    rank is 1 and this first index represent the vector component. The ``pencil``
-    attribute of ``a`` thus only considers the last three axes.
-
-    Also note that the ``alignment`` keyword does not take rank into
-    consideration. Setting alignment=2 for the array above means that the last
-    axis will be aligned, also when rank>0.
-
     """
 
     xp = np
@@ -501,89 +491,14 @@ class DistArray(DistArrayBase, np.ndarray):
         obj._rank = rank
         return obj
 
+    @property
+    def v(self):
+        """Return local ``self`` array as an ``ndarray`` object"""
+        return self.__array__()
 
-class DistArrayCuPy(DistArrayBase, cp.ndarray):
-    """Distributed CuPy array
-
-    This Numpy array is part of a larger global array. Information about the
-    distribution is contained in the attributes.
-
-    Parameters
-    ----------
-    global_shape : sequence of ints
-        Shape of non-distributed global array
-    subcomm : None, :class:`.Subcomm` object or sequence of ints, optional
-        Describes how to distribute the array
-    val : Number or None, optional
-        Initialize array with this number if buffer is not given
-    dtype : np.dtype, optional
-        Type of array
-    buffer : Numpy array, optional
-        Array of correct shape. The buffer owns the memory that is used for
-        this array.
-    alignment : None or int, optional
-        Make sure array is aligned in this direction. Note that alignment does
-        not take rank into consideration.
-    rank : int, optional
-        Rank of tensor (number of free indices, a scalar is zero, vector one,
-        matrix two)
-
-
-    For more information, see `numpy.ndarray <https://docs.scipy.org/doc/numpy/reference/arrays.ndarray.html>`_
-
-    Note
-    ----
-    Tensors of rank higher than 0 are not distributed in the first ``rank``
-    indices. For example,
-
-    >>> from mpi4py_fft import DistArray
-    >>> a = DistArray((3, 8, 8, 8), rank=1)
-    >>> print(a.pencil.shape)
-    (8, 8, 8)
-
-    The array ``a`` cannot be distributed in the first axis of length 3 since
-    rank is 1 and this first index represent the vector component. The ``pencil``
-    attribute of ``a`` thus only considers the last three axes.
-
-    Also note that the ``alignment`` keyword does not take rank into
-    consideration. Setting alignment=2 for the array above means that the last
-    axis will be aligned, also when rank>0.
-
-    """
-
-    # TODO: docs
-    xp = cp
-
-    def __new__(
-        cls,
-        global_shape,
-        subcomm=None,
-        val=None,
-        dtype=float,
-        memptr=None,
-        strides=None,
-        alignment=None,
-        rank=0,
-    ):
-        if len(global_shape[rank:]) < 2:  # 1D case
-            obj = cls.xp.ndarray.__new__(
-                cls, global_shape, dtype=dtype, memptr=memptr, strides=strides
-            )
-            if memptr is None and isinstance(val, Number):
-                obj.fill(val)
-            obj._rank = rank
-            obj._p0 = None
-            return obj
-
-        subcomm = cls.getSubcomm(subcomm, global_shape, rank, alignment)
-        p0, subshape = cls.getPencil(subcomm, rank, global_shape, alignment)
-
-        obj = cls.xp.ndarray.__new__(cls, subshape, dtype=dtype, memptr=memptr)
-        if memptr is None and isinstance(val, Number):
-            obj.fill(val)
-        obj._p0 = p0
-        obj._rank = rank
-        return obj
+    @property
+    def asnumpy(self):
+        return self
 
 
 def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False, useCuPy=False):
@@ -630,7 +545,11 @@ def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False, useCuPy=F
         dtype = pfft.forward.input_array.dtype
     global_shape = (len(global_shape),) * rank + global_shape
 
-    darraycls = DistArrayCuPy if useCuPy else DistArray
+    if useCuPy:
+        from mpi4py_fft.distarrayCuPy import DistArrayCuPy as darraycls
+    else:
+        darraycls = DistArray
+
     z = darraycls(
         global_shape,
         subcomm=p0.subcomm,

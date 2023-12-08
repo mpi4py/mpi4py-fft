@@ -20,6 +20,7 @@ __version__ = '2.0.5'
 __author__ = 'Lisandro Dalcin and Mikael Mortensen'
 
 from .distarray import DistArray, newDistArray, Function
+from .distarrayCuPy import DistArrayCuPy
 from .mpifft import PFFT
 from . import fftw
 from .fftw import fftlib
