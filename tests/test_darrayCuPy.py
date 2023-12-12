@@ -121,7 +121,7 @@ def test_3Darray():
 
 def test_newDistArray():
     N = (8, 8, 8)
-    pfft = PFFT(MPI.COMM_WORLD, N)
+    pfft = PFFT(MPI.COMM_WORLD, N, backend='cupy')
     for forward_output in (True, False):
         for view in (True, False):
             for rank in (0, 1, 2):
@@ -130,17 +130,16 @@ def test_newDistArray():
                     forward_output=forward_output,
                     rank=rank,
                     view=view,
-                    useCuPy=True,
                 )
                 if view is False:
                     assert isinstance(a, DistArrayCuPy)
                     assert a.rank == rank
                     if rank == 0:
-                        qfft = PFFT(MPI.COMM_WORLD, darray=a)
+                        qfft = PFFT(MPI.COMM_WORLD, darray=a, backend='cupy')
                     elif rank == 1:
-                        qfft = PFFT(MPI.COMM_WORLD, darray=a[0])
+                        qfft = PFFT(MPI.COMM_WORLD, darray=a[0], backend='cupy')
                     else:
-                        qfft = PFFT(MPI.COMM_WORLD, darray=a[0, 0])
+                        qfft = PFFT(MPI.COMM_WORLD, darray=a[0, 0], backend='cupy')
                     qfft.destroy()
 
                 else:
