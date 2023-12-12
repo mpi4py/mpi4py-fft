@@ -14,12 +14,6 @@ try:
 except ImportError:
     pass
 
-try:
-    import cupy
-    backends.append('cupy')
-except ImportError:
-    pass
-
 abstol = dict(f=0.1, d=2e-10, g=1e-10)
 
 def allclose(a, b):
