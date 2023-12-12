@@ -78,6 +78,32 @@ def _Xfftn_plan_fftw(shape, axes, dtype, transforms, options):
     xfftn_bck = plan_bck(V, s=s, axes=axes, threads=threads, flags=flags, output_array=U)
     return (xfftn_fwd, xfftn_bck)
 
+def _Xfftn_plan_cupy(shape, axes, dtype, transforms, options):
+    import cupy as cp
+
+    transforms = {} if transforms is None else transforms
+    if tuple(axes) in transforms:
+        plan_fwd, plan_bck = transforms[tuple(axes)]
+    else:
+        if cp.issubdtype(dtype, cp.floating):
+            plan_fwd = cp.fft.rfftn
+            plan_bck = cp.fft.irfftn
+        else:
+            plan_fwd = cp.fft.fftn
+            plan_bck = cp.fft.ifftn
+
+    s = tuple(np.take(shape, axes))
+    U = cp.array(fftw.aligned(shape, dtype=dtype))  # TODO: avoid going via CPU
+    _V = plan_fwd(U, s=s, axes=axes)
+    V = cp.array(fftw.aligned_like(_V.get()))  # TODO: avoid going via CPU
+    M = np.prod(s)
+
+    # CuPy has forward transform unscaled and backward scaled with 1/N
+    return (
+        _Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
+        _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}),
+    )
+
 def _Xfftn_plan_numpy(shape, axes, dtype, transforms, options):
 
     transforms = {} if transforms is None else transforms
@@ -310,7 +336,6 @@ class FFTBase(object):
                     su[axis] = -(N//2)
                     padded_array[tuple(su)] *= 0.5
 
-
 class FFT(FFTBase):
     """Class for serial FFT transforms
 
@@ -373,6 +398,7 @@ class FFT(FFTBase):
         output_array : array
 
     """
+
     def __init__(self, shape, axes=None, dtype=float, padding=False,
                  backend='fftw', transforms=None, **kw):
         FFTBase.__init__(self, shape, axes, dtype, padding)
@@ -380,6 +406,7 @@ class FFT(FFTBase):
             'pyfftw': _Xfftn_plan_pyfftw,
             'fftw': _Xfftn_plan_fftw,
             'numpy': _Xfftn_plan_numpy,
+            'cupy': _Xfftn_plan_cupy,
             'mkl_fft': _Xfftn_plan_mkl,
             'scipy': _Xfftn_plan_scipy,
         }[backend]
@@ -393,12 +420,16 @@ class FFT(FFTBase):
             self.M = self.fwd.get_normalization()
         if backend == 'scipy':
             self.real_transform = False # No rfftn/irfftn methods
+
         self.padding_factor = 1.0
         if padding is not False:
             self.padding_factor = padding[self.axes[-1]] if np.ndim(padding) else padding
         if abs(self.padding_factor-1.0) > 1e-8:
             assert len(self.axes) == 1
             trunc_array = self._get_truncarray(shape, V.dtype)
+            if self.backend in ['cupy']:  # TODO: Skip detour via CPU
+                import cupy as cp
+                trunc_array = cp.array(trunc_array)
             self.forward = _Xfftn_wrap(self._forward, U, trunc_array)
             self.backward = _Xfftn_wrap(self._backward, trunc_array, U)
         else:

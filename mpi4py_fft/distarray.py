@@ -501,7 +501,7 @@ class DistArray(DistArrayBase, np.ndarray):
         return self
 
 
-def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False, useCuPy=False):
+def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
     """Return a new :class:`.DistArray` object for provided :class:`.PFFT` object
 
     Parameters
@@ -519,8 +519,6 @@ def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False, useCuPy=F
         If True return view of the underlying Numpy array, i.e., return
         cls.view(np.ndarray). Note that the DistArray still will
         be accessible through the base attribute of the view.
-    useCuPy : bool, optional
-        If True, returns DistArrayCuPy instead of DistArray
 
     Returns
     -------
@@ -545,7 +543,7 @@ def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False, useCuPy=F
         dtype = pfft.forward.input_array.dtype
     global_shape = (len(global_shape),) * rank + global_shape
 
-    if useCuPy:
+    if pfft.xfftn[0].backend in ["cupy"]:
         from mpi4py_fft.distarrayCuPy import DistArrayCuPy as darraycls
     else:
         darraycls = DistArray
