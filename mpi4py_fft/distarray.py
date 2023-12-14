@@ -543,7 +543,7 @@ def newDistArray(pfft, forward_output=True, val=0, rank=0, view=False):
         dtype = pfft.forward.input_array.dtype
     global_shape = (len(global_shape),) * rank + global_shape
 
-    if pfft.xfftn[0].backend in ["cupy"]:
+    if pfft.xfftn[0].backend in ["cupy", "cupyx-scipy"]:
         from mpi4py_fft.distarrayCuPy import DistArrayCuPy as darraycls
     else:
         darraycls = DistArray

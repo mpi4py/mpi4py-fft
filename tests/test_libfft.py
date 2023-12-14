@@ -16,12 +16,22 @@ for backend in ('pyfftw', 'mkl_fft', 'scipy', 'numpy', 'cupy'):
 
 if has_backend['cupy']:
     import cupy as cp
+    has_backend['cupyx-scipy'] = True
 
 abstol = dict(f=5e-5, d=1e-14, g=1e-14)
 
+def get_xpy(backend=None, array=None):
+    if backend in ['cupy', 'cupyx-scipy']:
+        return cp
+    if has_backend['cupy'] and array is not None:
+        if type(array) == cp.ndarray:
+            return cp
+    return np
+
+
 def allclose(a, b):
     atol = abstol[a.dtype.char.lower()]
-    xp = cp if type(a) == cp.ndarray else np
+    xp = get_xpy(array=a)
     return xp.allclose(a, b, rtol=0, atol=atol)
 
 def test_libfft():
@@ -37,6 +47,7 @@ def test_libfft():
     for backend in has_backend.keys():
         if has_backend[backend] is False:
             continue
+        xp = get_xpy(backend=backend)
         t0 = 0
         for typecode in types:
             for dim in dims:
@@ -51,7 +62,7 @@ def test_libfft():
                                 A = fft.forward.input_array
                                 B = fft.forward.output_array
 
-                                A[...] = (cp if backend in ['cupy'] else np).random.random(A.shape).astype(typecode)
+                                A[...] = xp.random.random(A.shape).astype(typecode)
                                 X = A.copy()
 
                                 B.fill(0)
@@ -71,7 +82,7 @@ def test_libfft():
     for backend in has_backend.keys():
         if has_backend[backend] is False:
             continue
-        xp = cp if backend in ['cupy'] else np
+        xp = get_xpy(backend=backend)
         for padding in (1.5, 2.0):
             for typecode in types:
                 for dim in dims:
@@ -105,7 +116,7 @@ def test_libfft():
     for backend in has_backend.keys():
         if has_backend[backend] is False:
             continue
-        xp = cp if backend in ['cupy'] else np
+        xp = get_xpy(backend=backend)
 
         if backend == 'fftw':
             dctn = functools.partial(fftw.dctn, type=3)
@@ -130,6 +141,11 @@ def test_libfft():
             from scipy.fftpack import fftn, ifftn
             transforms = {(1,): (fftn, ifftn),
                           (0, 1): (fftn, ifftn)}
+        elif backend == 'cupyx-scipy':
+            from scipy.fftpack import fftn, ifftn
+            import cupyx.scipy.fft as fftlib
+            transforms = {(1,): (fftlib.fftn, fftlib.ifftn),
+                          (0, 1): (fftlib.fftn, fftlib.ifftn)}
 
         for axis in ((1,), (0, 1)):
             fft = FFT(shape, axis, backend=backend, transforms=transforms)

@@ -151,6 +151,42 @@ def _Xfftn_plan_mkl(shape, axes, dtype, transforms, options): #pragma: no cover
     return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
             _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}))
 
+def _Xfftn_plan_cupyx_scipy(shape, axes, dtype, transforms, options):
+    import cupy as cp
+    import cupyx.scipy.fft as fft_lib
+
+    transforms = {} if transforms is None else transforms
+    if tuple(axes) in transforms:
+        _plan_fwd, _plan_bck = transforms[tuple(axes)]
+    else:
+        if cp.issubdtype(dtype, cp.floating):
+            _plan_fwd = fft_lib.rfftn
+            _plan_bck = fft_lib.irfftn
+        else:
+            _plan_fwd = fft_lib.fftn
+            _plan_bck = fft_lib.ifftn
+
+    def swap_shape_for_s(kwargs):
+        _kwargs = {
+                's': kwargs.pop('shape', None),
+                **kwargs,
+        }
+        return _kwargs
+
+    def plan_fwd(*args, **kwargs):
+        return _plan_fwd(*args, **swap_shape_for_s(kwargs))
+
+    def plan_bck(*args, **kwargs):
+        return _plan_bck(*args, **swap_shape_for_s(kwargs))
+
+    s = tuple(np.take(shape, axes))
+    U = cp.array(fftw.aligned(shape, dtype=dtype))  # TODO: Skip CPU detour
+    V = plan_fwd(U, s=s, axes=axes)
+    V = cp.array(fftw.aligned_like(V.get()))  # TODO: skip CPU detour
+    M = np.prod(s)
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'shape': s, 'axes': axes}),
+            _Yfftn_wrap(plan_bck, V, U, M, {'shape': s, 'axes': axes}))
+
 def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
 
     transforms = {} if transforms is None else transforms
@@ -409,6 +445,7 @@ class FFT(FFTBase):
             'cupy': _Xfftn_plan_cupy,
             'mkl_fft': _Xfftn_plan_mkl,
             'scipy': _Xfftn_plan_scipy,
+            'cupyx-scipy': _Xfftn_plan_cupyx_scipy,
         }[backend]
         self.backend = backend
         self.fwd, self.bck = plan(self.shape, self.axes, self.dtype, transforms, kw)
@@ -427,7 +464,7 @@ class FFT(FFTBase):
         if abs(self.padding_factor-1.0) > 1e-8:
             assert len(self.axes) == 1
             trunc_array = self._get_truncarray(shape, V.dtype)
-            if self.backend in ['cupy']:  # TODO: Skip detour via CPU
+            if 'cupy' in self.backend:  # TODO: Skip detour via CPU
                 import cupy as cp
                 trunc_array = cp.array(trunc_array)
             self.forward = _Xfftn_wrap(self._forward, U, trunc_array)
