@@ -246,27 +246,27 @@ class NCCLTransfer(Transfer):
         iscomplex = cp.iscomplexobj(arrayA)
         NCCL_dtype, real_dtype = self.get_nccl_and_real_dtypes(arrayA)
 
-        for i in range(size):
-            for j in range(size):
+        for recv_rank in range(size):
+            for send_rank in range(size):
 
-                if rank == i:
-                    local_slice, shape = self.get_slice_and_shape(subtypesB[j])
+                if rank == recv_rank:
+                    local_slice, shape = self.get_slice_and_shape(subtypesB[send_rank])
                     buff = self.get_buffer(shape, iscomplex, real_dtype)
 
-                    if i == j:
-                        send_slice, _ = self.get_slice_and_shape(subtypesA[i])
+                    if recv_rank == send_rank:
+                        send_slice, _ = self.get_slice_and_shape(subtypesA[recv_rank])
                         self.fill_buffer(buff, arrayA, send_slice, iscomplex)
                     else:
-                        comm.recv(buff.data.ptr, buff.size, NCCL_dtype, j, stream)
+                        comm.recv(buff.data.ptr, buff.size, NCCL_dtype, send_rank, stream)
 
                     self.unpack_buffer(buff, arrayB, local_slice, iscomplex)
 
-                elif rank == j:
-                    local_slice, shape = self.get_slice_and_shape(subtypesA[i])
+                elif rank == send_rank:
+                    local_slice, shape = self.get_slice_and_shape(subtypesA[recv_rank])
                     buff = self.get_buffer(shape, iscomplex, real_dtype)
                     self.fill_buffer(buff, arrayA, local_slice, iscomplex)
 
-                    comm.send(buff.data.ptr, buff.size, NCCL_dtype, i, stream)
+                    comm.send(buff.data.ptr, buff.size, NCCL_dtype, recv_rank, stream)
 
 
     @staticmethod

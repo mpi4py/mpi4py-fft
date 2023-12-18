@@ -59,8 +59,8 @@ class DistArrayCuPy(DistArrayBase, cp.ndarray):
             obj._p0 = None
             return obj
 
-        subcomm = cls.getSubcomm(subcomm, global_shape, rank, alignment)
-        p0, subshape = cls.getPencil(subcomm, rank, global_shape, alignment)
+        subcomm = cls.get_subcomm(subcomm, global_shape, rank, alignment)
+        p0, subshape = cls.setup_pencil(subcomm, rank, global_shape, alignment)
 
         obj = cls.xp.ndarray.__new__(cls, subshape, dtype=dtype, memptr=memptr)
         if memptr is None and isinstance(val, Number):
@@ -76,7 +76,6 @@ class DistArrayCuPy(DistArrayBase, cp.ndarray):
         else:
             return cp.ndarray.get(self, *args, **kwargs)
 
-    @property
     def asnumpy(self):
         """Copy the array to CPU"""
         return self.get()
