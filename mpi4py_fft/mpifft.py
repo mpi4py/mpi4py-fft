@@ -128,6 +128,11 @@ class PFFT(object):
         fftn/ifftn for complex input arrays. Real-to-real transforms can be
         configured using this dictionary and real-to-real transforms from the
         :mod:`.fftw.xfftn` module. See Examples.
+    comm_backend : str, optional
+        Choose backend for communication. When using GPU based serial backends,
+        the "NCCL" backend can be be used in `Alltoallw` operations to speedup
+        GPU to GPU transfer. Keep in mind that this is used alongside MPI and
+        assumes one GPU per MPI rankMPI is used.
 
     Other Parameters
     ----------------
@@ -201,7 +206,7 @@ class PFFT(object):
     """
     def __init__(self, comm, shape=None, axes=None, dtype=float, grid=None,
                  padding=False, collapse=False, backend='fftw',
-                 transforms=None, darray=None, **kw):
+                 transforms=None, darray=None, comm_backend='MPI', **kw):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
@@ -311,6 +316,7 @@ class PFFT(object):
         self.pencil = [None, None]
 
         axes = self.axes[-1]
+        Pencil.backend = comm_backend
         pencil = Pencil(self.subcomm, shape, axes[-1])
         xfftn = FFT(pencil.subshape, axes, dtype, padding, backend=backend,
                     transforms=transforms, **kw)

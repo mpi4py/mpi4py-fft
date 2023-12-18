@@ -179,8 +179,15 @@ class Transfer(object):
         assert self.subshapeB == arrayB.shape
         assert self.dtype == arrayA.dtype
         assert self.dtype == arrayB.dtype
-        self.comm.Alltoallw([arrayA, self._counts_displs, self._subtypesA],
-                            [arrayB, self._counts_displs, self._subtypesB])
+        self.Alltoallw(arrayA, self._subtypesA, arrayB, self._subtypesB)
+
+    def Alltoallw(self, arrayA, subtypesA, arrayB, subtypesB):
+        """
+        Redistribute arrayA to arrayB
+        """
+        self.comm.Alltoallw([arrayA, self._counts_displs, subtypesA],
+                            [arrayB, self._counts_displs, subtypesB])
+
 
     def backward(self, arrayB, arrayA):
         """Global redistribution from arrayB to arrayA
@@ -197,8 +204,7 @@ class Transfer(object):
         assert self.subshapeB == arrayB.shape
         assert self.dtype == arrayA.dtype
         assert self.dtype == arrayB.dtype
-        self.comm.Alltoallw([arrayB, self._counts_displs, self._subtypesB],
-                            [arrayA, self._counts_displs, self._subtypesA])
+        self.Alltoallw(arrayB, self._subtypesB, arrayA, self._subtypesA)
 
     def destroy(self):
         for datatype in self._subtypesA:
@@ -207,6 +213,134 @@ class Transfer(object):
         for datatype in self._subtypesB:
             if datatype:
                 datatype.Free()
+
+
+class NCCLTransfer(Transfer):
+    """
+    Transfer class which uses NCCL for `Alltoallw` operations. The NCCL
+    communicator will share rank and size attributes with the MPI communicator.
+    In particular, this assumes one GPU per MPI rank.
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        from cupy.cuda import nccl
+        self.comm_nccl = nccl.NcclCommunicator(self.comm.size, self.comm.bcast(nccl.get_unique_id(), root=0), self.comm.rank)
+
+    def Alltoallw(self, arrayA, subtypesA, arrayB, subtypesB):
+        """
+        Redistribute arrayA to arrayB.
+
+        As NCCL does not have all to all, we replicate it by a bunch of individual send and receives.
+        As NCCL also does not have complex datatypes, we have to send real and imaginary parts separately.
+        """
+        import cupy as cp
+        from cupy.cuda import nccl
+        assert type(arrayA) == cp.ndarray
+        assert type(arrayB) == cp.ndarray
+        assert arrayA.dtype == arrayB.dtype
+        assert self.comm.rank == self.comm_nccl.rank_id(), f'The structure of the communicator has changed unexpectedly'
+
+        rank, size, comm = self.comm.rank, self.comm.size, self.comm_nccl
+        stream = cp.cuda.Stream.null.ptr
+        iscomplex = cp.iscomplexobj(arrayA)
+        NCCL_dtype, real_dtype = self.get_nccl_and_real_dtypes(arrayA)
+
+        for i in range(size):
+            for j in range(size):
+
+                if rank == i:
+                    local_slice, shape = self.get_slice_and_shape(subtypesB[j])
+                    buff = self.get_buffer(shape, iscomplex, real_dtype)
+
+                    if i == j:
+                        send_slice, _ = self.get_slice_and_shape(subtypesA[i])
+                        self.fill_buffer(buff, arrayA, send_slice, iscomplex)
+                    else:
+                        comm.recv(buff.data.ptr, buff.size, NCCL_dtype, j, stream)
+
+                    self.unpack_buffer(buff, arrayB, local_slice, iscomplex)
+
+                elif rank == j:
+                    local_slice, shape = self.get_slice_and_shape(subtypesA[i])
+                    buff = self.get_buffer(shape, iscomplex, real_dtype)
+                    self.fill_buffer(buff, arrayA, local_slice, iscomplex)
+
+                    comm.send(buff.data.ptr, buff.size, NCCL_dtype, i, stream)
+
+
+    @staticmethod
+    def get_slice_and_shape(subtype):
+        """
+        Extract from the subtype object generated for MPI what shape the buffer
+        should have and what part of the array we want to send / receive.
+        """
+        decoded = subtype.decode()
+        subsizes = decoded[2]['subsizes']
+        starts = decoded[2]['starts']
+        return tuple(slice(starts[i], starts[i] + subsizes[i]) for i in range(len(starts))), subsizes
+
+    @staticmethod
+    def get_nccl_and_real_dtypes(array):
+        """
+        Translate the datatype of the array to a NCCL type for sending with NCCL.
+        As NCCL does not support complex types, we have to translate them to two
+        real values.
+        """
+        from cupy.cuda import nccl
+        nccl_dtypes = {
+            np.dtype('float32'): nccl.NCCL_FLOAT32,
+            np.dtype('float64'): nccl.NCCL_FLOAT64,
+            np.dtype('complex64'): nccl.NCCL_FLOAT32,
+            np.dtype('complex128'): nccl.NCCL_FLOAT64,
+        }
+        real_dtypes = {
+            np.dtype('float32'): np.dtype('float32'),
+            np.dtype('float64'): np.dtype('float64'),
+            np.dtype('complex64'): np.dtype('float32'),
+            np.dtype('complex128'): np.dtype('float64'),
+        }
+        return nccl_dtypes[array.dtype], real_dtypes[array.dtype]
+
+    @staticmethod
+    def get_buffer(shape, iscomplex, real_dtype):
+        """
+        Get a buffer for communication. If complex numbers are used, we send
+        two real values instead.
+        """
+        import cupy as cp
+        if iscomplex:
+            return cp.empty(shape=[2,] + shape, dtype=real_dtype)
+        else:
+            return cp.empty(shape=shape, dtype=real_dtype)
+
+    @staticmethod
+    def fill_buffer(buff, array, local_slice, iscomplex):
+        """
+        Fill buffer for communication. If complex numbers are used, we send
+        two real values instead.
+        """
+        if iscomplex:
+            buff[0][:] = array[local_slice].real
+            buff[1][:] = array[local_slice].imag
+        else:
+            buff[:] = array[local_slice][:]
+
+    @staticmethod
+    def unpack_buffer(buff, array, local_slice, iscomplex):
+        """
+        Unpack buffer for communication. If complex numbers are used, we get
+        two real values instead.
+        """
+        if iscomplex:
+            array[local_slice].real = buff[0][:]
+            array[local_slice].imag = buff[1][:]
+        else:
+            array[local_slice][:] = buff[:]
+
+    def destroy(self):
+        super().destroy()
+        self.comm_nccl.destroy()
 
 
 class Pencil(object):
@@ -274,6 +408,8 @@ class Pencil(object):
     aligned in axis 1.
 
     """
+    backend = 'MPI'
+
     def __init__(self, subcomm, shape, axis=-1):
         assert len(shape) >= 2
         assert min(shape) >= 1
@@ -349,6 +485,13 @@ class Pencil(object):
         shape = list(penA.subshape)
         shape[axis] = penA.shape[axis]
 
-        return Transfer(comm, shape, dtype,
+        if self.backend == 'MPI':
+            transfer_class = Transfer
+        elif self.backend == 'NCCL':
+            transfer_class = NCCLTransfer
+        else:
+            raise NotImplementedError(f'Don\'t have a transfer class for backend \"{self.backend}\"!')
+
+        return transfer_class(comm, shape, dtype,
                         penA.subshape, penA.axis,
                         penB.subshape, penB.axis)
