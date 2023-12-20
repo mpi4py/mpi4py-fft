@@ -242,32 +242,44 @@ class NCCLTransfer(Transfer):
         assert self.comm.rank == self.comm_nccl.rank_id(), f'The structure of the communicator has changed unexpectedly'
 
         rank, size, comm = self.comm.rank, self.comm.size, self.comm_nccl
-        stream = cp.cuda.Stream.null.ptr
         iscomplex = cp.iscomplexobj(arrayA)
         NCCL_dtype, real_dtype = self.get_nccl_and_real_dtypes(arrayA)
 
-        for recv_rank in range(size):
-            for send_rank in range(size):
+        send_stream = cp.cuda.Stream(non_blocking=False)
+        recv_stream = cp.cuda.Stream(non_blocking=False)
 
-                if rank == recv_rank:
-                    local_slice, shape = self.get_slice_and_shape(subtypesB[send_rank])
-                    buff = self.get_buffer(shape, iscomplex, real_dtype)
+        def send(array, subtype, send_to, iscomplex, stream):
+            local_slice, shape = self.get_slice_and_shape(subtype)
+            buff = self.get_buffer(shape, iscomplex, real_dtype)
+            self.fill_buffer(buff, array, local_slice, iscomplex)
+            comm.send(buff.data.ptr, buff.size, NCCL_dtype, send_to, stream.ptr)
 
-                    if recv_rank == send_rank:
-                        send_slice, _ = self.get_slice_and_shape(subtypesA[recv_rank])
-                        self.fill_buffer(buff, arrayA, send_slice, iscomplex)
-                    else:
-                        comm.recv(buff.data.ptr, buff.size, NCCL_dtype, send_rank, stream)
+        for i in range(size):
+            send_to = (rank + i) % size
+            recv_from = (rank -i + size) % size
 
-                    self.unpack_buffer(buff, arrayB, local_slice, iscomplex)
+            if send_to > rank:
+                with send_stream:
+                    send(arrayA, subtypesA[send_to], send_to, iscomplex, send_stream)
 
-                elif rank == send_rank:
-                    local_slice, shape = self.get_slice_and_shape(subtypesA[recv_rank])
-                    buff = self.get_buffer(shape, iscomplex, real_dtype)
-                    self.fill_buffer(buff, arrayA, local_slice, iscomplex)
+            with recv_stream:
+                local_slice, shape = self.get_slice_and_shape(subtypesB[recv_from])
+                buff = self.get_buffer(shape, iscomplex, real_dtype)
 
-                    comm.send(buff.data.ptr, buff.size, NCCL_dtype, recv_rank, stream)
+                if recv_from == rank:
+                    send_slice, _ = self.get_slice_and_shape(subtypesA[send_to])
+                    self.fill_buffer(buff, arrayA, send_slice, iscomplex)
+                else:
+                    comm.recv(buff.data.ptr, buff.size, NCCL_dtype, recv_from, recv_stream.ptr)
 
+                self.unpack_buffer(buff, arrayB, local_slice, iscomplex)
+
+            if send_to < rank:
+                with send_stream:
+                    send(arrayA, subtypesA[send_to], send_to, iscomplex, send_stream)
+
+        send_stream.synchronize()
+        recv_stream.synchronize()
 
     @staticmethod
     def get_slice_and_shape(subtype):

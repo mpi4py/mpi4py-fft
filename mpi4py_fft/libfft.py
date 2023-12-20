@@ -86,11 +86,24 @@ def _Xfftn_plan_cupy(shape, axes, dtype, transforms, options):
         plan_fwd, plan_bck = transforms[tuple(axes)]
     else:
         if cp.issubdtype(dtype, cp.floating):
-            plan_fwd = cp.fft.rfftn
-            plan_bck = cp.fft.irfftn
+            _plan_fwd = cp.fft.rfftn
+            _plan_bck = cp.fft.irfftn
         else:
-            plan_fwd = cp.fft.fftn
-            plan_bck = cp.fft.ifftn
+            _plan_fwd = cp.fft.fftn
+            _plan_bck = cp.fft.ifftn
+
+    stream = cp.cuda.stream.Stream()
+    def execute_in_stream(function, *args, **kwargs):
+        with stream:
+            result = function(*args, **kwargs)
+        stream.synchronize()
+        return result
+
+    def plan_fwd(*args, **kwargs):
+        return execute_in_stream(_plan_fwd, *args, **kwargs)
+
+    def plan_bck(*args, **kwargs):
+        return execute_in_stream(_plan_bck, *args, **kwargs)
 
     s = tuple(np.take(shape, axes))
     U = cp.array(fftw.aligned(shape, dtype=dtype))  # TODO: avoid going via CPU
