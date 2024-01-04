@@ -155,6 +155,7 @@ class Transfer(object):
                  comm, shape, dtype,
                  subshapeA, axisA,
                  subshapeB, axisB):
+
         self.comm = comm
         self.shape = tuple(shape)
         self.dtype = dtype = np.dtype(dtype)
@@ -215,6 +216,62 @@ class Transfer(object):
                 datatype.Free()
 
 
+class CustomMPITransfer(Transfer):
+
+    def Alltoallw(self, arrayA, subtypesA, arrayB, subtypesB):
+        """
+        Redistribute arrayA to arrayB.
+        """
+        if type(arrayA) == np.ndarray:
+            xp = np
+            def synchronize_stream():
+                pass
+        else:
+            import cupy as xp
+            synchronize_stream = xp.cuda.get_current_stream().synchronize
+
+        rank, size, comm = self.comm.rank, self.comm.size, self.comm
+
+        for i in range(size):
+            send_to = (rank + i) % size
+            recv_from = (rank -i + size) % size
+
+            sliceA, shapeA = self.get_slice_and_shape(subtypesA[send_to])
+            sliceB, shapeB = self.get_slice_and_shape(subtypesB[recv_from])
+
+            if send_to == rank:
+                arrayB[sliceB][:] = arrayA[sliceA][:]
+            else:
+                # send asynchronously
+                sendbuff = xp.empty(shapeA, dtype=self.dtype)
+                sendbuff[:] = arrayA[sliceA][:]
+                synchronize_stream()
+                req = comm.Isend(sendbuff, dest=send_to)
+
+                # receive
+                recvbuff = xp.empty(shapeB, dtype=self.dtype)
+                comm.Recv(recvbuff, source=recv_from)
+                synchronize_stream()
+                arrayB[sliceB][:] = recvbuff[:]
+
+                # finish send and clean up
+                req.wait()
+                del sendbuff
+                del recvbuff
+
+    @staticmethod
+    def get_slice_and_shape(subtype):
+        """
+        Extract from the subtype object generated for MPI what shape the buffer
+        should have and what part of the array we want to send / receive.
+        """
+        decoded = subtype.decode()
+        subsizes = decoded[2]['subsizes']
+        starts = decoded[2]['starts']
+        return tuple(slice(starts[i], starts[i] + subsizes[i]) for i in range(len(starts))), subsizes
+
+
+
 class NCCLTransfer(Transfer):
     """
     Transfer class which uses NCCL for `Alltoallw` operations. The NCCL
@@ -245,41 +302,45 @@ class NCCLTransfer(Transfer):
         iscomplex = cp.iscomplexobj(arrayA)
         NCCL_dtype, real_dtype = self.get_nccl_and_real_dtypes(arrayA)
 
-        send_stream = cp.cuda.Stream(non_blocking=False)
-        recv_stream = cp.cuda.Stream(non_blocking=False)
-
         def send(array, subtype, send_to, iscomplex, stream):
             local_slice, shape = self.get_slice_and_shape(subtype)
-            buff = self.get_buffer(shape, iscomplex, real_dtype)
+            buff = self.get_buffer(shape, iscomplex, real_dtype, stream)
             self.fill_buffer(buff, array, local_slice, iscomplex)
             comm.send(buff.data.ptr, buff.size, NCCL_dtype, send_to, stream.ptr)
 
-        for i in range(size):
-            send_to = (rank + i) % size
-            recv_from = (rank -i + size) % size
+        events = []
+        streams = [cp.cuda.Stream(null=False) for _ in range(size)]
+        for i, stream in zip(range(size), streams):
+            with stream:
 
-            if send_to > rank:
-                with send_stream:
-                    send(arrayA, subtypesA[send_to], send_to, iscomplex, send_stream)
+                send_to = (rank + i) % size
+                recv_from = (rank -i + size) % size
 
-            with recv_stream:
+                if send_to > rank:
+                    send(arrayA, subtypesA[send_to], send_to, iscomplex, stream)
+
                 local_slice, shape = self.get_slice_and_shape(subtypesB[recv_from])
-                buff = self.get_buffer(shape, iscomplex, real_dtype)
+                buff = self.get_buffer(shape, iscomplex, real_dtype, stream)
 
                 if recv_from == rank:
                     send_slice, _ = self.get_slice_and_shape(subtypesA[send_to])
                     self.fill_buffer(buff, arrayA, send_slice, iscomplex)
                 else:
-                    comm.recv(buff.data.ptr, buff.size, NCCL_dtype, recv_from, recv_stream.ptr)
+                    comm.recv(buff.data.ptr, buff.size, NCCL_dtype, recv_from, stream.ptr)
 
                 self.unpack_buffer(buff, arrayB, local_slice, iscomplex)
 
-            if send_to < rank:
-                with send_stream:
-                    send(arrayA, subtypesA[send_to], send_to, iscomplex, send_stream)
+                if send_to < rank:
+                    send(arrayA, subtypesA[send_to], send_to, iscomplex, stream)
 
-        send_stream.synchronize()
-        recv_stream.synchronize()
+                events += [stream.record()]
+
+        null_stream = cp.cuda.Stream(null=True)
+        null_stream.use()
+        for event in events:
+            null_stream.wait_event(event)
+
+        cp.cuda.Device(0).synchronize()
 
     @staticmethod
     def get_slice_and_shape(subtype):
@@ -315,16 +376,17 @@ class NCCLTransfer(Transfer):
         return nccl_dtypes[array.dtype], real_dtypes[array.dtype]
 
     @staticmethod
-    def get_buffer(shape, iscomplex, real_dtype):
+    def get_buffer(shape, iscomplex, real_dtype, stream):
         """
         Get a buffer for communication. If complex numbers are used, we send
         two real values instead.
         """
         import cupy as cp
+
         if iscomplex:
-            return cp.empty(shape=[2,] + shape, dtype=real_dtype)
+            return cp.ndarray(shape=[2,] + shape, dtype=real_dtype)
         else:
-            return cp.empty(shape=shape, dtype=real_dtype)
+            return cp.ndarray(shape=shape, dtype=real_dtype)
 
     @staticmethod
     def fill_buffer(buff, array, local_slice, iscomplex):
@@ -501,6 +563,10 @@ class Pencil(object):
             transfer_class = Transfer
         elif self.backend == 'NCCL':
             transfer_class = NCCLTransfer
+        elif self.backend == 'CUDAMemCpy':
+            transfer_class = CUDAMemCpy
+        elif self.backend == 'customMPI':
+            transfer_class = CustomMPITransfer
         else:
             raise NotImplementedError(f'Don\'t have a transfer class for backend \"{self.backend}\"!')
 

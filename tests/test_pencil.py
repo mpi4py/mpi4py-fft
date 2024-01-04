@@ -11,10 +11,11 @@ def test_pencil():
     sizes = (7, 8, 9)
     types = 'fdFD' #'hilfdgFDG'
 
-    backends = ['MPI']
+    backends = ['MPI', 'customMPI']
 
     xp = {
         'MPI': np,
+        'customMPI': np,
     }
 
     try:
@@ -22,6 +23,7 @@ def test_pencil():
         from cupy.cuda import nccl
         backends += ['NCCL']
         xp['NCCL'] = cp
+        cp.cuda.set_allocator(cp.cuda.MemoryAsyncPool().malloc)
     except ImportError:
         pass
 
