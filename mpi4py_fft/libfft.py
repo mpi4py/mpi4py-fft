@@ -80,30 +80,18 @@ def _Xfftn_plan_fftw(shape, axes, dtype, transforms, options):
 
 def _Xfftn_plan_cupy(shape, axes, dtype, transforms, options):
     import cupy as cp
+    cp.fft.config.enable_nd_planning = True
 
     transforms = {} if transforms is None else transforms
     if tuple(axes) in transforms:
         plan_fwd, plan_bck = transforms[tuple(axes)]
     else:
         if cp.issubdtype(dtype, cp.floating):
-            _plan_fwd = cp.fft.rfftn
-            _plan_bck = cp.fft.irfftn
+            plan_fwd = cp.fft.rfftn
+            plan_bck = cp.fft.irfftn
         else:
-            _plan_fwd = cp.fft.fftn
-            _plan_bck = cp.fft.ifftn
-
-    stream = cp.cuda.stream.Stream()
-    def execute_in_stream(function, *args, **kwargs):
-        with stream:
-            result = function(*args, **kwargs)
-        stream.synchronize()
-        return result
-
-    def plan_fwd(*args, **kwargs):
-        return execute_in_stream(_plan_fwd, *args, **kwargs)
-
-    def plan_bck(*args, **kwargs):
-        return execute_in_stream(_plan_bck, *args, **kwargs)
+            plan_fwd = cp.fft.fftn
+            plan_bck = cp.fft.ifftn
 
     s = tuple(np.take(shape, axes))
     U = cp.array(fftw.aligned(shape, dtype=dtype))  # TODO: avoid going via CPU
@@ -166,39 +154,22 @@ def _Xfftn_plan_mkl(shape, axes, dtype, transforms, options): #pragma: no cover
 
 def _Xfftn_plan_cupyx_scipy(shape, axes, dtype, transforms, options):
     import cupy as cp
-    import cupyx.scipy.fft as fft_lib
+    import cupyx.scipy.fftpack as cufft
 
     transforms = {} if transforms is None else transforms
     if tuple(axes) in transforms:
-        _plan_fwd, _plan_bck = transforms[tuple(axes)]
+        plan_fwd, plan_bck = transforms[tuple(axes)]
     else:
-        if cp.issubdtype(dtype, cp.floating):
-            _plan_fwd = fft_lib.rfftn
-            _plan_bck = fft_lib.irfftn
-        else:
-            _plan_fwd = fft_lib.fftn
-            _plan_bck = fft_lib.ifftn
-
-    def swap_shape_for_s(kwargs):
-        _kwargs = {
-                's': kwargs.pop('shape', None),
-                **kwargs,
-        }
-        return _kwargs
-
-    def plan_fwd(*args, **kwargs):
-        return _plan_fwd(*args, **swap_shape_for_s(kwargs))
-
-    def plan_bck(*args, **kwargs):
-        return _plan_bck(*args, **swap_shape_for_s(kwargs))
+        plan_fwd = cufft.fftn
+        plan_bck = cufft.ifftn
 
     s = tuple(np.take(shape, axes))
     U = cp.array(fftw.aligned(shape, dtype=dtype))  # TODO: Skip CPU detour
-    V = plan_fwd(U, s=s, axes=axes)
+    V = plan_fwd(U, shape=s, axes=axes)
     V = cp.array(fftw.aligned_like(V.get()))  # TODO: skip CPU detour
     M = np.prod(s)
-    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'shape': s, 'axes': axes}),
-            _Yfftn_wrap(plan_bck, V, U, M, {'shape': s, 'axes': axes}))
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'shape': s, 'axes': axes, 'overwrite_x': True}),
+            _Yfftn_wrap(plan_bck, V, U, M, {'shape': s, 'axes': axes, 'overwrite_x': True}))
 
 def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
 
@@ -468,7 +439,7 @@ class FFT(FFTBase):
             self.M = 1./np.prod(np.take(self.shape, self.axes))
         else:
             self.M = self.fwd.get_normalization()
-        if backend == 'scipy':
+        if backend in ['scipy', 'cupyx-scipy']:
             self.real_transform = False # No rfftn/irfftn methods
 
         self.padding_factor = 1.0

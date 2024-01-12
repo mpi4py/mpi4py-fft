@@ -232,7 +232,7 @@ class CustomMPITransfer(Transfer):
 
         rank, size, comm = self.comm.rank, self.comm.size, self.comm
 
-        for i in range(size):
+        for i in range(1, size + 1):
             send_to = (rank + i) % size
             recv_from = (rank -i + size) % size
 
@@ -242,22 +242,13 @@ class CustomMPITransfer(Transfer):
             if send_to == rank:
                 arrayB[sliceB][:] = arrayA[sliceA][:]
             else:
-                # send asynchronously
-                sendbuff = xp.empty(shapeA, dtype=self.dtype)
-                sendbuff[:] = arrayA[sliceA][:]
-                synchronize_stream()
-                req = comm.Isend(sendbuff, dest=send_to)
+                recvbuf = xp.empty(shapeB, dtype=self.dtype)
+                sendbuf = xp.empty(shapeA, dtype=self.dtype)
+                sendbuf[:] = arrayA[sliceA][:]
 
-                # receive
-                recvbuff = xp.empty(shapeB, dtype=self.dtype)
-                comm.Recv(recvbuff, source=recv_from)
                 synchronize_stream()
-                arrayB[sliceB][:] = recvbuff[:]
-
-                # finish send and clean up
-                req.wait()
-                del sendbuff
-                del recvbuff
+                comm.Sendrecv(sendbuf, send_to, recvbuf=recvbuf, source=recv_from)
+                arrayB[sliceB][:] = recvbuf[:]
 
     @staticmethod
     def get_slice_and_shape(subtype):
@@ -302,45 +293,36 @@ class NCCLTransfer(Transfer):
         iscomplex = cp.iscomplexobj(arrayA)
         NCCL_dtype, real_dtype = self.get_nccl_and_real_dtypes(arrayA)
 
-        def send(array, subtype, send_to, iscomplex, stream):
-            local_slice, shape = self.get_slice_and_shape(subtype)
-            buff = self.get_buffer(shape, iscomplex, real_dtype, stream)
-            self.fill_buffer(buff, array, local_slice, iscomplex)
-            comm.send(buff.data.ptr, buff.size, NCCL_dtype, send_to, stream.ptr)
+        stream = cp.cuda.Stream(null=True)
+        stream.use()
 
-        events = []
-        streams = [cp.cuda.Stream(null=False) for _ in range(size)]
-        for i, stream in zip(range(size), streams):
-            with stream:
+        for i in range(size):
+            send_to = (rank + i) % size
+            recv_from = (rank -i + size) % size
 
-                send_to = (rank + i) % size
-                recv_from = (rank -i + size) % size
+            # prepare receive buffer
+            local_slice, shape = self.get_slice_and_shape(subtypesB[recv_from])
+            recv_buff = self.get_buffer(shape, iscomplex, real_dtype)
 
-                if send_to > rank:
-                    send(arrayA, subtypesA[send_to], send_to, iscomplex, stream)
+            # prepare send buffer
+            send_slice, send_shape = self.get_slice_and_shape(subtypesA[send_to])
 
-                local_slice, shape = self.get_slice_and_shape(subtypesB[recv_from])
-                buff = self.get_buffer(shape, iscomplex, real_dtype, stream)
+            # send / receive
+            if send_to == rank:
+                self.fill_buffer(recv_buff, arrayA, send_slice, iscomplex)
+            else:
+                send_buff = self.get_buffer(send_shape, iscomplex, real_dtype)
+                self.fill_buffer(send_buff, arrayA, send_slice, iscomplex)
 
-                if recv_from == rank:
-                    send_slice, _ = self.get_slice_and_shape(subtypesA[send_to])
-                    self.fill_buffer(buff, arrayA, send_slice, iscomplex)
-                else:
-                    comm.recv(buff.data.ptr, buff.size, NCCL_dtype, recv_from, stream.ptr)
+                # perform all sends and receives in a single kernel to allow overlap
+                cp.cuda.nccl.groupStart()
+                comm.recv(recv_buff.data.ptr, recv_buff.size, NCCL_dtype, recv_from, stream.ptr)
+                comm.send(send_buff.data.ptr, send_buff.size, NCCL_dtype, send_to, stream.ptr)
+                cp.cuda.nccl.groupEnd()
 
-                self.unpack_buffer(buff, arrayB, local_slice, iscomplex)
+            self.unpack_buffer(recv_buff, arrayB, local_slice, iscomplex)
 
-                if send_to < rank:
-                    send(arrayA, subtypesA[send_to], send_to, iscomplex, stream)
-
-                events += [stream.record()]
-
-        null_stream = cp.cuda.Stream(null=True)
-        null_stream.use()
-        for event in events:
-            null_stream.wait_event(event)
-
-        cp.cuda.Device(0).synchronize()
+        cp.cuda.Stream(null=True).use()
 
     @staticmethod
     def get_slice_and_shape(subtype):
@@ -376,7 +358,7 @@ class NCCLTransfer(Transfer):
         return nccl_dtypes[array.dtype], real_dtypes[array.dtype]
 
     @staticmethod
-    def get_buffer(shape, iscomplex, real_dtype, stream):
+    def get_buffer(shape, iscomplex, real_dtype):
         """
         Get a buffer for communication. If complex numbers are used, we send
         two real values instead.

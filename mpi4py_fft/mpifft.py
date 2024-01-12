@@ -130,9 +130,9 @@ class PFFT(object):
         :mod:`.fftw.xfftn` module. See Examples.
     comm_backend : str, optional
         Choose backend for communication. When using GPU based serial backends,
-        the "NCCL" backend can be be used in `Alltoallw` operations to speedup
-        GPU to GPU transfer. Keep in mind that this is used alongside MPI and
-        assumes one GPU per MPI rankMPI is used.
+        the "NCCL" backend or a "customMPI" backend can be be used in `Alltoallw`
+        operations to speedup GPU to GPU transfer. Keep in mind that this is used
+        alongside MPI and assumes one GPU per MPI rank is used.
 
     Other Parameters
     ----------------

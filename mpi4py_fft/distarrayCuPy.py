@@ -62,7 +62,7 @@ class DistArrayCuPy(DistArrayBase, cp.ndarray):
         subcomm = cls.get_subcomm(subcomm, global_shape, rank, alignment)
         p0, subshape = cls.setup_pencil(subcomm, rank, global_shape, alignment)
 
-        obj = cls.xp.ndarray.__new__(cls, subshape, dtype=dtype, memptr=memptr)
+        obj = cls.xp.ndarray.__new__(cls, subshape, dtype=dtype, memptr=memptr, strides=strides)
         if memptr is None and isinstance(val, Number):
             obj.fill(val)
         obj._p0 = p0
