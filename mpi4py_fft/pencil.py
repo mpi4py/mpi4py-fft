@@ -471,8 +471,6 @@ class Pencil(object):
             transfer_class = Transfer
         elif self.backend == 'NCCL':
             transfer_class = NCCLTransfer
-        elif self.backend == 'CUDAMemCpy':
-            transfer_class = CUDAMemCpy
         elif self.backend == 'customMPI':
             transfer_class = CustomMPITransfer
         else:

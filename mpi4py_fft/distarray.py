@@ -246,7 +246,7 @@ class DistArrayBase:
         (slice(0, 16, None), slice(7, 14, None), slice(6, 12, None))
         """
         v = [slice(start, start+shape) for start, shape in zip(self._p0.substart,
-                                                                 self._p0.subshape)]
+                                                               self._p0.subshape)]
         return tuple([slice(0, s) for s in self.shape[:self.rank]] + v)
 
     def redistribute(self, axis=None, out=None):
@@ -298,10 +298,10 @@ class DistArrayBase:
         p1, transfer = self.get_pencil_and_transfer(axis)
         if out is None:
             out = type(self)(self.global_shape,
-                subcomm=p1.subcomm,
-                dtype=self.dtype,
-                alignment=axis,
-                rank=self.rank)
+                             subcomm=p1.subcomm,
+                             dtype=self.dtype,
+                             alignment=axis,
+                             rank=self.rank)
 
         if self.rank == 0:
             transfer.forward(self, out)

@@ -154,7 +154,7 @@ def _Xfftn_plan_mkl(shape, axes, dtype, transforms, options): #pragma: no cover
 
 def _Xfftn_plan_cupyx_scipy(shape, axes, dtype, transforms, options):
     import cupy as cp
-    import cupyx.scipy.fftpack as cufft
+    import cupyx.scipy.fft as cufft
 
     transforms = {} if transforms is None else transforms
     if tuple(axes) in transforms:
@@ -168,8 +168,8 @@ def _Xfftn_plan_cupyx_scipy(shape, axes, dtype, transforms, options):
     V = plan_fwd(U, s=s, axes=axes)
     V = cp.array(V)
     M = np.prod(s)
-    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'shape': s, 'axes': axes, 'overwrite_x': True}),
-            _Yfftn_wrap(plan_bck, V, U, M, {'shape': s, 'axes': axes, 'overwrite_x': True}))
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes, 'overwrite_x': True}),
+            _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes, 'overwrite_x': True}))
 
 def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
 
