@@ -94,9 +94,9 @@ def _Xfftn_plan_cupy(shape, axes, dtype, transforms, options):
             plan_bck = cp.fft.ifftn
 
     s = tuple(np.take(shape, axes))
-    U = cp.array(fftw.aligned(shape, dtype=dtype))  # TODO: avoid going via CPU
-    _V = plan_fwd(U, s=s, axes=axes)
-    V = cp.array(fftw.aligned_like(_V.get()))  # TODO: avoid going via CPU
+    U = cp.empty(shape=shape, dtype=dtype)
+    V = plan_fwd(U, s=s, axes=axes)
+    V = cp.array(V)
     M = np.prod(s)
 
     # CuPy has forward transform unscaled and backward scaled with 1/N
@@ -164,9 +164,9 @@ def _Xfftn_plan_cupyx_scipy(shape, axes, dtype, transforms, options):
         plan_bck = cufft.ifftn
 
     s = tuple(np.take(shape, axes))
-    U = cp.array(fftw.aligned(shape, dtype=dtype))  # TODO: Skip CPU detour
-    V = plan_fwd(U, shape=s, axes=axes)
-    V = cp.array(fftw.aligned_like(V.get()))  # TODO: skip CPU detour
+    U = cp.empty(shape=shape, dtype=dtype)
+    V = plan_fwd(U, s=s, axes=axes)
+    V = cp.array(V)
     M = np.prod(s)
     return (_Yfftn_wrap(plan_fwd, U, V, 1, {'shape': s, 'axes': axes, 'overwrite_x': True}),
             _Yfftn_wrap(plan_bck, V, U, M, {'shape': s, 'axes': axes, 'overwrite_x': True}))

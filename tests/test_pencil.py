@@ -23,7 +23,6 @@ def test_pencil():
         from cupy.cuda import nccl
         backends += ['NCCL']
         xp['NCCL'] = cp
-        cp.cuda.set_allocator(cp.cuda.MemoryAsyncPool().malloc)
     except ImportError:
         pass
 
