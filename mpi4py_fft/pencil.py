@@ -302,6 +302,7 @@ class NCCLTransfer(Transfer):
         # perform all sends and receives in a single kernel to allow overlap
         cp.cuda.nccl.groupStart()
         for i in range(1, size + 1):
+
             send_to = (rank + i) % size
             recv_from = (rank -i + size) % size
 
@@ -315,10 +316,17 @@ class NCCLTransfer(Transfer):
             comm.send(sendbufs[i].data.ptr, sendbufs[i].size * self.count_modifier, self.NCCL_dtype, send_to, stream.ptr)
         cp.cuda.nccl.groupEnd()
 
-        # distribute sent data from buffers
+        # unpack the buffers concurrently in different streams
+        streams = {key: cp.cuda.Stream() for key in recvbufs.keys()}
+        events = {}
         for i in recvbufs.keys():
-            if arrayB[sliceBs[i]] is not recvbufs[i]:
-                arrayB[sliceBs[i]][:] = recvbufs[i][:]
+            with streams[i]:
+                cp.copyto(arrayB[sliceBs[i]], recvbufs[i][:])
+                events[i] = streams[i].record()
+
+        for i in events.keys():
+            stream.wait_event(events[i])
+
 
     def destroy(self):
         super().destroy()

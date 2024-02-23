@@ -63,17 +63,18 @@ class Transform(object):
 
         """
         if input_array is not None:
-            self.input_array[...] = input_array
+            self._xfftn[0].copyto(self.input_array, input_array)
 
         for i in range(len(self._transfer)):
             self._xfftn[i](**kw)
             arrayA = self._xfftn[i].output_array
             arrayB = self._xfftn[i+1].input_array
             self._transfer[i](arrayA, arrayB)
+
         self._xfftn[-1](**kw)
 
         if output_array is not None:
-            output_array[...] = self.output_array
+            self._xfftn[-1].copyto(output_array, self.output_array)
             return output_array
         else:
             return self.output_array

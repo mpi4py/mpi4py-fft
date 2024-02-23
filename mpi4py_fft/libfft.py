@@ -101,8 +101,8 @@ def _Xfftn_plan_cupy(shape, axes, dtype, transforms, options):
 
     # CuPy has forward transform unscaled and backward scaled with 1/N
     return (
-        _Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
-        _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}),
+        _Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}, xp=cp),
+        _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}, xp=cp),
     )
 
 def _Xfftn_plan_numpy(shape, axes, dtype, transforms, options):
@@ -168,8 +168,8 @@ def _Xfftn_plan_cupyx_scipy(shape, axes, dtype, transforms, options):
     V = plan_fwd(U, s=s, axes=axes)
     V = cp.array(V)
     M = np.prod(s)
-    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes, 'overwrite_x': True}),
-            _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes, 'overwrite_x': True}))
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes, 'overwrite_x': True}, xp=cp),
+            _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes, 'overwrite_x': True}, xp=cp))
 
 def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
 
@@ -193,19 +193,23 @@ class _Yfftn_wrap(object):
     #Wraps numpy/scipy/mkl transforms to FFTW style
     # pylint: disable=too-few-public-methods
 
-    __slots__ = ('_xfftn', '_M', '_opt', '__doc__', '_input_array', '_output_array')
+    __slots__ = ('_xfftn', '_M', '_opt', '__doc__', '_input_array', '_output_array', 'xp')
 
-    def __init__(self, xfftn_obj, input_array, output_array, M, opt):
+    def __init__(self, xfftn_obj, input_array, output_array, M, opt, xp=np):
         object.__setattr__(self, '_xfftn', xfftn_obj)
         object.__setattr__(self, '_opt', opt)
         object.__setattr__(self, '_M', M)
         object.__setattr__(self, '_input_array', input_array)
         object.__setattr__(self, '_output_array', output_array)
         object.__setattr__(self, '__doc__', xfftn_obj.__doc__)
+        object.__setattr__(self, 'xp', xp)
 
     @property
     def input_array(self):
         return object.__getattribute__(self, '_input_array')
+
+    def copyto(self, dst, src):
+        self.xp.copyto(dst, src, casting='unsafe')
 
     @property
     def output_array(self):
@@ -225,22 +229,24 @@ class _Yfftn_wrap(object):
 
     def __call__(self, *args, **kwargs):
         self.opt.update(kwargs)
-        self.output_array[...] = self.xfftn(self.input_array, **self.opt)
+        self.copyto(self._output_array, self.xfftn(self.input_array, **self.opt))
         if abs(self.M-1) > 1e-8:
             self._output_array *= self.M
         return self.output_array
+
 
 class _Xfftn_wrap(object):
     #Common interface for all serial transforms
     # pylint: disable=too-few-public-methods
 
-    __slots__ = ('_xfftn', '__doc__', '_input_array', '_output_array')
+    __slots__ = ('_xfftn', '__doc__', '_input_array', '_output_array', 'xp')
 
-    def __init__(self, xfftn_obj, input_array, output_array):
+    def __init__(self, xfftn_obj, input_array, output_array, xp=np):
         object.__setattr__(self, '_xfftn', xfftn_obj)
         object.__setattr__(self, '_input_array', input_array)
         object.__setattr__(self, '_output_array', output_array)
         object.__setattr__(self, '__doc__', xfftn_obj.__doc__)
+        object.__setattr__(self, 'xp', xp)
 
     @property
     def input_array(self):
@@ -254,12 +260,15 @@ class _Xfftn_wrap(object):
     def xfftn(self):
         return object.__getattribute__(self, '_xfftn')
 
+    def copyto(self, dst, src):
+        self.xp.copyto(dst, src, casting='unsafe')
+
     def __call__(self, input_array=None, output_array=None, **options):
         if input_array is not None:
-            self.input_array[...] = input_array
+            self.copyto(self.input_array, input_array)
         self.xfftn(**options)
         if output_array is not None:
-            output_array[...] = self.output_array
+            self.copyto(output_array, self.output_array)
             return output_array
         else:
             return self.output_array
@@ -448,11 +457,13 @@ class FFT(FFTBase):
         if abs(self.padding_factor-1.0) > 1e-8:
             assert len(self.axes) == 1
             trunc_array = self._get_truncarray(shape, V.dtype)
+            xp = np
             if 'cupy' in self.backend:  # TODO: Skip detour via CPU
                 import cupy as cp
                 trunc_array = cp.array(trunc_array)
-            self.forward = _Xfftn_wrap(self._forward, U, trunc_array)
-            self.backward = _Xfftn_wrap(self._backward, trunc_array, U)
+                xp = cp
+            self.forward = _Xfftn_wrap(self._forward, U, trunc_array, xp=xp)
+            self.backward = _Xfftn_wrap(self._backward, trunc_array, U, xp=xp)
         else:
             self.forward = _Xfftn_wrap(self._forward, U, V)
             self.backward = _Xfftn_wrap(self._backward, V, U)
