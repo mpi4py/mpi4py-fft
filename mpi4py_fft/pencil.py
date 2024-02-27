@@ -321,7 +321,7 @@ class NCCLTransfer(Transfer):
         events = {}
         for i in recvbufs.keys():
             with streams[i]:
-                cp.copyto(arrayB[sliceBs[i]], recvbufs[i][:])
+                cp.copyto(arrayB[sliceBs[i]], recvbufs[i])
                 events[i] = streams[i].record()
 
         for i in events.keys():
