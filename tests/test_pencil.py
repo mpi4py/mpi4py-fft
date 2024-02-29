@@ -11,53 +11,74 @@ def test_pencil():
     sizes = (7, 8, 9)
     types = 'fdFD' #'hilfdgFDG'
 
+    backends = ['MPI', 'customMPI']
+
+    xp = {
+        'MPI': np,
+        'customMPI': np,
+    }
+
+    try:
+        import cupy as cp
+        from cupy.cuda import nccl
+        backends += ['NCCL']
+        xp['NCCL'] = cp
+    except ImportError:
+        pass
+
     for typecode in types:
         for dim in dims:
             for shape in product(*([sizes]*dim)):
-                axes = list(range(dim))
-                for axis1, axis2, axis3 in product(axes, axes, axes):
+                for backend in backends:
+                     
+                    Pencil.backend = backend
+                    axes = list(range(dim))
+                     
+                    for axis1, axis2, axis3 in product(axes, axes, axes):
 
-                    if axis1 == axis2: continue
-                    if axis2 == axis3: continue
-                    axis3 -= len(shape)
-                    #if comm.rank == 0:
-                    #    print(shape, axis1, axis2, axis3, typecode)
+                        if axis1 == axis2: continue
+                        if axis2 == axis3: continue
+                        axis3 -= len(shape)
+                        #if comm.rank == 0:
+                        #    print(shape, axis1, axis2, axis3, typecode)
 
-                    for pdim in [None] + list(range(1, dim-1)):
+                        for pdim in [None] + list(range(1, dim-1)):
 
-                        subcomm = Subcomm(comm, pdim)
-                        pencil0 = Pencil(subcomm, shape)
+                            subcomm = Subcomm(comm, pdim)
+                            pencil0 = Pencil(subcomm, shape)
 
-                        pencilA = pencil0.pencil(axis1)
-                        pencilB = pencilA.pencil(axis2)
-                        pencilC = pencilB.pencil(axis3)
+                            pencilA = pencil0.pencil(axis1)
+                            pencilB = pencilA.pencil(axis2)
+                            pencilC = pencilB.pencil(axis3)
 
-                        trans1 = Pencil.transfer(pencilA, pencilB, typecode)
-                        trans2 = Pencil.transfer(pencilB, pencilC, typecode)
+                            assert pencilC.backend == backend
 
-                        X = np.random.random(pencilA.subshape).astype(typecode)
+                            trans1 = Pencil.transfer(pencilA, pencilB, typecode)
+                            trans2 = Pencil.transfer(pencilB, pencilC, typecode)
 
-                        A = np.empty(pencilA.subshape, dtype=typecode)
-                        B = np.empty(pencilB.subshape, dtype=typecode)
-                        C = np.empty(pencilC.subshape, dtype=typecode)
+                            X = xp[backend].random.random(pencilA.subshape).astype(typecode)
 
-                        A[...] = X
+                            A = xp[backend].empty(pencilA.subshape, dtype=typecode)
+                            B = xp[backend].empty(pencilB.subshape, dtype=typecode)
+                            C = xp[backend].empty(pencilC.subshape, dtype=typecode)
 
-                        B.fill(0)
-                        trans1.forward(A, B)
-                        C.fill(0)
-                        trans2.forward(B, C)
+                            A[...] = X
 
-                        B.fill(0)
-                        trans2.backward(C, B)
-                        A.fill(0)
-                        trans1.backward(B, A)
+                            B.fill(0)
+                            trans1.forward(A, B)
+                            C.fill(0)
+                            trans2.forward(B, C)
 
-                        assert np.allclose(A, X)
+                            B.fill(0)
+                            trans2.backward(C, B)
+                            A.fill(0)
+                            trans1.backward(B, A)
 
-                        trans1.destroy()
-                        trans2.destroy()
-                        subcomm.destroy()
+                            assert xp[backend].allclose(A, X)
+
+                            trans1.destroy()
+                            trans2.destroy()
+                            subcomm.destroy()
 
 
 if __name__ == '__main__':
