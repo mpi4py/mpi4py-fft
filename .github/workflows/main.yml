@@ -27,7 +27,7 @@ jobs:
           - "3.9"
           - "3.10"
           - "3.11"
-          - "3.12-dev"
+          - "3.12"
 
     steps:
 
@@ -41,10 +41,16 @@ jobs:
         # Install fftw
         case $(uname) in
           Linux)
-          sudo apt update && sudo apt install -y -q fftw-dev
+            sudo apt update
+            sudo apt install -y -q fftw-dev
+            echo FFTW_INCLUDE_DIR=/usr/include              >> $GITHUB_ENV
+            echo FFTW_LIBRARY_DIR=/usr/lib/x86_64-linux-gnu >> $GITHUB_ENV
             ;;
           Darwin)
             brew install fftw
+            local prefix=$(brew --prefix fftw)
+            echo FFTW_INCLUDE_DIR=$prefix/include >> $GITHUB_ENV
+            echo FFTW_LIBRARY_DIR=$prefix/lib     >> $GITHUB_ENV
             ;;
         esac
 
