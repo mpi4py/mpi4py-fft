@@ -1,4 +1,4 @@
-cdef extern from "fftw3.h":
+cdef extern from "fftw3.h" nogil:
 
     ctypedef struct fftw_complex_struct:
         pass
@@ -12,15 +12,15 @@ cdef extern from "fftw3.h":
 
     void fftw_destroy_plan(fftw_plan)
 
-    void fftw_execute_dft(fftw_plan, void *_in, void *_out) nogil
+    void fftw_execute_dft(fftw_plan, void *_in, void *_out)
 
-    void fftw_execute_dft_c2r(fftw_plan, void *_in, void *_out) nogil
+    void fftw_execute_dft_c2r(fftw_plan, void *_in, void *_out)
 
-    void fftw_execute_dft_r2c(fftw_plan, void *_in, void *_out) nogil
+    void fftw_execute_dft_r2c(fftw_plan, void *_in, void *_out)
 
-    void fftw_execute_r2r(fftw_plan, void *_in, void *_out) nogil
+    void fftw_execute_r2r(fftw_plan, void *_in, void *_out)
 
-    void fftw_execute(fftw_plan) nogil
+    void fftw_execute(fftw_plan)
 
     void fftw_init_threads()
 
@@ -43,7 +43,7 @@ cdef extern from "fftw3.h":
     void fftw_print_plan(fftw_plan)
 
 
-cdef extern from "fftw_planxfftn.h":
+cdef extern from "fftw_planxfftn.h" nogil:
 
     ctypedef double fftw_real
 
