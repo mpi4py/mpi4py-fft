@@ -20,8 +20,12 @@ __version__ = '2.0.5'
 __author__ = 'Lisandro Dalcin and Mikael Mortensen'
 
 from .distarray import DistArray, newDistArray, Function
-from .distarrayCuPy import DistArrayCuPy
 from .mpifft import PFFT
 from . import fftw
 from .fftw import fftlib
 from .io import HDF5File, NCFile, generate_xdmf
+
+try:
+    from .distarrayCuPy import DistArrayCuPy
+except ModuleNotFoundError:
+    pass
