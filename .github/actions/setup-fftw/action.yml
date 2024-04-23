@@ -4,7 +4,7 @@ description: "Set up FFTW."
 author: "Ben Landrum"
 inputs:
   os:
-    description: "Hyphenated operating system name, e.g., ubuntu-latest."
+    description: "Operating system name (e.g., ubuntu-latest)."
 outputs:
   include-dir:
     description: "The installed FFTW include directory."
