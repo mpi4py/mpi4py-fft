@@ -27,7 +27,7 @@ jobs:
           - "3.9"
           - "3.10"
           - "3.11"
-          - "3.12"
+          - "3.12-dev"
 
     steps:
 
@@ -37,17 +37,20 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - id: setup-fftw
-      uses: ./.github/actions/setup-fftw
-      with:
-        os: ${{ matrix.os }}
+    - run: |
+        # Install fftw
+        case $(uname) in
+          Linux)
+          sudo apt update && sudo apt install -y -q fftw-dev
+            ;;
+          Darwin)
+            brew install fftw
+            ;;
+        esac
 
     - run: python -m pip install -U pip build
 
     - run: python -m build
-      env:
-        FFTW_INCLUDE_DIR: ${{ steps.setup-fftw.outputs.include-dir }}
-        FFTW_LIBRARY_DIR: ${{ steps.setup-fftw.outputs.library-dir }}
 
     - uses: mpi4py/setup-mpi@v1
       with:
