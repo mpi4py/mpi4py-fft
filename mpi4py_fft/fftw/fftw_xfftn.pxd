@@ -1,3 +1,4 @@
+# cython: language_level=3str
 cdef extern from "fftw3.h" nogil:
 
     ctypedef struct fftw_complex_struct:
@@ -57,4 +58,4 @@ cdef extern from "fftw_planxfftn.h" nogil:
                              int      kind[],
                              unsigned flags)
 
-ctypedef void (*generic_function)(void *plan, void *_in, void *_out) nogil
+ctypedef void (*generic_function)(void *plan, void *_in, void *_out) noexcept nogil

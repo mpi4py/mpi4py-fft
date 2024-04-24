@@ -1,4 +1,4 @@
-#cython: language_level=3
+# cython: language_level=3str
 from . cimport fftw_xfftn
 cimport numpy as np
 from .utilities import *

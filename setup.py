@@ -79,7 +79,13 @@ def get_fftw_libs():
 
 def generate_extensions(fftwlibs, force=True):
     """Generate files with float and long double"""
-    from distutils.dep_util import newer_group
+    try:
+        from setuptools.modified import newer_group
+    except ImportError:
+        try:
+            from setuptools.dep_util import newer_group
+        except ImportError:
+            from distutils.dep_util import newer_group
 
     for d in fftwlibs:
         if d == 'double':
