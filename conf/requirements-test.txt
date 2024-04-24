@@ -1,0 +1,3 @@
+coverage
+pyfftw; sys_platform == 'linux' and python_version < '3.12'
+scipy
