@@ -7,6 +7,7 @@ import re
 import platform
 import sysconfig
 from distutils import ccompiler
+from distutils.errors import DistutilsPlatformError
 from setuptools import setup
 from setuptools.dist import Distribution
 from setuptools.extension import Extension
@@ -74,7 +75,9 @@ def get_fftw_libs():
                 libs[d].append(tlib)
             if os.name == 'posix':
                 libs[d].append('m')
-    assert len(libs) > 0, "No FFTW libraries found in {}".format(library_dirs)
+    if not libs:
+        message = "No FFTW libraries found in {}".format(library_dirs)
+        raise DistutilsPlatformError(message)
     return libs
 
 def generate_extensions(fftwlibs, force=True):
@@ -149,7 +152,12 @@ def get_extensions():
         ),
     ]
 
-    fftwlibs = get_fftw_libs()
+    sdist = 'sdist' in sys.argv
+    egg_info = 'egg_info' in sys.argv
+    fftwlibs = (
+        get_fftw_libs() if not (sdist or egg_info) else
+        {d: [] for d in ('float', 'double', 'long double')}
+    )
     for d, libs in fftwlibs.items():
         p = 'fftw' + prec_map[d] + '_'
         ext.append(
