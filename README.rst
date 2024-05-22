@@ -47,13 +47,6 @@ Install with conda from the coda-forge channel::
 
     conda install -c conda-forge mpi4py-fft
 
-or build it with conda build from the main source directory::
-
-    conda build -c conda-forge conf/
-    conda create --name mpi4py_fft mpi4py_fft --use-local
-
-which will pull in the required dependencies from the conda-forge channel.
-
 Note that mpi4py-fft depends on Python packages
 
     * mpi4py
