@@ -1,5 +1,5 @@
-cimport fftw_xfftn
-#cython: language_level=3
+# cython: language_level=3str
+from . cimport fftw_xfftn
 cimport numpy as np
 from .utilities import *
 import numpy as np
@@ -26,16 +26,16 @@ cpdef void cleanup():
     fftw_cleanup()
     fftw_cleanup_threads()
 
-cdef void _fftw_execute_dft(void *plan, void *_in, void *_out) nogil:
+cdef void _fftw_execute_dft(void *plan, void *_in, void *_out) noexcept nogil:
     fftw_execute_dft(<fftw_plan>plan, <fftw_complex *>_in, <fftw_complex *>_out)
 
-cdef void _fftw_execute_dft_r2c(void *plan, void *_in, void *_out) nogil:
+cdef void _fftw_execute_dft_r2c(void *plan, void *_in, void *_out) noexcept nogil:
     fftw_execute_dft_r2c(<fftw_plan>plan, <fftw_real *>_in, <fftw_complex *>_out)
 
-cdef void _fftw_execute_dft_c2r(void *plan, void *_in, void *_out) nogil:
+cdef void _fftw_execute_dft_c2r(void *plan, void *_in, void *_out) noexcept nogil:
     fftw_execute_dft_c2r(<fftw_plan>plan, <fftw_complex *>_in, <fftw_real *>_out)
 
-cdef void _fftw_execute_r2r(void *plan, void *_in, void *_out) nogil:
+cdef void _fftw_execute_r2r(void *plan, void *_in, void *_out) noexcept nogil:
     fftw_execute_r2r(<fftw_plan>plan, <fftw_real *>_in, <fftw_real *>_out)
 
 cdef generic_function _get_execute_function(kind):
