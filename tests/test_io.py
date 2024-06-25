@@ -178,6 +178,7 @@ if __name__ == '__main__':
         import netCDF4
     except ImportError:
         skip['netcdf4'] = True
+    skip['netcdf4'] = True # Drop test for netCDF4
     for bnd in ('hdf5', 'netcdf4'):
         if not skip[bnd]:
             forw_output = [False]

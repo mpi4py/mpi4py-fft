@@ -41,3 +41,7 @@ u3 = uc.copy()
 u3 = cfft.forward(u2, u3)
 
 assert np.allclose(uc, u3)
+
+fft.destroy()
+pfft.destroy()
+cfft.destroy()

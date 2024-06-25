@@ -48,6 +48,7 @@ def test_r2r():
     B = fft.forward(A)
     C = fft.backward(B, C)
     assert np.allclose(A, C)
+    fft.destroy()
 
 def test_mpifft():
     from itertools import product

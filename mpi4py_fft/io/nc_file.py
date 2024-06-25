@@ -186,7 +186,7 @@ class NCFile(FileBase):
 
         h[step] = 0 # collectively create dataset
         h.set_collective(False)
-        sf = tuple([step] + list(sf))
+        sf = tuple([int(step)] + list(sf))
         sl = tuple(slices)
         if inside:
             h[sf] = field[sl]

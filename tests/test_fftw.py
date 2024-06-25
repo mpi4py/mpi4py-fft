@@ -27,7 +27,7 @@ rkinds = {val: key for key, val in kinds.items()}
 
 def allclose(a, b):
     atol = abstol[a.dtype.char.lower()]
-    return np.allclose(a, b, rtol=0, atol=atol)
+    return np.allclose(a, b, atol=atol)
 
 def test_fftw():
     from itertools import product

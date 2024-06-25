@@ -45,9 +45,7 @@ def get_local_mesh(FFT, L):
     """Returns local mesh."""
     X = np.ogrid[FFT.local_slice(False)]
     N = FFT.global_shape()
-    for i in range(len(N)):
-        X[i] = (X[i]*L[i]/N[i])
-    X = [np.broadcast_to(x, FFT.shape(False)) for x in X]
+    X = [np.broadcast_to(x*L[i]/N[i], FFT.shape(False)) for i, x in enumerate(X)]
     return X
 
 def get_local_wavenumbermesh(FFT, L):
@@ -60,9 +58,7 @@ def get_local_wavenumbermesh(FFT, L):
     K = [ki[si] for ki, si in zip(k, s)]
     Ks = np.meshgrid(*K, indexing='ij', sparse=True)
     Lp = 2*np.pi/L
-    for i in range(3):
-        Ks[i] = (Ks[i]*Lp[i]).astype(float)
-    return [np.broadcast_to(k, FFT.shape(True)) for k in Ks]
+    return [np.broadcast_to(k*Lp[i], FFT.shape(True)) for i, k in enumerate(Ks)]
 
 X = get_local_mesh(FFT, L)
 K = get_local_wavenumbermesh(FFT, L)
@@ -131,3 +127,5 @@ k = MPI.COMM_WORLD.reduce(np.sum(U*U)/N[0]/N[1]/N[2]/2)
 if MPI.COMM_WORLD.Get_rank() == 0:
     print('Time = {}'.format(time()-t0))
     assert round(float(k) - 0.124953117517, 7) == 0
+
+FFT.destroy()

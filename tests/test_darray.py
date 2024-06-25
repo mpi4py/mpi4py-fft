@@ -46,7 +46,7 @@ def test_2Darray():
                 pass
             _ = a.local_slice()
             newaxis = (a.alignment+1)%2
-            _ = a.get_pencil_and_transfer(newaxis)
+            p, t = a.get_pencil_and_transfer(newaxis)
             a[:] = MPI.COMM_WORLD.Get_rank()
             b = a.redistribute(newaxis)
             a = b.redistribute(out=a)
@@ -57,6 +57,7 @@ def test_2Darray():
                 assert abs(s0-s1) < 1e-1
             c = a.redistribute(a.alignment)
             assert c is a
+            t.destroy()
 
 def test_3Darray():
     N = (8, 8, 8)
@@ -97,7 +98,7 @@ def test_3Darray():
                 pass
             _ = a.local_slice()
             newaxis = (a.alignment+1)%3
-            _ = a.get_pencil_and_transfer(newaxis)
+            p, t = a.get_pencil_and_transfer(newaxis)
             a[:] = MPI.COMM_WORLD.Get_rank()
             b = a.redistribute(newaxis)
             a = b.redistribute(out=a)
@@ -105,6 +106,7 @@ def test_3Darray():
             s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(b)**2)
             if MPI.COMM_WORLD.Get_rank() == 0:
                 assert abs(s0-s1) < 1e-1
+            t.destroy()
 
 def test_newDistArray():
     N = (8, 8, 8)
