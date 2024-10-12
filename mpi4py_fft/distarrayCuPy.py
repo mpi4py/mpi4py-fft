@@ -83,4 +83,4 @@ class DistArrayCuPy(DistArrayBase, cp.ndarray):
     @property
     def v(self):
         """Return local ``self`` array as an ``ndarray`` object"""
-        return cp.ndarray.__getitem__(self, slice(0, -1, 1))
+        return cp.ndarray.__getitem__(self, slice(None, None, None))
