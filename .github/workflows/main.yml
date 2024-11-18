@@ -69,7 +69,7 @@ jobs:
       working-directory: tests
 
     - if: matrix.mpi == 'mpich' && startsWith(matrix.os, 'ubuntu')
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v5
       with:
         files: test/coverage.xml
         name: ${{ matrix.os }}-${{ matrix.mpi }}-${{ matrix.py }}
