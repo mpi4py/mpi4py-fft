@@ -267,6 +267,7 @@ class NCCLTransfer(Transfer):
     communicator will share rank and size attributes with the MPI communicator.
     In particular, this assumes one GPU per MPI rank.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.forward_graph = None
@@ -288,6 +289,55 @@ class NCCLTransfer(Transfer):
             raise NotImplementedError(f'Don\'t know what NCCL dtype to use to send data of dtype {self.dtype}!')
         self.count_modifier = 2 if 'complex' in str(self.dtype) else 1
 
+        self.arrayA = None
+        self.arrayB = None
+
+    def _copy_to_input_arrays(self, arrayA, arrayB):
+        """
+        This is needed to make the CUDA graph work with arbitrary input data.
+
+        Parameters
+        ----------
+        arrayA : array
+            Data to be copied to the graph input
+        arrayB : array
+            Data to be copied to the graph output
+        """
+        if self.arrayA is None:
+            self.arrayA = arrayA
+        elif self.arrayA.data.ptr == arrayA.data.ptr:
+            pass
+        else:
+            self.arrayA[...] = arrayA
+
+        if self.arrayB is None:
+            self.arrayB = arrayB
+        elif self.arrayB.data.ptr == arrayB.data.ptr:
+            pass
+        else:
+            self.arrayB[...] = arrayB
+
+    def _retrieve_from_input_arrays(self, arrayA, arrayB):
+        """
+        This is needed to make the CUDA graph work with arbitrary input data.
+
+        Parameters
+        ----------
+        arrayA : array
+            Data to be copied from the graph input
+        arrayB : array
+            Data to be copied from the graph output
+        """
+        if self.arrayA.data.ptr == arrayA.data.ptr:
+            pass
+        else:
+            arrayA[...] = self.arrayA
+
+        if self.arrayB.data.ptr == arrayB.data.ptr:
+            pass
+        else:
+            arrayB[...] = self.arrayB
+
     def backward(self, arrayB, arrayA):
         """Global redistribution from arrayB to arrayA
 
@@ -299,7 +349,9 @@ class NCCLTransfer(Transfer):
             Array of shape subshapeA, for receiving data
 
         """
-        self.backward_graph = self.Alltoallw(arrayB, self._subtypesB, arrayA, self._subtypesA, graph=self.backward_graph)
+        self._copy_to_input_arrays(arrayA, arrayB)
+        self.backward_graph = self.Alltoallw(self.arrayB, self._subtypesB, self.arrayA, self._subtypesA, graph=self.backward_graph)
+        self._retrieve_from_input_arrays(arrayA, arrayB)
 
     def forward(self, arrayA, arrayB):
         """Global redistribution from arrayA to arrayB
@@ -311,7 +363,9 @@ class NCCLTransfer(Transfer):
         arrayB : array
             Array of shape subshapeB, for receiving data
         """
-        self.forward_graph = self.Alltoallw(arrayA, self._subtypesA, arrayB, self._subtypesB, graph=self.forward_graph)
+        self._copy_to_input_arrays(arrayA, arrayB)
+        self.forward_graph = self.Alltoallw(self.arrayA, self._subtypesA, self.arrayB, self._subtypesB, graph=self.forward_graph)
+        self._retrieve_from_input_arrays(arrayA, arrayB)
 
     def Alltoallw(self, arrayA, subtypesA, arrayB, subtypesB, graph=None):
         """
