@@ -80,3 +80,6 @@ s0 = MPI.COMM_WORLD.reduce(np.linalg.norm(m0)**2)
 s1 = MPI.COMM_WORLD.reduce(np.linalg.norm(m1)**2)
 if MPI.COMM_WORLD.Get_rank() == 0:
     assert abs(s0-s1) < 1e-12
+
+fft.destroy()
+nfft.destroy()

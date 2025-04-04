@@ -58,14 +58,6 @@ after cloning or forking
 
     pip install .
 
-or using `conda-build`_ with the recipes in folder ``conf/``
-
-::
-
-    conda build -c conda-forge conf/
-    conda create --name mpi4py-fft -c conda-forge mpi4py-fft --use-local
-    conda activate mpi4py-fft
-
 
 Additional dependencies
 -----------------------
@@ -115,5 +107,4 @@ This test-suit is run automatically on every commit to github, see, e.g.,
 .. _openmpi: https://www.open-mpi.org
 .. _numpy: https://www.numpy.org
 .. _numba: https://www.numba.org
-.. _conda-build: https://conda.io/docs/commands/build/conda-build.html
 .. _pypi: https://pypi.org/project/shenfun/
