@@ -28,9 +28,9 @@ jobs:
 
     steps:
 
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@v7
 
-    - uses: actions/setup-python@v6
+    - uses: actions/setup-python@v7
       with:
         python-version: ${{ matrix.py }}
 
@@ -66,7 +66,7 @@ jobs:
       working-directory: tests
 
     - if: matrix.mpi == 'mpich' && startsWith(matrix.os, 'ubuntu')
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@v7
       with:
         files: test/coverage.xml
         name: ${{ matrix.os }}-${{ matrix.mpi }}-${{ matrix.py }}
