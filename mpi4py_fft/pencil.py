@@ -29,6 +29,17 @@ def _subarraytypes(comm, shape, axis, subshape, dtype):
     return tuple(datatypes)
 
 
+def get_slice(subtype):
+    """
+    Extract from the subtype object generated for MPI what shape the buffer
+    should have and what part of the array we want to send / receive.
+    """
+    decoded = subtype.decode()
+    subsizes = decoded[2]['subsizes']
+    starts = decoded[2]['starts']
+    return tuple(slice(starts[i], starts[i] + subsizes[i]) for i in range(len(starts)))
+
+
 class Subcomm(tuple):
     r"""Class returning a tuple of subcommunicators of any dimensionality
 
@@ -155,6 +166,7 @@ class Transfer(object):
                  comm, shape, dtype,
                  subshapeA, axisA,
                  subshapeB, axisB):
+
         self.comm = comm
         self.shape = tuple(shape)
         self.dtype = dtype = np.dtype(dtype)
@@ -179,8 +191,15 @@ class Transfer(object):
         assert self.subshapeB == arrayB.shape
         assert self.dtype == arrayA.dtype
         assert self.dtype == arrayB.dtype
-        self.comm.Alltoallw([arrayA, self._counts_displs, self._subtypesA],
-                            [arrayB, self._counts_displs, self._subtypesB])
+        self.Alltoallw(arrayA, self._subtypesA, arrayB, self._subtypesB)
+
+    def Alltoallw(self, arrayA, subtypesA, arrayB, subtypesB):
+        """
+        Redistribute arrayA to arrayB
+        """
+        self.comm.Alltoallw([arrayA, self._counts_displs, subtypesA],
+                            [arrayB, self._counts_displs, subtypesB])
+
 
     def backward(self, arrayB, arrayA):
         """Global redistribution from arrayB to arrayA
@@ -197,8 +216,7 @@ class Transfer(object):
         assert self.subshapeB == arrayB.shape
         assert self.dtype == arrayA.dtype
         assert self.dtype == arrayB.dtype
-        self.comm.Alltoallw([arrayB, self._counts_displs, self._subtypesB],
-                            [arrayA, self._counts_displs, self._subtypesA])
+        self.Alltoallw(arrayB, self._subtypesB, arrayA, self._subtypesA)
 
     def destroy(self):
         for datatype in self._subtypesA:
@@ -207,6 +225,196 @@ class Transfer(object):
         for datatype in self._subtypesB:
             if datatype:
                 datatype.Free()
+
+
+class CustomMPITransfer(Transfer):
+
+    def Alltoallw(self, arrayA, subtypesA, arrayB, subtypesB):
+        """
+        Redistribute arrayA to arrayB.
+        """
+        if type(arrayA) == np.ndarray:
+            xp = np
+            def synchronize_stream():
+                pass
+        else:
+            import cupy as xp
+            synchronize_stream = xp.cuda.get_current_stream().synchronize
+
+        rank, size, comm = self.comm.rank, self.comm.size, self.comm
+
+        for i in range(1, size + 1):
+            send_to = (rank + i) % size
+            recv_from = (rank -i + size) % size
+
+            sliceA = get_slice(subtypesA[send_to])
+            sliceB = get_slice(subtypesB[recv_from])
+
+            if send_to == rank:
+                arrayB[sliceB][:] = arrayA[sliceA][:]
+            else:
+                recvbuf = xp.ascontiguousarray(arrayB[sliceB])
+                sendbuf = xp.ascontiguousarray(arrayA[sliceA])
+
+                synchronize_stream()
+                comm.Sendrecv(sendbuf, send_to, recvbuf=recvbuf, source=recv_from)
+                arrayB[sliceB][:] = recvbuf[:]
+
+
+class NCCLTransfer(Transfer):
+    """
+    Transfer class which uses NCCL for `Alltoallw` operations. The NCCL
+    communicator will share rank and size attributes with the MPI communicator.
+    In particular, this assumes one GPU per MPI rank.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.forward_graph = None
+        self.backward_graph = None
+
+        from cupy.cuda import nccl
+        self.comm_nccl = nccl.NcclCommunicator(self.comm.size, self.comm.bcast(nccl.get_unique_id(), root=0), self.comm.rank)
+
+        # determine how to send the data. If we have complex numbers, we need to send two real numbers.
+        if self.dtype in [np.dtype('float32'), np.dtype('complex64')]:
+            self.NCCL_dtype = nccl.NCCL_FLOAT32
+        elif self.dtype in [np.dtype('float64'), np.dtype('complex128')]:
+            self.NCCL_dtype = nccl.NCCL_FLOAT64
+        elif self.dtype in [np.dtype('int32')]:
+            self.NCCL_dtype = nccl.NCCL_INT32
+        elif self.dtype in [np.dtype('int64')]:
+            self.NCCL_dtype = nccl.NCCL_INT64
+        else:
+            raise NotImplementedError(f'Don\'t know what NCCL dtype to use to send data of dtype {self.dtype}!')
+        self.count_modifier = 2 if 'complex' in str(self.dtype) else 1
+
+        self.arrayA = None
+        self.arrayB = None
+
+    def _copy_to_input_arrays(self, arrayA, arrayB):
+        """
+        This is needed to make the CUDA graph work with arbitrary input data.
+
+        Parameters
+        ----------
+        arrayA : array
+            Data to be copied to the graph input
+        arrayB : array
+            Data to be copied to the graph output
+        """
+        if self.arrayA is None:
+            self.arrayA = arrayA
+        elif self.arrayA.data.ptr == arrayA.data.ptr:
+            pass
+        else:
+            self.arrayA[...] = arrayA
+
+        if self.arrayB is None:
+            self.arrayB = arrayB
+        elif self.arrayB.data.ptr == arrayB.data.ptr:
+            pass
+        else:
+            self.arrayB[...] = arrayB
+
+    def _retrieve_from_input_arrays(self, arrayA, arrayB):
+        """
+        This is needed to make the CUDA graph work with arbitrary input data.
+
+        Parameters
+        ----------
+        arrayA : array
+            Data to be copied from the graph input
+        arrayB : array
+            Data to be copied from the graph output
+        """
+        if self.arrayA.data.ptr == arrayA.data.ptr:
+            pass
+        else:
+            arrayA[...] = self.arrayA
+
+        if self.arrayB.data.ptr == arrayB.data.ptr:
+            pass
+        else:
+            arrayB[...] = self.arrayB
+
+    def backward(self, arrayB, arrayA):
+        """Global redistribution from arrayB to arrayA
+
+        Parameters
+        ----------
+        arrayB : array
+            Array of shape subshapeB, containing data to be redistributed
+        arrayA : array
+            Array of shape subshapeA, for receiving data
+
+        """
+        self._copy_to_input_arrays(arrayA, arrayB)
+        self.backward_graph = self.Alltoallw(self.arrayB, self._subtypesB, self.arrayA, self._subtypesA, graph=self.backward_graph)
+        self._retrieve_from_input_arrays(arrayA, arrayB)
+
+    def forward(self, arrayA, arrayB):
+        """Global redistribution from arrayA to arrayB
+
+        Parameters
+        ----------
+        arrayA : array
+            Array of shape subshapeA, containing data to be redistributed
+        arrayB : array
+            Array of shape subshapeB, for receiving data
+        """
+        self._copy_to_input_arrays(arrayA, arrayB)
+        self.forward_graph = self.Alltoallw(self.arrayA, self._subtypesA, self.arrayB, self._subtypesB, graph=self.forward_graph)
+        self._retrieve_from_input_arrays(arrayA, arrayB)
+
+    def Alltoallw(self, arrayA, subtypesA, arrayB, subtypesB, graph=None):
+        """
+        Redistribute arrayA to arrayB.
+        """
+        import cupy as cp
+        rank, size, comm = self.comm.rank, self.comm.size, self.comm_nccl
+
+        # record to a graph if we haven't already done so
+        if graph is None:
+            stream = cp.cuda.Stream(non_blocking=True)
+            with stream:
+                stream.begin_capture()
+
+                # initialize dictionaries required to overlap sends
+                recvbufs = {}
+                sendbufs = {}
+                sliceBs = {}
+
+                # perform all sends and receives in a single kernel to allow overlap
+                cp.cuda.nccl.groupStart()
+                for i in range(1, size + 1):
+
+                    send_to = (rank + i) % size
+                    recv_from = (rank -i + size) % size
+
+                    sliceA = get_slice(subtypesA[send_to])
+                    sliceBs[i] = get_slice(subtypesB[recv_from])
+
+                    recvbufs[i] = cp.ascontiguousarray(arrayB[sliceBs[i]])
+                    sendbufs[i] = cp.ascontiguousarray(arrayA[sliceA])
+
+                    comm.recv(recvbufs[i].data.ptr, recvbufs[i].size * self.count_modifier, self.NCCL_dtype, recv_from, stream.ptr)
+                    comm.send(sendbufs[i].data.ptr, sendbufs[i].size * self.count_modifier, self.NCCL_dtype, send_to, stream.ptr)
+                cp.cuda.nccl.groupEnd()
+
+                for i in recvbufs.keys():
+                    cp.copyto(arrayB[sliceBs[i]], recvbufs[i])
+
+                graph = stream.end_capture()
+
+        graph.launch(stream=cp.cuda.get_current_stream())
+        return graph
+
+    def destroy(self):
+        del self.forward_graph
+        del self.backward_graph
+        self.comm_nccl.destroy()
+        super().destroy()
 
 
 class Pencil(object):
@@ -274,6 +482,8 @@ class Pencil(object):
     aligned in axis 1.
 
     """
+    backend = 'MPI'
+
     def __init__(self, subcomm, shape, axis=-1):
         assert len(shape) >= 2
         assert min(shape) >= 1
@@ -349,6 +559,15 @@ class Pencil(object):
         shape = list(penA.subshape)
         shape[axis] = penA.shape[axis]
 
-        return Transfer(comm, shape, dtype,
+        if self.backend == 'MPI':
+            transfer_class = Transfer
+        elif self.backend == 'NCCL':
+            transfer_class = NCCLTransfer
+        elif self.backend == 'customMPI':
+            transfer_class = CustomMPITransfer
+        else:
+            raise NotImplementedError(f'Don\'t have a transfer class for backend \"{self.backend}\"!')
+
+        return transfer_class(comm, shape, dtype,
                         penA.subshape, penA.axis,
                         penB.subshape, penB.axis)

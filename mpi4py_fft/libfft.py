@@ -78,6 +78,30 @@ def _Xfftn_plan_fftw(shape, axes, dtype, transforms, options):
     xfftn_bck = plan_bck(V, s=s, axes=axes, threads=threads, flags=flags, output_array=U)
     return (xfftn_fwd, xfftn_bck)
 
+def _Xfftn_plan_cupy(shape, axes, dtype, transforms, options):
+    import cupy as cp
+    cp.fft.config.enable_nd_planning = True
+
+    transforms = {} if transforms is None else transforms
+    if tuple(axes) in transforms:
+        plan_fwd, plan_bck = transforms[tuple(axes)]
+    else:
+        if cp.issubdtype(dtype, cp.floating):
+            plan_fwd = cp.fft.rfftn
+            plan_bck = cp.fft.irfftn
+        else:
+            plan_fwd = cp.fft.fftn
+            plan_bck = cp.fft.ifftn
+
+    s = tuple(np.take(shape, axes))
+    U = cp.empty(shape=shape, dtype=dtype)
+    V = cp.empty_like(plan_fwd(U, s=s, axes=axes))
+
+    return (
+        _Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes, 'norm': 'backward',}, xp=cp),
+        _Yfftn_wrap(plan_bck, V, U, 1, {'s': s, 'axes': axes, 'norm': 'forward',}, xp=cp),
+    )
+
 def _Xfftn_plan_numpy(shape, axes, dtype, transforms, options):
 
     transforms = {} if transforms is None else transforms
@@ -125,6 +149,25 @@ def _Xfftn_plan_mkl(shape, axes, dtype, transforms, options): #pragma: no cover
     return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes}),
             _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes}))
 
+def _Xfftn_plan_cupyx_scipy(shape, axes, dtype, transforms, options):
+    import cupy as cp
+    import cupyx.scipy.fft as cufft
+
+    transforms = {} if transforms is None else transforms
+    if tuple(axes) in transforms:
+        plan_fwd, plan_bck = transforms[tuple(axes)]
+    else:
+        plan_fwd = cufft.fftn
+        plan_bck = cufft.ifftn
+
+    s = tuple(np.take(shape, axes))
+    U = cp.empty(shape=shape, dtype=dtype)
+    V = plan_fwd(U, s=s, axes=axes)
+    V = cp.array(V)
+    M = np.prod(s)
+    return (_Yfftn_wrap(plan_fwd, U, V, 1, {'s': s, 'axes': axes, 'overwrite_x': True}, xp=cp),
+            _Yfftn_wrap(plan_bck, V, U, M, {'s': s, 'axes': axes, 'overwrite_x': True}, xp=cp))
+
 def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
 
     transforms = {} if transforms is None else transforms
@@ -143,19 +186,23 @@ def _Xfftn_plan_scipy(shape, axes, dtype, transforms, options):
     return (_Yfftn_wrap(plan_fwd, U, V, 1, {'shape': s, 'axes': axes}),
             _Yfftn_wrap(plan_bck, V, U, M, {'shape': s, 'axes': axes}))
 
+def _copyto(dst, src, xp):
+    xp.copyto(dst, src, casting='unsafe')
+
 class _Yfftn_wrap(object):
     #Wraps numpy/scipy/mkl transforms to FFTW style
     # pylint: disable=too-few-public-methods
 
-    __slots__ = ('_xfftn', '_M', '_opt', '__doc__', '_input_array', '_output_array')
+    __slots__ = ('_xfftn', '_M', '_opt', '__doc__', '_input_array', '_output_array', 'xp')
 
-    def __init__(self, xfftn_obj, input_array, output_array, M, opt):
+    def __init__(self, xfftn_obj, input_array, output_array, M, opt, xp=np):
         object.__setattr__(self, '_xfftn', xfftn_obj)
         object.__setattr__(self, '_opt', opt)
         object.__setattr__(self, '_M', M)
         object.__setattr__(self, '_input_array', input_array)
         object.__setattr__(self, '_output_array', output_array)
         object.__setattr__(self, '__doc__', xfftn_obj.__doc__)
+        object.__setattr__(self, 'xp', xp)
 
     @property
     def input_array(self):
@@ -177,9 +224,12 @@ class _Yfftn_wrap(object):
     def M(self):
         return object.__getattribute__(self, '_M')
 
+    def copyto(self, dst, src):
+        _copyto(dst, src, self.xp)
+
     def __call__(self, *args, **kwargs):
         self.opt.update(kwargs)
-        self.output_array[...] = self.xfftn(self.input_array, **self.opt)
+        self.copyto(self._output_array, self.xfftn(self.input_array, **self.opt))
         if abs(self.M-1) > 1e-8:
             self._output_array *= self.M
         return self.output_array
@@ -188,13 +238,14 @@ class _Xfftn_wrap(object):
     #Common interface for all serial transforms
     # pylint: disable=too-few-public-methods
 
-    __slots__ = ('_xfftn', '__doc__', '_input_array', '_output_array')
+    __slots__ = ('_xfftn', '__doc__', '_input_array', '_output_array', 'xp')
 
-    def __init__(self, xfftn_obj, input_array, output_array):
+    def __init__(self, xfftn_obj, input_array, output_array, xp=np):
         object.__setattr__(self, '_xfftn', xfftn_obj)
         object.__setattr__(self, '_input_array', input_array)
         object.__setattr__(self, '_output_array', output_array)
         object.__setattr__(self, '__doc__', xfftn_obj.__doc__)
+        object.__setattr__(self, 'xp', xp)
 
     @property
     def input_array(self):
@@ -208,12 +259,15 @@ class _Xfftn_wrap(object):
     def xfftn(self):
         return object.__getattribute__(self, '_xfftn')
 
+    def copyto(self, dst, src):
+        _copyto(dst, src, self.xp)
+
     def __call__(self, input_array=None, output_array=None, **options):
         if input_array is not None:
-            self.input_array[...] = input_array
+            self.copyto(self.input_array, input_array)
         self.xfftn(**options)
         if output_array is not None:
-            output_array[...] = self.output_array
+            self.copyto(output_array, self.output_array)
             return output_array
         else:
             return self.output_array
@@ -310,7 +364,6 @@ class FFTBase(object):
                     su[axis] = -(N//2)
                     padded_array[tuple(su)] *= 0.5
 
-
 class FFT(FFTBase):
     """Class for serial FFT transforms
 
@@ -373,6 +426,7 @@ class FFT(FFTBase):
         output_array : array
 
     """
+
     def __init__(self, shape, axes=None, dtype=float, padding=False,
                  backend='fftw', transforms=None, **kw):
         FFTBase.__init__(self, shape, axes, dtype, padding)
@@ -380,8 +434,10 @@ class FFT(FFTBase):
             'pyfftw': _Xfftn_plan_pyfftw,
             'fftw': _Xfftn_plan_fftw,
             'numpy': _Xfftn_plan_numpy,
+            'cupy': _Xfftn_plan_cupy,
             'mkl_fft': _Xfftn_plan_mkl,
             'scipy': _Xfftn_plan_scipy,
+            'cupyx-scipy': _Xfftn_plan_cupyx_scipy,
         }[backend]
         self.backend = backend
         self.fwd, self.bck = plan(self.shape, self.axes, self.dtype, transforms, kw)
@@ -391,19 +447,27 @@ class FFT(FFTBase):
             self.M = 1./np.prod(np.take(self.shape, self.axes))
         else:
             self.M = self.fwd.get_normalization()
-        if backend == 'scipy':
+        if backend in ['scipy', 'cupyx-scipy']:
             self.real_transform = False # No rfftn/irfftn methods
+
         self.padding_factor = 1.0
         if padding is not False:
             self.padding_factor = padding[self.axes[-1]] if np.ndim(padding) else padding
+        xp = np
+        if 'cupy' in self.backend:
+            import cupy as cp
+            xp = cp
+
         if abs(self.padding_factor-1.0) > 1e-8:
             assert len(self.axes) == 1
             trunc_array = self._get_truncarray(shape, V.dtype)
-            self.forward = _Xfftn_wrap(self._forward, U, trunc_array)
-            self.backward = _Xfftn_wrap(self._backward, trunc_array, U)
+            if 'cupy' in self.backend:  # TODO: Skip detour via CPU
+                trunc_array = cp.array(trunc_array)
+            self.forward = _Xfftn_wrap(self._forward, U, trunc_array, xp=xp)
+            self.backward = _Xfftn_wrap(self._backward, trunc_array, U, xp=xp)
         else:
-            self.forward = _Xfftn_wrap(self._forward, U, V)
-            self.backward = _Xfftn_wrap(self._backward, V, U)
+            self.forward = _Xfftn_wrap(self._forward, U, V, xp=xp)
+            self.backward = _Xfftn_wrap(self._backward, V, U, xp=xp)
 
     def _forward(self, **kw):
         normalize = kw.pop('normalize', True)

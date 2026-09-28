@@ -63,17 +63,18 @@ class Transform(object):
 
         """
         if input_array is not None:
-            self.input_array[...] = input_array
+            self._xfftn[0].copyto(self.input_array, input_array)
 
         for i in range(len(self._transfer)):
             self._xfftn[i](**kw)
             arrayA = self._xfftn[i].output_array
             arrayB = self._xfftn[i+1].input_array
             self._transfer[i](arrayA, arrayB)
+
         self._xfftn[-1](**kw)
 
         if output_array is not None:
-            output_array[...] = self.output_array
+            self._xfftn[-1].copyto(output_array, self.output_array)
             return output_array
         else:
             return self.output_array
@@ -128,6 +129,11 @@ class PFFT(object):
         fftn/ifftn for complex input arrays. Real-to-real transforms can be
         configured using this dictionary and real-to-real transforms from the
         :mod:`.fftw.xfftn` module. See Examples.
+    comm_backend : str, optional
+        Choose backend for communication. When using GPU based serial backends,
+        the "NCCL" backend or a "customMPI" backend can be be used in `Alltoallw`
+        operations to speedup GPU to GPU transfer. Keep in mind that this is used
+        alongside MPI and assumes one GPU per MPI rank is used.
 
     Other Parameters
     ----------------
@@ -201,7 +207,7 @@ class PFFT(object):
     """
     def __init__(self, comm, shape=None, axes=None, dtype=float, grid=None,
                  padding=False, collapse=False, backend='fftw',
-                 transforms=None, darray=None, **kw):
+                 transforms=None, darray=None, comm_backend='MPI', **kw):
         # pylint: disable=too-many-locals
         # pylint: disable=too-many-branches
         # pylint: disable=too-many-statements
@@ -311,6 +317,7 @@ class PFFT(object):
         self.pencil = [None, None]
 
         axes = self.axes[-1]
+        Pencil.backend = comm_backend
         pencil = Pencil(self.subcomm, shape, axes[-1])
         xfftn = FFT(pencil.subshape, axes, dtype, padding, backend=backend,
                     transforms=transforms, **kw)
