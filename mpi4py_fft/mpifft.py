@@ -316,9 +316,10 @@ class PFFT(object):
                     transforms=transforms, **kw)
         self.xfftn.append(xfftn)
         self.pencil[0] = pencilA = pencil
-        if not shape[axes[-1]] == xfftn.forward.output_array.shape[axes[-1]]:
-            dtype = xfftn.forward.output_array.dtype
-            shape[axes[-1]] = xfftn.forward.output_array.shape[axes[-1]]
+        output_shape = xfftn.forward.output_array.shape
+        dtype = xfftn.forward.output_array.dtype
+        if shape[axes[-1]] != output_shape[axes[-1]]:
+            shape[axes[-1]] = output_shape[axes[-1]]
             pencilA = Pencil(self.subcomm, shape, axes[-1])
 
         for axes in reversed(self.axes[:-1]):
@@ -329,9 +330,10 @@ class PFFT(object):
             self.xfftn.append(xfftn)
             self.transfer.append(transAB)
             pencilA = pencilB
-            if not shape[axes[-1]] == xfftn.forward.output_array.shape[axes[-1]]:
-                dtype = xfftn.forward.output_array.dtype
-                shape[axes[-1]] = xfftn.forward.output_array.shape[axes[-1]]
+            output_shape = xfftn.forward.output_array.shape
+            dtype = xfftn.forward.output_array.dtype
+            if shape[axes[-1]] != output_shape[axes[-1]]:
+                shape[axes[-1]] = output_shape[axes[-1]]
                 pencilA = Pencil(pencilB.subcomm, shape, axes[-1])
 
         self.pencil[1] = pencilA
