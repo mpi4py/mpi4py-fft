@@ -132,8 +132,62 @@ def test_newDistArray():
                     assert a.base.rank == rank
     pfft.destroy()
 
+def test_redistribute_out():
+    shape = (max(8, 2*comm.Get_size()), max(7, comm.Get_size()), 5)
+    same_layout = Subcomm(comm, (0, 1, 1))
+
+    def coordinate_values(array):
+        starts = [part.start for part in array.local_slice()]
+        i, j, k = np.indices(array.shape, dtype=np.int64)
+        return ((i + starts[0])*shape[1]*shape[2] +
+                (j + starts[1])*shape[2] + k + starts[2])
+
+    source = DistArray(shape, subcomm=same_layout, alignment=1)
+    source.v[...] = coordinate_values(source)
+    source_values = coordinate_values(source)
+
+    # Supplying out must still copy when the requested alignment already
+    # matches the source alignment.
+    same_alignment_out = DistArray(shape, subcomm=same_layout, alignment=1)
+    same_alignment_out.v.fill(-1)
+    returned = source.redistribute(axis=1, out=same_alignment_out)
+    assert returned is same_alignment_out
+    np.testing.assert_array_equal(same_alignment_out.v, source_values)
+    np.testing.assert_array_equal(source.v, source_values)
+
+    # Both axes are undivided, so this path needs no communication, but it
+    # must not change the source pencil or ignore the requested output.
+    undivided_out = DistArray(shape, subcomm=same_layout, alignment=2)
+    undivided_out.v.fill(-1)
+    source_alignment = source.alignment
+    returned = source.redistribute(axis=2, out=undivided_out)
+    assert returned is undivided_out
+    assert source.alignment == source_alignment
+    np.testing.assert_array_equal(undivided_out.v, source_values)
+    np.testing.assert_array_equal(source.v, source_values)
+
+    # axis=None takes the target alignment and performs a real redistribution.
+    for axis in (None, 0):
+        target_pencil = source.pencil.pencil(0)
+        redistributed_out = DistArray(shape, subcomm=target_pencil.subcomm,
+                                      alignment=0)
+        redistributed_out.v.fill(-1)
+        returned = source.redistribute(axis=axis, out=redistributed_out)
+        assert returned is redistributed_out
+        np.testing.assert_array_equal(redistributed_out.v,
+                                      coordinate_values(redistributed_out))
+        np.testing.assert_array_equal(source.v, source_values)
+
+    # out=self remains valid and preserves the source data.
+    returned = source.redistribute(axis=source.alignment, out=source)
+    assert returned is source
+    np.testing.assert_array_equal(source.v, source_values)
+
+    same_layout.destroy()
+
 if __name__ == '__main__':
     test_1Darray()
     test_2Darray()
     test_3Darray()
     test_newDistArray()
+    test_redistribute_out()
