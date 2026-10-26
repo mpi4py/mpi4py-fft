@@ -312,23 +312,11 @@ class DistArray(np.ndarray):
             None then a new DistArray (aligned along ``axis``) is created
             and returned. Otherwise the provided out array is returned.
         """
-        # Take care of some trivial cases first
-        if axis == self.alignment:
-            return self
-
-        if axis is not None and isinstance(out, DistArray):
-            assert axis == out.alignment
-
-        # Check if self is already aligned along axis. In that case just switch
-        # axis of pencil (both axes are undivided) and return
-        if axis is not None:
-            if self.commsizes[self.rank+axis] == 1:
-                self.pencil.axis = axis
-                return self
-
         if out is not None:
             assert isinstance(out, DistArray)
             assert self.global_shape == out.global_shape
+            if axis is not None:
+                assert axis == out.alignment
             axis = out.alignment
             if self.commsizes == out.commsizes:
                 # Just a copy required. Should probably not be here
@@ -340,6 +328,17 @@ class DistArray(np.ndarray):
                 if i not in (self.alignment, out.alignment):
                     assert self.pencil.subcomm[i] == out.pencil.subcomm[i]
                     assert self.pencil.subshape[i] == out.pencil.subshape[i]
+        else:
+            # Take care of some trivial cases when no output array was given.
+            if axis == self.alignment:
+                return self
+
+            # Check if self is already aligned along axis. In that case just
+            # switch axis of pencil (both axes are undivided) and return.
+            if axis is not None:
+                if self.commsizes[self.rank+axis] == 1:
+                    self.pencil.axis = axis
+                    return self
 
         p1, transfer = self.get_pencil_and_transfer(axis)
         if out is None:
