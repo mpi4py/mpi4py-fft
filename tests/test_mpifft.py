@@ -50,6 +50,187 @@ def test_r2r():
     assert np.allclose(A, C)
     fft.destroy()
 
+def test_small_r2c_dtype():
+    comm = MPI.COMM_WORLD
+    size = comm.Get_size()
+    metrics = []
+    last_lengths = (1, 2, 3)
+    real_dtypes = (np.float32, np.float64)
+    complex_controls = (np.complex64, np.complex128)
+
+    for last_length in last_lengths:
+        shape = (max(5, size), max(5, 2*size-1), last_length)
+        axes = ((0,), (1,), (2,))
+        i, j, k = np.indices(shape, dtype=np.float64)
+        real_values = (np.sin(0.17*i + 0.31*j + 0.43*k) +
+                       0.25*np.cos(0.11*i - 0.23*j + 0.37*k))
+
+        for dtype in real_dtypes:
+            source = real_values.astype(dtype)
+            fft = PFFT(comm, shape, axes=axes, dtype=dtype,
+                       grid=(size, 1, 1),
+                       collapse=False)
+            expected_dtype = (np.complex64 if dtype is np.float32
+                              else np.complex128)
+            assert fft.forward.output_array.dtype == np.dtype(expected_dtype)
+            fft.forward.input_array[...] = source[fft.local_slice(False)]
+            actual = fft.forward(normalize=False)
+            assert actual.dtype == np.dtype(expected_dtype)
+
+            expected_shape = shape[:-1] + (last_length//2 + 1,)
+            assert fft.global_shape(True) == expected_shape
+            reference = np.fft.rfftn(source, axes=(0, 1, 2))
+            local_output = fft.local_slice(True)
+            tolerance = abstol[np.dtype(expected_dtype).char.lower()]
+            local_spectrum_matches = np.allclose(
+                actual, reference[local_output], rtol=0, atol=tolerance)
+            local_spectrum_error = float(np.max(np.abs(
+                actual - reference[local_output])))
+            spectrum_error = comm.allreduce(local_spectrum_error, op=MPI.MAX)
+            spectrum_matches = comm.allreduce(
+                int(local_spectrum_matches), op=MPI.MIN)
+            assert spectrum_matches, (
+                'r2c spectrum mismatch: last_length={}, dtype={}, '
+                'global_max_abs_error={}, atol={}'.format(
+                    last_length, np.dtype(dtype).name, spectrum_error,
+                    tolerance))
+
+            restored = fft.backward(actual, normalize=True)
+            local_roundtrip_error = float(np.max(np.abs(
+                restored - source[fft.local_slice(False)])))
+            roundtrip_error = comm.allreduce(
+                local_roundtrip_error, op=MPI.MAX)
+            local_roundtrip_matches = np.allclose(
+                restored, source[fft.local_slice(False)], rtol=0,
+                atol=tolerance)
+            roundtrip_matches = comm.allreduce(
+                int(local_roundtrip_matches), op=MPI.MIN)
+            assert roundtrip_matches, (
+                'r2c inverse mismatch: last_length={}, dtype={}, '
+                'global_max_abs_error={}, atol={}'.format(
+                    last_length, np.dtype(dtype).name, roundtrip_error,
+                    tolerance))
+            metrics.append({
+                'transform': 'r2c',
+                'dtype': np.dtype(dtype).name,
+                'last_length': last_length,
+                'spectrum_max_abs_error': spectrum_error,
+                'roundtrip_max_abs_error': roundtrip_error,
+            })
+            fft.destroy()
+
+    # Complex-to-complex transforms provide a dtype-preserving control case.
+    last_length = 2
+    shape = (max(5, size), max(5, 2*size-1), last_length)
+    axes = ((0,), (1,), (2,))
+    i, j, k = np.indices(shape, dtype=np.float64)
+    for dtype in complex_controls:
+        source = (np.sin(0.17*i + 0.31*j + 0.43*k) +
+                  1j*np.cos(0.11*i - 0.23*j + 0.37*k)).astype(dtype)
+        fft = PFFT(comm, shape, axes=axes, dtype=dtype,
+                   grid=(size, 1, 1),
+                   collapse=False)
+        fft.forward.input_array[...] = source[fft.local_slice(False)]
+        actual = fft.forward(normalize=False)
+        assert actual.dtype == np.dtype(dtype)
+        reference = np.fft.fftn(source, axes=(0, 1, 2))
+        local_output = fft.local_slice(True)
+        tolerance = abstol[np.dtype(dtype).char.lower()]
+        local_spectrum_matches = np.allclose(
+            actual, reference[local_output], rtol=0, atol=tolerance)
+        local_spectrum_error = float(np.max(np.abs(
+            actual - reference[local_output])))
+        spectrum_error = comm.allreduce(local_spectrum_error, op=MPI.MAX)
+        spectrum_matches = comm.allreduce(
+            int(local_spectrum_matches), op=MPI.MIN)
+        assert spectrum_matches, (
+            'c2c spectrum mismatch: dtype={}, global_max_abs_error={}, '
+            'atol={}'.format(
+                np.dtype(dtype).name, spectrum_error, tolerance))
+        restored = fft.backward(actual, normalize=True)
+        local_roundtrip_error = float(np.max(np.abs(
+            restored - source[fft.local_slice(False)])))
+        roundtrip_error = comm.allreduce(
+            local_roundtrip_error, op=MPI.MAX)
+        local_roundtrip_matches = np.allclose(
+            restored, source[fft.local_slice(False)], rtol=0,
+            atol=tolerance)
+        roundtrip_matches = comm.allreduce(
+            int(local_roundtrip_matches), op=MPI.MIN)
+        assert roundtrip_matches, (
+            'c2c inverse mismatch: dtype={}, global_max_abs_error={}, '
+            'atol={}'.format(
+                np.dtype(dtype).name, roundtrip_error, tolerance))
+        metrics.append({
+            'transform': 'c2c-control',
+            'dtype': np.dtype(dtype).name,
+            'last_length': last_length,
+            'spectrum_max_abs_error': spectrum_error,
+            'roundtrip_max_abs_error': roundtrip_error,
+        })
+        fft.destroy()
+    return metrics
+
+def test_original_5x5x2_r2c_dtype():
+    comm = MPI.COMM_WORLD
+    size = comm.Get_size()
+    shape = (5, max(5, size), 2)
+    axes = ((0,), (2,))
+    i, j, k = np.indices(shape, dtype=np.float64)
+    values = (np.sin(0.17*i + 0.31*j + 0.43*k) +
+              0.25*np.cos(0.11*i - 0.23*j + 0.37*k))
+    metrics = []
+
+    for dtype in (np.float32, np.float64):
+        source = values.astype(dtype)
+        fft = PFFT(comm, shape, axes=axes, dtype=dtype,
+                   grid=(1, size, 1), collapse=False)
+        expected_dtype = (np.complex64 if dtype is np.float32
+                          else np.complex128)
+        assert fft.forward.output_array.dtype == np.dtype(expected_dtype)
+        fft.forward.input_array[...] = source[fft.local_slice(False)]
+        actual = fft.forward(normalize=False)
+
+        reference = np.fft.rfftn(source, axes=(0, 2))
+        local_output = fft.local_slice(True)
+        tolerance = abstol[np.dtype(expected_dtype).char.lower()]
+        local_spectrum_matches = np.allclose(
+            actual, reference[local_output], rtol=0, atol=tolerance)
+        local_spectrum_error = float(np.max(np.abs(
+            actual - reference[local_output])))
+        spectrum_error = comm.allreduce(local_spectrum_error, op=MPI.MAX)
+        spectrum_matches = comm.allreduce(
+            int(local_spectrum_matches), op=MPI.MIN)
+        assert actual.dtype == np.dtype(expected_dtype)
+        assert fft.global_shape(True) == shape
+        assert spectrum_matches, (
+            'original 5x5x2 spectrum mismatch: dtype={}, '
+            'global_max_abs_error={}, atol={}'.format(
+                np.dtype(dtype).name, spectrum_error, tolerance))
+
+        restored = fft.backward(actual, normalize=True)
+        local_roundtrip_error = float(np.max(np.abs(
+            restored - source[fft.local_slice(False)])))
+        roundtrip_error = comm.allreduce(
+            local_roundtrip_error, op=MPI.MAX)
+        local_roundtrip_matches = np.allclose(
+            restored, source[fft.local_slice(False)], rtol=0,
+            atol=tolerance)
+        roundtrip_matches = comm.allreduce(
+            int(local_roundtrip_matches), op=MPI.MIN)
+        assert roundtrip_matches, (
+            'original 5x5x2 inverse mismatch: dtype={}, '
+            'global_max_abs_error={}, atol={}'.format(
+                np.dtype(dtype).name, roundtrip_error, tolerance))
+        metrics.append({
+            'transform': 'r2c-original-5x5x2',
+            'dtype': np.dtype(dtype).name,
+            'spectrum_max_abs_error': spectrum_error,
+            'roundtrip_max_abs_error': roundtrip_error,
+        })
+        fft.destroy()
+    return metrics
+
 def test_mpifft():
     from itertools import product
 
@@ -255,3 +436,5 @@ def test_mpifft():
 if __name__ == '__main__':
     test_mpifft()
     test_r2r()
+    test_small_r2c_dtype()
+    test_original_5x5x2_r2c_dtype()
