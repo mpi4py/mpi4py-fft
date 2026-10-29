@@ -4,6 +4,30 @@ from mpi4py import MPI
 from mpi4py_fft.pencil import Subcomm, Pencil
 
 
+def test_pencil_small_shape():
+    comm = MPI.COMM_WORLD
+    size = comm.Get_size()
+    if size == 1:
+        return
+
+    for axis in range(2):
+        dims = [1, 1]
+        dims[axis] = size
+        subcomm = Subcomm(comm, dims)
+        try:
+            shape = [size, size]
+            pencil = Pencil(subcomm, shape, 1-axis)
+            np.testing.assert_equal(pencil.subshape[axis], 1)
+
+            shape[axis] = size-1
+            message = r"axis {} of length {} over {} processes".format(
+                axis, size-1, size)
+            with np.testing.assert_raises_regex(ValueError, message):
+                Pencil(subcomm, shape, 1-axis)
+        finally:
+            subcomm.destroy()
+
+
 def test_pencil():
     from itertools import product
     comm = MPI.COMM_WORLD
@@ -61,4 +85,5 @@ def test_pencil():
 
 
 if __name__ == '__main__':
+    test_pencil_small_shape()
     test_pencil()

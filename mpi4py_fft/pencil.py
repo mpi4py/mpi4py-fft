@@ -220,6 +220,11 @@ class Pencil(object):
     axis : int, optional
         Pencil is aligned in this direction
 
+    Raises
+    ------
+    ValueError
+        If an axis is shorter than the number of processes distributing it.
+
     Examples
     --------
 
@@ -295,7 +300,10 @@ class Pencil(object):
         for i, comm in enumerate(subcomm):
             size = comm.Get_size()
             rank = comm.Get_rank()
-            assert shape[i] >= size
+            if shape[i] < size:
+                raise ValueError(
+                    "Cannot distribute axis {} of length {} over {} processes: "
+                    "empty pencils are not supported".format(i, shape[i], size))
             n, s = _blockdist(shape[i], size, rank)
             subshape[i] = n
             substart[i] = s
