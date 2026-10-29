@@ -32,6 +32,27 @@ def random_true_or_false(comm):
     r = comm.bcast(r)
     return r
 
+def test_pfft_small_shape():
+    comm = MPI.COMM_WORLD
+    size = comm.Get_size()
+    if size == 1:
+        return
+
+    cases = [((size, 1, 1), (size-1, size+1, size+1),
+              r"axis 0 of length {} over {} processes".format(size-1, size))]
+    if size > 2:
+        cases.append(((1, size, 1), (size+1, size+1, size),
+                      r"axis 2 of length {} over {} processes".format(
+                          size//2+1, size)))
+
+    for dims, shape, message in cases:
+        subcomm = Subcomm(comm, dims)
+        try:
+            with np.testing.assert_raises_regex(ValueError, message):
+                PFFT(subcomm, shape, dtype=float)
+        finally:
+            subcomm.destroy()
+
 def test_r2r():
     N = (5, 6, 7, 8, 9)
     assert MPI.COMM_WORLD.Get_size() < 6
@@ -253,5 +274,6 @@ def test_mpifft():
                             fft.destroy()
 
 if __name__ == '__main__':
+    test_pfft_small_shape()
     test_mpifft()
     test_r2r()
