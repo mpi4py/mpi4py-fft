@@ -6,8 +6,10 @@ import sys
 import re
 import platform
 import sysconfig
+from tempfile import TemporaryDirectory
 from distutils import ccompiler
 from distutils.errors import DistutilsPlatformError
+from distutils.sysconfig import customize_compiler
 from setuptools import setup
 from setuptools.dist import Distribution
 from setuptools.extension import Extension
@@ -79,6 +81,21 @@ def get_fftw_libs():
         message = "No FFTW libraries found in {}".format(library_dirs)
         raise DistutilsPlatformError(message)
     return libs
+
+def has_fftw_threads(dtype, libraries, library_dirs):
+    """Check separate and combined FFTW threading libraries."""
+    if not libraries:
+        return False
+    if 'fftw3'+prec_map[dtype]+'_threads' in libraries:
+        return True
+    compiler = ccompiler.new_compiler()
+    customize_compiler(compiler)
+    probe_libraries = libraries + (['pthread'] if os.name == 'posix' else [])
+    with TemporaryDirectory(prefix='mpi4py-fft-config-') as output_dir:
+        compiler.output_dir = output_dir
+        return compiler.has_function('fftw'+prec_map[dtype]+'_init_threads',
+                                     libraries=probe_libraries,
+                                     library_dirs=library_dirs)
 
 def generate_extensions(fftwlibs, force=True):
     """Generate files with float and long double"""
@@ -167,7 +184,10 @@ def get_extensions():
                     os.path.join(fftwdir, "{}xfftn.pyx".format(p)),
                     os.path.join(fftwdir, "{}planxfftn.c".format(p)),
                 ],
-                define_macros=[('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION')],
+                define_macros=[
+                    ('NPY_NO_DEPRECATED_API', 'NPY_1_7_API_VERSION'),
+                    ('MPI4PY_FFTW_HAS_THREADS', str(int(has_fftw_threads(d, libs, library_dirs)))),
+                ],
                 libraries=libs,
                 include_dirs=include_dirs,
                 library_dirs=library_dirs,
