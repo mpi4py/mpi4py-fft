@@ -43,6 +43,11 @@ def test_fftw():
 
     for threads in (1, 2):
         for typecode in types:
+            if threads > 1 and not fftw.get_fftw_lib(typecode)._has_threads:
+                input_array = fftw.aligned((8,), dtype=typecode)
+                with np.testing.assert_raises_regex(ValueError, "threading library"):
+                    fftw.rfftn(input_array, threads=threads)
+                continue
             for dim in dims:
                 for shape in product(*([sizes]*dim)):
                     allaxes = tuple(reversed(range(dim)))

@@ -6,6 +6,21 @@ import numpy as np
 from libc.stdint cimport intptr_t
 from libc.stdlib cimport malloc, free
 
+cdef extern from *:
+    """
+    #include <fftw3.h>
+    #ifndef MPI4PY_FFTW_HAS_THREADS
+    #define MPI4PY_FFTW_HAS_THREADS 1
+    #endif
+    #if !MPI4PY_FFTW_HAS_THREADS
+    #define fftw_cleanup_threads() ((void)0)
+    #define fftw_plan_with_nthreads(n) ((void)(n))
+    #endif
+    """
+    const int MPI4PY_FFTW_HAS_THREADS
+
+_has_threads = bool(MPI4PY_FFTW_HAS_THREADS)
+
 cpdef int alignment_of(input_array):
     cdef np.ndarray _input_array = input_array
     return fftw_alignment_of(<fftw_real *>np.PyArray_DATA(_input_array))
@@ -113,12 +128,18 @@ cdef class FFT:
         cdef int naxes = len(axes)
         cdef int flag, i
         cdef unsigned allflags
-        cdef int *sz_in = <int *> malloc(ndims * sizeof(int))
-        cdef int *sz_out = <int *> malloc(ndims * sizeof(int))
-        cdef int *axs = <int *> malloc(naxes * sizeof(int))
-        cdef int *knd = <int *> malloc(naxes * sizeof(int))
+        cdef int *sz_in
+        cdef int *sz_out
+        cdef int *axs
+        cdef int *knd
         cdef void *_in = <void *>np.PyArray_DATA(input_array)
         cdef void *_out = <void *>np.PyArray_DATA(output_array)
+        if not MPI4PY_FFTW_HAS_THREADS and threads > 1:
+            raise ValueError("FFTW threading library is not available")
+        sz_in = <int *> malloc(ndims * sizeof(int))
+        sz_out = <int *> malloc(ndims * sizeof(int))
+        axs = <int *> malloc(naxes * sizeof(int))
+        knd = <int *> malloc(naxes * sizeof(int))
         self.input_shape = input_array.shape
         self.output_shape = output_array.shape
         self.input_strides = input_array.strides
@@ -157,7 +178,8 @@ cdef class FFT:
         free(knd)
 
     def __dealloc__(self):
-        self.destroy()
+        if self._plan != NULL:
+            self.destroy()
 
     def destroy(self):
         fftw_destroy_plan(<fftw_plan>self._plan)

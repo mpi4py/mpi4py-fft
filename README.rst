@@ -61,6 +61,10 @@ Note in particular that *mpi4py* requires that you have a working
 MPI installation, with the compiler wrapper *mpicc*, on your search path.
 The FFTW header and libraries must also be available on the search path, and
 we will build wrappers for any precision found of the FFTW libraries.
+FFTW threading support is optional and may be provided by a separate threading
+library or a combined FFTW library. If threading support is unavailable for a
+precision, transforms of that precision support ``threads=1``; requesting multiple
+threads raises ``ValueError``.
 
 All of the above dependencies are available and will be downloaded through
 the conda-forge channel if conda is used for installation. However, pip
